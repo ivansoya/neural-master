@@ -1,0 +1,9 @@
+.idea/
+.venv3.10/
+.venv3.12/
+.ipynb_checkpoints/
+test_data/
+runs/
+post_processing_data/
+convert_script/
+calibration/
