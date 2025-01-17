@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1200</width>
+    <width>1319</width>
     <height>881</height>
    </rect>
   </property>
@@ -392,7 +392,7 @@ QPushButton:pressed {
          </widget>
         </item>
         <item>
-         <widget class="UAnnotableGraphicsView" name="image_view">
+         <widget class="UAnnotationGraphicsView" name="annotate_view">
           <property name="minimumSize">
            <size>
             <width>0</width>
@@ -413,47 +413,207 @@ QPushButton:pressed {
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QWidget" name="verticalWidget" native="true">
+          <property name="maximumSize">
+           <size>
+            <width>200</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <property name="leftMargin">
+            <number>10</number>
+           </property>
+           <property name="topMargin">
+            <number>10</number>
+           </property>
+           <property name="rightMargin">
+            <number>10</number>
+           </property>
+           <property name="bottomMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label_3">
+             <property name="minimumSize">
+              <size>
+               <width>175</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Статистика</string>
+             </property>
+             <property name="textFormat">
+              <enum>Qt::AutoText</enum>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_6">
+             <property name="font">
+              <font>
+               <pointsize>11</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Размечено</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <widget class="QLabel" name="max_annotated">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>0</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_5">
+               <property name="maximumSize">
+                <size>
+                 <width>10</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>/</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="current_annotated">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>0</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_7">
+             <property name="font">
+              <font>
+               <pointsize>11</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Разметки на сцене</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListWidget" name="list_widget_annotated_on_scene">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_go_to_not_annotated">
+             <property name="text">
+              <string>Перейти к неразмеченному</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="create_dataset">
+             <property name="styleSheet">
+              <string notr="true">QWidget &gt; QPushButton {
+	background-color: rgb(88, 239, 255);
+}
+
+QWidget &gt; QPushButton:hover {
+	background-color: white;
+}</string>
+             </property>
+             <property name="text">
+              <string>Создать датасет</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>
-       <widget class="UHorizontalScrollArea" name="round_images">
+       <widget class="UThumbnailCarousel" name="thumbnail_carousel" native="true">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>175</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>220</height>
+          <height>200</height>
          </size>
         </property>
         <property name="mouseTracking">
          <bool>true</bool>
         </property>
-        <property name="verticalScrollBarPolicy">
-         <enum>Qt::ScrollBarAlwaysOff</enum>
+        <property name="acceptDrops">
+         <bool>false</bool>
         </property>
-        <property name="horizontalScrollBarPolicy">
-         <enum>Qt::ScrollBarAsNeeded</enum>
-        </property>
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="scroll_content">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>1178</width>
-           <height>218</height>
-          </rect>
-         </property>
-         <property name="mouseTracking">
-          <bool>true</bool>
-         </property>
-        </widget>
        </widget>
       </item>
       <item>
@@ -490,7 +650,7 @@ QPushButton:pressed {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1200</width>
+     <width>1319</width>
      <height>21</height>
     </rect>
    </property>
@@ -499,15 +659,15 @@ QPushButton:pressed {
  </widget>
  <customwidgets>
   <customwidget>
-   <class>UHorizontalScrollArea</class>
-   <extends>QScrollArea</extends>
-   <header location="global">custom_widgets</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>UAnnotableGraphicsView</class>
+   <class>UAnnotationGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header location="global">annotable</header>
+  </customwidget>
+  <customwidget>
+   <class>UThumbnailCarousel</class>
+   <extends>QWidget</extends>
+   <header location="global">carousel</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
