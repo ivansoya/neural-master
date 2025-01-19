@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt, QObject, QEvent, pyqtSignal, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 
-from desktop_app.utility import EWorkMode
+from utility import EWorkMode
 
 
 class UGlobalSignalHolder(QObject):

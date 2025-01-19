@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_TrainApp(object):
     def setupUi(self, TrainApp):
         TrainApp.setObjectName("TrainApp")
-        TrainApp.resize(1319, 881)
+        TrainApp.resize(1700, 1122)
         TrainApp.setAutoFillBackground(False)
         TrainApp.setDockNestingEnabled(False)
         self.centralwidget = QtWidgets.QWidget(TrainApp)
@@ -50,7 +50,8 @@ class Ui_TrainApp(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.verticalWidget = QtWidgets.QWidget(self.centralwidget)
-        self.verticalWidget.setMaximumSize(QtCore.QSize(150, 16777215))
+        self.verticalWidget.setMinimumSize(QtCore.QSize(200, 0))
+        self.verticalWidget.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.verticalWidget.setObjectName("verticalWidget")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.verticalWidget)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
@@ -179,12 +180,9 @@ class Ui_TrainApp(object):
         self.annotate_view.setObjectName("annotate_view")
         self.horizontalLayout.addWidget(self.annotate_view)
         self.verticalWidget1 = QtWidgets.QWidget(self.centralwidget)
-        self.verticalWidget1.setMaximumSize(QtCore.QSize(200, 16777215))
-        self.verticalWidget1.setStyleSheet("#verticalWidget {\n"
-"    background-color: white;\n"
-"    border: 1px solid black;\n"
-"    padding-bottom: 10px;\n"
-"}")
+        self.verticalWidget1.setMinimumSize(QtCore.QSize(300, 0))
+        self.verticalWidget1.setMaximumSize(QtCore.QSize(300, 16777215))
+        self.verticalWidget1.setStyleSheet("")
         self.verticalWidget1.setObjectName("verticalWidget1")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalWidget1)
         self.verticalLayout.setContentsMargins(10, 10, 10, 10)
@@ -277,7 +275,7 @@ class Ui_TrainApp(object):
         self.verticalLayout_2.addLayout(self.main_layout)
         TrainApp.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(TrainApp)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1319, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1700, 26))
         self.menubar.setObjectName("menubar")
         TrainApp.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(TrainApp)

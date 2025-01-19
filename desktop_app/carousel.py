@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QLabel
 )
 
-from desktop_app.utility import FAnnotationData, FClassData, EAnnotationStatus
+from utility import FAnnotationData, FClassData, EAnnotationStatus
 
 
 class UAnnotationThumbnail(QGraphicsPixmapItem):

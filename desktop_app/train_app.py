@@ -14,8 +14,8 @@ from design import Ui_TrainApp
 from commander import UGlobalSignalHolder
 from carousel import UThumbnailCarousel
 from annotable import UAnnotationBox, ImageAnnotationScene, UAnnotationGraphicsView
-from desktop_app.carousel import UAnnotationThumbnail
-from desktop_app.utility import EWorkMode, EAnnotationStatus
+from carousel import UAnnotationThumbnail
+from utility import EWorkMode, EAnnotationStatus
 from utility import GColorList, FClassData
 from custom_widgets import UHorizontalScrollArea
 

@@ -8,10 +8,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QTransform, QFont, QFontMetricsF, QCursor, QPixmap, QIcon
 from PyQt5.QtCore import Qt, QRectF, QPointF, QSizeF, pyqtSignal
-from onnx.reference.ops.op_optional import Optional
-from sympy import false
 
-from desktop_app.utility import FAnnotationData
+from utility import FAnnotationData
 from utility import EWorkMode, FClassData
 from commander import UGlobalSignalHolder
 

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1319</width>
-    <height>881</height>
+    <width>1700</width>
+    <height>1122</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -63,9 +63,15 @@ QPushButton:pressed {
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
          <widget class="QWidget" name="verticalWidget" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="maximumSize">
            <size>
-            <width>150</width>
+            <width>16777215</width>
             <height>16777215</height>
            </size>
           </property>
@@ -415,9 +421,15 @@ QPushButton:pressed {
         </item>
         <item>
          <widget class="QWidget" name="verticalWidget" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>300</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="maximumSize">
            <size>
-            <width>200</width>
+            <width>300</width>
             <height>16777215</height>
            </size>
           </property>
@@ -650,8 +662,8 @@ QWidget &gt; QPushButton:hover {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1319</width>
-     <height>21</height>
+     <width>1700</width>
+     <height>26</height>
     </rect>
    </property>
   </widget>
