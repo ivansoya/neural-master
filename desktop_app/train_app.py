@@ -1,12 +1,12 @@
 import sys
+from typing import Optional
 
 import cv2
 import os
-from functools import partial
 from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton, QFileDialog, QVBoxLayout, QHBoxLayout, \
     QWidget, QScrollArea, QGraphicsScene, QGraphicsPixmapItem, QGraphicsView, QGraphicsRectItem
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QImage, QPixmap, QStandardItemModel, QStandardItem
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 
 from ultralytics import YOLO
 
@@ -34,6 +34,8 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.model_yolo = None
 
         self.class_list_item_model = QStandardItemModel()
+
+        self.thumbnails_count: int = 0
 
         self.annotate_scene = ImageAnnotationScene(commander = self.global_signal_holder)
         self.annotate_view.setScene(self.annotate_scene)
@@ -71,6 +73,8 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
         self.toggle_round_images.clicked.connect(self.toggle_roulette_visibility)
 
+        self.global_signal_holder.command_key_pressed.connect(self.annotate_on_button_pressed)
+
     def load_model(self):
         model_file, _ = QFileDialog.getOpenFileName(self, "Выбрать pt модель", "",
                                                      "Image Files (*.pt)")
@@ -103,35 +107,45 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Images", "",
                                                      "Image Files (*.png *.jpg *.jpeg *.bmp)")
         if file_paths:
-            self.image_paths = file_paths
-
-            # Очистка старого контента
-            self.thumbnail_carousel.clear_thumbnails()
-
             # Отображение карусели
             self.thumbnail_carousel.setVisible(True)
             self.toggle_round_images.setEnabled(True)
             self.toggle_round_images.setVisible(True)
 
+            if self.load_thumbnails_thread is not None:
+                if self.load_thumbnails_thread.isRunning() is True:
+                    self.load_thumbnails_thread.stop()
+
+            self.image_paths = file_paths
+
+            # Очистка старого контента
+            self.thumbnail_carousel.clear_thumbnails()
+            self.thumbnails_count = 0
+
             self.load_thumbnails()
+
+            self.thumbnail_carousel.update()
 
     def load_thumbnails(self):
         if self.image_paths:
             image_path = self.image_paths.pop(0)
 
             self.thumbnail_carousel.add_thumbnail(image_path)
-
+            self.on_added_thumbnail(None)
             QTimer.singleShot(50, lambda: self.load_thumbnails())
 
     def display_image(self, thumbnail: UAnnotationThumbnail):
         self.annotate_scene.clear()
         self.image_matrix = cv2.imread(thumbnail.get_image_path())
         if self.image_matrix is not None:
-            image_t = cv2.cvtColor(self.image_matrix, cv2.COLOR_BGR2RGB)
-            height, width, channel = image_t.shape
-            bytes_per_line = 3 * width
-            qimg = QImage(image_t.data, width, height, bytes_per_line, QImage.Format_RGB888)
-            pixmap = QPixmap.fromImage(qimg)
+            try:
+                image_t = cv2.cvtColor(self.image_matrix, cv2.COLOR_BGR2RGB)
+                height, width, channel = image_t.shape
+                bytes_per_line = 3 * width
+                qimg = QImage(image_t.data, width, height, bytes_per_line, QImage.Format_RGB888)
+                pixmap = QPixmap.fromImage(qimg)
+            except Exception:
+                pixmap = QPixmap()
 
             self.image_on_scene = QGraphicsPixmapItem(pixmap)
             self.annotate_scene.addItem(self.image_on_scene)
@@ -182,6 +196,10 @@ class TrainApp(QMainWindow, Ui_TrainApp):
                 self.class_combobox.itemData(int(d_class))
             )
 
+    def annotate_on_button_pressed(self, key: int):
+        if key == Qt.Key_Space:
+            self.auto_annotate()
+
     def set_label_work_mode(self, mode: int):
         self.selected_label.setText(str(mode))
 
@@ -191,6 +209,10 @@ class TrainApp(QMainWindow, Ui_TrainApp):
     def on_change_index_combobox(self, index):
         if self.class_combobox.currentIndex() != index:
             self.class_combobox.setCurrentIndex(index)
+
+    def on_added_thumbnail(self, thumbnail: UAnnotationThumbnail):
+        self.thumbnails_count += 1
+        self.current_annotated.setText(str(self.thumbnails_count))
 
     def toggle_roulette_visibility(self):
         if self.thumbnail_carousel.isVisible():

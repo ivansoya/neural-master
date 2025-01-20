@@ -61,6 +61,7 @@ class UGlobalSignalHolder(QObject):
                 return True
 
             if event.key() == Qt.Key_Space:
+                self.command_key_pressed.emit(Qt.Key_Space)
                 return True
 
             if event.key() == Qt.Key_N:
