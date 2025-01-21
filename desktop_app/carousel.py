@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QLabel
 )
 
+from commander import UGlobalSignalHolder
 from utility import FAnnotationData, FClassData, EAnnotationStatus
 
 class ImageLoaderThread(QThread):
@@ -24,17 +25,22 @@ class ImageLoaderThread(QThread):
         #pixmap.scaled(self.width, self.height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.image_loaded.emit(pixmap)
 
-
 class UAnnotationThumbnail(QGraphicsPixmapItem):
     def __init__(self, image_path: str, height, scale: float, bound_boxes: list):
         super().__init__()
 
         self.setFlag(QGraphicsPixmapItem.ItemIsSelectable)
 
-        pixmap = QPixmap(image_path)
-        self.scale = height / pixmap.height() * scale
-        self._height: int = int(pixmap.height() * self.scale)
-        self._width: int = int(pixmap.width() * self.scale)
+        try:
+            pixmap = QPixmap(image_path)
+            self.scale = height / pixmap.height() * scale
+            self._height: int = int(pixmap.height() * self.scale)
+            self._width: int = int(pixmap.width() * self.scale)
+        except Exception:
+            self.scale = scale
+            self._height = int(height * self.scale)
+            self._width = int(height * self.scale)
+
         self.setPixmap(QPixmap())
         self.uploaded = False
 
@@ -45,6 +51,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
         self.image_path = image_path
 
         self.board_width = 4
+        self.annotation_width = 1
 
         self.annotation_data_list : list[FAnnotationData] = list()
         self.update()
@@ -120,7 +127,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
         for ann_data in self.annotation_data_list:
             color = QColor(FClassData.get_save_color(ann_data.ClassID))
             pen = QPen(color)
-            pen.setWidth(4)
+            pen.setWidth(self.annotation_width)
             painter.setPen(pen)
 
             background = color
@@ -128,10 +135,10 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             painter.setBrush(background)
 
             rect = QRectF(
-                ann_data.X,
-                ann_data.Y,
-                ann_data.Width,
-                ann_data.Height
+                ann_data.X * self.scale,
+                ann_data.Y * self.scale,
+                ann_data.Width * self.scale,
+                ann_data.Height * self.scale
             )
 
             painter.drawRect(rect)
@@ -181,22 +188,24 @@ class UPixmapSignalEmitter(QObject):
 class HorizontalScrollView(QGraphicsView):
     view_changed = pyqtSignal(QRectF)
 
-    def wheelEvent(self, event):
-        delta = event.angleDelta().y()
-        self.horizontalScrollBar().setValue(
-            self.horizontalScrollBar().value() - delta
-        )
-        self.view_changed.emit()
-
-    def scrollContentsBy(self, dx, dy):
-        super().scrollContentsBy(dx, dy)
-        bound_viewport = QRectF(
+    def get_view_bound_box(self):
+        return QRectF(
             self.mapToScene(self.viewport().rect().topLeft()).x() - 400,
             self.mapToScene(self.viewport().rect().topLeft()).y(),
             self.viewport().rect().width() + 600,
             self.viewport().rect().height()
         )
-        self.view_changed.emit(bound_viewport)
+
+    def wheelEvent(self, event):
+        delta = event.angleDelta().y()
+        self.horizontalScrollBar().setValue(
+            self.horizontalScrollBar().value() - delta
+        )
+        self.view_changed.emit(self.get_view_bound_box())
+
+    def scrollContentsBy(self, dx, dy):
+        super().scrollContentsBy(dx, dy)
+        self.view_changed.emit(self.get_view_bound_box())
 
     def keyPressEvent(self, event):
         pass
@@ -296,8 +305,6 @@ class UThumbnailCarousel(QWidget):
         for thumb in self.thumbnails:
             if thumb.index not in selected_indexes:
                 thumb.clear_image()
-
-        print(selected_indexes)
 
 
     def on_thumbnail_clicked(self, thumbnail: UAnnotationThumbnail):

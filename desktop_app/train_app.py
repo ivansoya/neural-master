@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 
 from ultralytics import YOLO
 
+from dataset import UDatasetDialog
 from design import Ui_TrainApp
 from commander import UGlobalSignalHolder
 from carousel import UThumbnailCarousel
@@ -34,8 +35,6 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.model_yolo = None
 
         self.class_list_item_model = QStandardItemModel()
-
-        self.thumbnails_count: int = 0
 
         self.annotate_scene = ImageAnnotationScene(commander = self.global_signal_holder)
         self.annotate_view.setScene(self.annotate_scene)
@@ -75,6 +74,20 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
         self.global_signal_holder.command_key_pressed.connect(self.annotate_on_button_pressed)
 
+        # Изменение label для отображения количества размеченных и неразмеченных изображений
+        self.thumbnails_count: int = 0
+        self.current_annotated_count: int = 0
+        #self.global_signal_holder.increase_annotated_counter.connect(
+        #    lambda is_increase=True, checked=False:
+        #        self.current_annotated_label.setText(str(self.increment_current_annotated(is_increase)))
+        #)
+        #self.global_signal_holder.decrease_annotated_counter.connect(
+        #    lambda is_increase=False, checked=False:
+        #        self.current_annotated_label.setText(str(self.increment_current_annotated(is_increase)))
+        #)
+
+        self.button_create_dataset.clicked.connect(self.show_dialog_create_dataset)
+
     def load_model(self):
         model_file, _ = QFileDialog.getOpenFileName(self, "Выбрать pt модель", "",
                                                      "Image Files (*.pt)")
@@ -112,10 +125,6 @@ class TrainApp(QMainWindow, Ui_TrainApp):
             self.toggle_round_images.setEnabled(True)
             self.toggle_round_images.setVisible(True)
 
-            if self.load_thumbnails_thread is not None:
-                if self.load_thumbnails_thread.isRunning() is True:
-                    self.load_thumbnails_thread.stop()
-
             self.image_paths = file_paths
 
             # Очистка старого контента
@@ -132,11 +141,15 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
             self.thumbnail_carousel.add_thumbnail(image_path)
             self.on_added_thumbnail(None)
+
             QTimer.singleShot(50, lambda: self.load_thumbnails())
 
     def display_image(self, thumbnail: UAnnotationThumbnail):
         self.annotate_scene.clear()
-        self.image_matrix = cv2.imread(thumbnail.get_image_path())
+        try:
+            self.image_matrix = cv2.imread(thumbnail.get_image_path())
+        except Exception:
+            self.image_matrix = None
         if self.image_matrix is not None:
             try:
                 image_t = cv2.cvtColor(self.image_matrix, cv2.COLOR_BGR2RGB)
@@ -173,6 +186,9 @@ class TrainApp(QMainWindow, Ui_TrainApp):
                 pass
 
             print("Количество боксов на сцене: ", len(self.annotate_scene.boxes_on_scene))
+
+        else:
+            self.image_on_scene = QGraphicsPixmapItem(QPixmap())
 
     def auto_annotate(self):
         if self.image_matrix is None or self.model_yolo is None:
@@ -212,7 +228,7 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
     def on_added_thumbnail(self, thumbnail: UAnnotationThumbnail):
         self.thumbnails_count += 1
-        self.current_annotated.setText(str(self.thumbnails_count))
+        self.overall_images_label.setText(str(self.thumbnails_count))
 
     def toggle_roulette_visibility(self):
         if self.thumbnail_carousel.isVisible():
@@ -221,6 +237,19 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         else:
             self.thumbnail_carousel.setVisible(True)
             self.toggle_round_images.setText("Скрыть карусель")
+
+    def increment_current_annotated(self, is_increase: bool):
+        if is_increase:
+            self.current_annotated_count += 1
+        else:
+            self.current_annotated_count -= 1
+        return self.current_annotated_count
+
+    def show_dialog_create_dataset(self):
+        if len(self.annotate_scene.available_classes) <= 0 or len(self.thumbnail_carousel.thumbnails) <= 0:
+            return
+        dialog = UDatasetDialog(self.annotate_scene.available_classes, self.thumbnail_carousel.thumbnails)
+        dialog.exec_()
 
 def main():
     app = QApplication(sys.argv)

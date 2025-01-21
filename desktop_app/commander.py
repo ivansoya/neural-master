@@ -21,6 +21,9 @@ class UGlobalSignalHolder(QObject):
 
     command_key_pressed = pyqtSignal(int)
 
+    increase_annotated_counter = pyqtSignal()
+    decrease_annotated_counter = pyqtSignal()
+
     def __init__(self):
         super().__init__()
 

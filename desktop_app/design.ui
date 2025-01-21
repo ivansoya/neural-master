@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1700</width>
-    <height>1122</height>
+    <width>1319</width>
+    <height>881</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -65,13 +65,13 @@ QPushButton:pressed {
          <widget class="QWidget" name="verticalWidget" native="true">
           <property name="minimumSize">
            <size>
-            <width>200</width>
+            <width>175</width>
             <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>16777215</width>
+            <width>150</width>
             <height>16777215</height>
            </size>
           </property>
@@ -421,15 +421,9 @@ QPushButton:pressed {
         </item>
         <item>
          <widget class="QWidget" name="verticalWidget" native="true">
-          <property name="minimumSize">
-           <size>
-            <width>300</width>
-            <height>0</height>
-           </size>
-          </property>
           <property name="maximumSize">
            <size>
-            <width>300</width>
+            <width>250</width>
             <height>16777215</height>
            </size>
           </property>
@@ -491,7 +485,7 @@ QPushButton:pressed {
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_2">
              <item>
-              <widget class="QLabel" name="max_annotated">
+              <widget class="QLabel" name="current_annotated_label">
                <property name="font">
                 <font>
                  <pointsize>10</pointsize>
@@ -527,7 +521,7 @@ QPushButton:pressed {
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="current_annotated">
+              <widget class="QLabel" name="overall_images_label">
                <property name="font">
                 <font>
                  <pointsize>10</pointsize>
@@ -560,6 +554,12 @@ QPushButton:pressed {
            </item>
            <item>
             <widget class="QListWidget" name="list_widget_annotated_on_scene">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
              <property name="maximumSize">
               <size>
                <width>16777215</width>
@@ -589,7 +589,7 @@ QPushButton:pressed {
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="create_dataset">
+            <widget class="QPushButton" name="button_create_dataset">
              <property name="styleSheet">
               <string notr="true">QWidget &gt; QPushButton {
 	background-color: rgb(88, 239, 255);
@@ -662,8 +662,8 @@ QWidget &gt; QPushButton:hover {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1700</width>
-     <height>26</height>
+     <width>1319</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>

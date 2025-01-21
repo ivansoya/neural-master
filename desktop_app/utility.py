@@ -48,4 +48,8 @@ class FAnnotationData:
         self.Resolution_h = res_h
 
     def __str__(self):
-        return f"{self.ClassID} {self.X} {self.Y} {self.Width} {self.Height}"
+        return (f"{self.ClassID} "
+                f"{self.X} "
+                f"{self.Y} "
+                f"{int(self.Width) / float(self.Resolution_w)} "
+                f"{int(self.Height) / float(self.Resolution_h)}")

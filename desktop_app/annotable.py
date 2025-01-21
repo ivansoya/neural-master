@@ -54,9 +54,10 @@ class UAnnotationBox(QGraphicsRectItem):
         self.class_name = class_data.Name
 
         self.line_width = 4
+        self.draw_scale = 1
 
-        self.setPen(QPen(self.color, self.line_width, Qt.SolidLine))
-        self.pen().setCosmetic(True)
+        #self.setPen(QPen(self.color, self.line_width, Qt.SolidLine))
+
         self.background_color = QColor(class_data.Color)
         self.background_color.setAlpha(50)
         self.setBrush(QBrush(self.background_color))
@@ -100,7 +101,8 @@ class UAnnotationBox(QGraphicsRectItem):
 
     def get_resize_handles(self):
         rect = self.rect()
-        handle_size = self.resize_handle_size
+        handle_size = int(self.resize_handle_size * self.draw_scale)
+        line_width = int(self.line_width * self.draw_scale)
         return {
             'top_left': QRectF(rect.topLeft() - QPointF(handle_size / 2, handle_size / 2),
                                QSizeF(handle_size, handle_size)),
@@ -110,14 +112,14 @@ class UAnnotationBox(QGraphicsRectItem):
                                QSizeF(handle_size, handle_size)),
             'bottom_right': QRectF(rect.bottomRight() - QPointF(handle_size / 2, handle_size / 2),
                                QSizeF(handle_size, handle_size)),
-            'top_line': QRectF(rect.topLeft() - QPointF(self.line_width / 2, self.line_width / 2),
-                               QSizeF(rect.width() + self.line_width, self.line_width)),
-            'right_line': QRectF(rect.topRight() - QPointF(self.line_width / 2, self.line_width / 2),
-                               QSizeF(self.line_width, rect.height() + self.line_width)),
-            'bottom_line': QRectF(rect.bottomLeft() - QPointF(self.line_width / 2, self.line_width / 2),
-                               QSizeF(rect.width() + self.line_width, self.line_width)),
-            'left_line': QRectF(rect.topLeft() - QPointF(self.line_width / 2, self.line_width / 2),
-                               QSizeF(self.line_width, rect.height() + self.line_width)),
+            'top_line': QRectF(rect.topLeft() - QPointF(line_width / 2, line_width / 2),
+                               QSizeF(rect.width() + line_width, line_width)),
+            'right_line': QRectF(rect.topRight() - QPointF(line_width / 2, line_width / 2),
+                               QSizeF(line_width, rect.height() + line_width)),
+            'bottom_line': QRectF(rect.bottomLeft() - QPointF(line_width / 2, line_width / 2),
+                               QSizeF(rect.width() + line_width, line_width)),
+            'left_line': QRectF(rect.topLeft() - QPointF(line_width/ 2, line_width / 2),
+                               QSizeF(line_width, rect.height() + line_width)),
         }
 
     @staticmethod
@@ -132,11 +134,8 @@ class UAnnotationBox(QGraphicsRectItem):
         self.class_id = class_data.Cid
         self.class_name = class_data.Name
 
-        self.setPen(QPen(self.color, self.line_width, Qt.SolidLine))
-        self.pen().setCosmetic(True)
         self.background_color = QColor(self.color)
         self.background_color.setAlpha(50)
-        self.setBrush(QBrush(self.background_color))
 
         self.update()
 
@@ -174,7 +173,7 @@ class UAnnotationBox(QGraphicsRectItem):
         super().hoverLeaveEvent(event)
 
     def paint(self, painter, option, widget=None):
-        super().paint(painter, option, widget)
+        #super().paint(painter, option, widget)
 
         if self.isSelected():
             # Удаление фона
@@ -212,7 +211,9 @@ class UAnnotationBox(QGraphicsRectItem):
                 painter.drawText(text_background_rect, Qt.AlignCenter, text)
 
         else:
-            self.setBrush(QBrush(self.background_color))
+            painter.setBrush(QBrush(self.background_color))
+            painter.setPen(QPen(self.color, self.line_width * self.draw_scale, Qt.SolidLine))
+            painter.drawRect(self.boundingRect())
 
     def itemChange(self, change, value):
         if change == QGraphicsRectItem.ItemSelectedChange:
@@ -366,6 +367,9 @@ class ImageAnnotationScene(QGraphicsScene):
         )
         self.boxes_on_scene.remove(box)
         self.removeItem(box)
+
+        if len(self.boxes_on_scene) == 0:
+            self.commander.decrease_annotated_counter.emit()
 
         print("Удален бокс под номером", delete_index)
 
