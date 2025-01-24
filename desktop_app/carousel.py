@@ -239,6 +239,7 @@ class UThumbnailCarousel(QWidget):
         self.scale_not_selected = 0.75
 
         self.view.view_changed.connect(self.display_images)
+        self.last_displayed_images: list[UAnnotationThumbnail] = list()
 
     def clear_thumbnails(self):
         self.thumbnails.clear()
@@ -296,15 +297,23 @@ class UThumbnailCarousel(QWidget):
 
     def display_images(self, display_bounds: QRectF):
         items = self.scene.items(display_bounds, Qt.IntersectsItemBoundingRect)
-        selected_indexes: list[int] = list()
+        selected_thumbnails: list[UAnnotationThumbnail] = list()
         for thumbnail in items:
             if isinstance(thumbnail, UAnnotationThumbnail):
-                selected_indexes.append(thumbnail.index)
-                thumbnail.upload_image()
+                selected_thumbnails.append(thumbnail)
 
-        for thumb in self.thumbnails:
-            if thumb.index not in selected_indexes:
+        # Отображение картинок в карусели
+        for thumb in selected_thumbnails:
+            if thumb not in self.last_displayed_images:
+                thumb.upload_image()
+
+        # Скрытие картинок:
+        for thumb in self.last_displayed_images:
+            if thumb not in selected_thumbnails:
                 thumb.clear_image()
+
+        self.last_displayed_images.clear()
+        self.last_displayed_images = [item for item in selected_thumbnails]
 
 
     def on_thumbnail_clicked(self, thumbnail: UAnnotationThumbnail):

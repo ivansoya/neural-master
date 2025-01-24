@@ -48,8 +48,12 @@ class FAnnotationData:
         self.Resolution_h = res_h
 
     def __str__(self):
+        if self.X < 0: self.X = 0
+        if self.Y < 0: self.Y = 0
+        if self.X + self.Width > self.Resolution_w: self.Width = self.Resolution_w - self.X
+        if self.Y + self.Height > self.Resolution_h: self.Height = self.Resolution_h - self.Y
         return (f"{self.ClassID} "
-                f"{self.X} "
-                f"{self.Y} "
-                f"{int(self.Width) / float(self.Resolution_w)} "
-                f"{int(self.Height) / float(self.Resolution_h)}")
+                f"{(self.X + self.Width / 2) / float(self.Resolution_w)} "
+                f"{(self.Y + self.Height / 2) / float(self.Resolution_h)} "
+                f"{self.Width / float(self.Resolution_w)} "
+                f"{self.Height / float(self.Resolution_h)}")

@@ -1,9 +1,12 @@
 import os.path
 import random
+import shutil
+from typing import Optional
 
+import yaml
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog
-from matplotlib.image import thumbnail
+from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMessageBox
+import yaml
 
 from carousel import UAnnotationThumbnail
 from dataset_window import Ui_Dialog
@@ -37,31 +40,64 @@ class UDatasetCreator(QThread):
         self.counter = counter
         self.dataset_path = path
 
+        self.len_data = 0
+        self.progress_counter = 0
+
         self.annotation_data: list[FAnnItem] = list()
 
     def run(self):
+        print(f"Общее количество картинок: {len(self.thumb_list)}")
         # Сначала создаем список размеченных данных
         for i in range(len(self.thumb_list)):
-            if self.thumb_list[i].get_annotated_status().value == EAnnotationStatus.Annotated:
+            if self.thumb_list[i].get_annotated_status().value == EAnnotationStatus.Annotated.value:
                 self.annotation_data.append(
                     FAnnItem(self.thumb_list[i].annotation_data_list, self.thumb_list[i].image_path)
                 )
             self.progress_bar_updated.emit(int(100 * i / len(self.thumb_list)))
-        print(f"Всего {len(self.annotation_data)} размеченных картинок!")
-        count_val = int(len(self.annotation_data) * (self.percentage / 100.0))
+        self.len_data = len(self.annotation_data)
+        print(f"Размечено картинок: {len(self.annotation_data)}")
+        if self.len_data <= 0:
+            self.creation_ended.emit(-1)
+            return
 
-        list_for_val = random.sample(self.annotation_data, count_val)
+        count_val = int(len(self.annotation_data) * (1.0 - self.percentage / 100.0))
+
+        try:
+            list_for_val = random.sample(self.annotation_data, count_val)
+        except Exception:
+            list_for_val = []
         list_for_train = [ann for ann in self.annotation_data if ann not in list_for_val]
 
         # Непосредственная генерация датасета
+        train_image_folder = os.path.join(self.dataset_path, "train/images")
+        train_labels_folder = os.path.join(self.dataset_path, "train/labels")
+        self.generation(train_image_folder, train_labels_folder, list_for_train)
 
+        valid_image_folder = os.path.join(self.dataset_path, "valid/images")
+        valid_labels_folder = os.path.join(self.dataset_path, "valid/labels")
+        self.generation(valid_image_folder, valid_labels_folder, list_for_val)
+
+        self.creation_ended.emit(self.counter)
 
     def generation(self, image_folder: str, label_folder: str, ann_data: list[FAnnItem]):
-        image_folder_path = os.path.join(self.dataset_path, image_folder)
-        label_folder_path = os.path.join(self.dataset_path, label_folder)
-
-        file_name = f"Number_{self.counter:024b}_{self}"
         for i in range(len(ann_data)):
+            image_name_img = f"Number_{self.counter:024b}_{os.path.basename(ann_data[i].image_path)}"
+            self.counter += 1
+            image_name_txt = os.path.splitext(image_name_img)[0] + ".txt"
+            # Копирование картинки в датасет
+            shutil.copy(
+                ann_data[i].image_path,
+                os.path.join(image_folder, image_name_img)
+            )
+            with open(os.path.join(label_folder, image_name_txt), 'w+') as label_file:
+                for annotation in ann_data[i].annotation_list:
+                    label_file.write(str(annotation) + '\n')
+            self.progress_counter += 1
+            try:
+                self.progress_bar_updated.emit(int(float(self.progress_counter) / self.len_data * 100))
+            except Exception:
+                self.progress_bar_updated.emit(0)
+
 
 class UDatasetDialog(QDialog, Ui_Dialog):
     def __init__(self, classes: list[FClassData], annotations: list[UAnnotationThumbnail], parent=None):
@@ -76,10 +112,15 @@ class UDatasetDialog(QDialog, Ui_Dialog):
         self.path_to_dataset: str = ""
         self.start_count: int = 1
 
+        self.dataset_creator: Optional[UDatasetCreator] = None
+
         # Обработка выбора пути к датасету
         self.radio_create_dataset.setChecked(True)
         self.button_choose_path_dataset.clicked.connect(self.on_button_choose_path_clicked)
         self.label_dataset_path.setText("Папка не выбрана")
+
+        # Назначение на кнопку создания датасета
+        self.button_create.clicked.connect(self.on_button_clicked_start_dataset_creation)
 
         # Какой процент изображений пойдет в train категорию, какой в val категорию
         self.slider_train_val.setValue(self.train_percentage)
@@ -110,10 +151,6 @@ class UDatasetDialog(QDialog, Ui_Dialog):
         elif self.radio_create_dataset.isChecked():
             self.path_to_dataset = QFileDialog.getExistingDirectory(self, "Выберите папку")
             self.path_to_dataset = self.path_to_dataset.replace("/", "\\")
-            self.create_dataset_carcass(self.path_to_dataset)
-            self.create_yaml_file(self.path_to_dataset)
-
-
         else:
             pass
 
@@ -121,6 +158,35 @@ class UDatasetDialog(QDialog, Ui_Dialog):
             self.label_dataset_path.setText(f"{self.path_to_dataset}")
         else:
             self.label_dataset_path.setText("Папка не выбрана")
+
+    def on_button_clicked_start_dataset_creation(self):
+        if self.radio_create_dataset.isChecked():
+            if os.path.exists(self.path_to_dataset) is False:
+                print("Выбранного пути не существует!")
+                return
+            if self.dataset_creator is not None and self.dataset_creator.isRunning() is True:
+                print("Уже запущен процесс создания датасета!")
+                return
+
+            self.create_dataset_carcass(self.path_to_dataset)
+            self.create_yaml_file(os.path.join(self.path_to_dataset, yaml_name))
+
+            self.dataset_creator = UDatasetCreator(
+                self.annotations,
+                self.train_percentage,
+                self.start_count,
+                self.path_to_dataset
+            )
+            self.dataset_creator.progress_bar_updated.connect(self.progress_load.setValue)
+            self.dataset_creator.creation_ended.connect(self.on_ended_creation_dataset)
+            self.dataset_creator.start()
+
+        elif self.radio_add_to_dataset.isChecked():
+            if os.path.exists(self.path_to_dataset) is False:
+                print("Выбранного пути не существует!")
+                return
+
+            self.check_yaml_file(self.path_to_dataset)
 
     def set_data_from_config(self, path_to_config: str):
         try:
@@ -154,9 +220,8 @@ class UDatasetDialog(QDialog, Ui_Dialog):
         os.makedirs(os.path.join(path, "test/images"), exist_ok=True)
         os.makedirs(os.path.join(path, "test/labels"), exist_ok=True)
 
-    def create_yaml_file(self, path):
-        data_path = os.path.join(path, yaml_name)
-        with open(data_path, 'w+') as data_file:
+    def create_yaml_file(self, yaml_path):
+        with open(yaml_path, 'w+') as data_file:
             name_class_list = []
             for class_item in self.class_list:
                 name_class_list.append(class_item.Name)
@@ -167,3 +232,49 @@ class UDatasetDialog(QDialog, Ui_Dialog):
                             "\n"
                             f"nc: {len(name_class_list)}\n"
                             f"names: [{', '.join([f"'{item}'" for item in name_class_list])}]\n")
+
+    def check_yaml_file(self, yaml_path):
+        if os.path.exists(yaml_path) is False:
+            return -1
+
+        with open(yaml_path, "r") as data_yaml:
+            try:
+                data = yaml.safe_load(data_yaml)
+                dataset_path = os.path.dirname(yaml_path)
+
+                result = {
+                    "train_images": os.path.join(dataset_path, data["train"].lstrip("./")).replace("\\", "/"),
+                    "train_labels": os.path.join(dataset_path, data["train"].lstrip("./") + "/labels").replace("\\", "/"),
+                    "val_images": os.path.join(dataset_path, data["val"].lstrip("./")).replace("\\", "/"),
+                    "val_labels": os.path.join(dataset_path, data["val"].lstrip("./") + "/labels").replace("\\", "/"),
+                    "test_images": os.path.join(dataset_path, data["test"].lstrip("./")).replace("\\", "/"),
+                    "test_labels": os.path.join(dataset_path, data["test"].lstrip("./") + "/labels").replace("\\", "/"),
+
+                    "nc": data["nc"],
+                    "names": data["names"],
+                }
+                print(result)
+                return result
+
+            except yaml.YAMLError:
+                return -2
+
+
+    def on_ended_creation_dataset(self, key: int):
+        if key == -1:
+            print("Ошибка при создании датасета!")
+            self.progress_load.setValue(0)
+            return
+        else:
+            self.start_count = key
+            self.progress_load.setValue(100)
+
+            self.create_config_file(self.path_to_dataset)
+
+            # Создание QMessageBox
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Information)  # Устанавливаем тип иконки
+            msg_box.setWindowTitle("Успех")
+            msg_box.setText("Датасет успешно создан!")
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()

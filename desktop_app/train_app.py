@@ -142,7 +142,7 @@ class TrainApp(QMainWindow, Ui_TrainApp):
             self.thumbnail_carousel.add_thumbnail(image_path)
             self.on_added_thumbnail(None)
 
-            QTimer.singleShot(50, lambda: self.load_thumbnails())
+            QTimer.singleShot(10, lambda: self.load_thumbnails())
 
     def display_image(self, thumbnail: UAnnotationThumbnail):
         self.annotate_scene.clear()
