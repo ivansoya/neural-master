@@ -172,7 +172,7 @@ class Ui_TrainApp(object):
         self.verticalLayout_3.addItem(spacerItem1)
         self.horizontalLayout.addWidget(self.verticalWidget)
         self.annotate_view = UAnnotationGraphicsView(self.centralwidget)
-        self.annotate_view.setMinimumSize(QtCore.QSize(0, 480))
+        self.annotate_view.setMinimumSize(QtCore.QSize(480, 480))
         self.annotate_view.setMouseTracking(True)
         self.annotate_view.setTabletTracking(True)
         self.annotate_view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
@@ -299,6 +299,9 @@ class Ui_TrainApp(object):
         self.verticalLayout.addWidget(self.button_go_to_not_annotated)
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem2)
+        self.button_load_dataset = QtWidgets.QPushButton(self.verticalWidget1)
+        self.button_load_dataset.setObjectName("button_load_dataset")
+        self.verticalLayout.addWidget(self.button_load_dataset)
         self.button_create_dataset = QtWidgets.QPushButton(self.verticalWidget1)
         self.button_create_dataset.setStyleSheet("QWidget > QPushButton {\n"
 "    background-color: rgb(88, 239, 255);\n"
@@ -370,6 +373,7 @@ class Ui_TrainApp(object):
         self.label_5.setText(_translate("TrainApp", "/"))
         self.overall_images_label.setText(_translate("TrainApp", "0"))
         self.button_go_to_not_annotated.setText(_translate("TrainApp", "Перейти к неразмеченному"))
+        self.button_load_dataset.setText(_translate("TrainApp", "Загрузить датасет"))
         self.button_create_dataset.setText(_translate("TrainApp", "Создать датасет"))
         self.toggle_round_images.setText(_translate("TrainApp", "Скрыть карусель"))
 from annotable import UAnnotationGraphicsView

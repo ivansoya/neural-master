@@ -13,12 +13,10 @@ from ultralytics import YOLO
 from dataset import UDatasetDialog
 from design import Ui_TrainApp
 from commander import UGlobalSignalHolder
-from carousel import UThumbnailCarousel
-from annotable import UAnnotationBox, ImageAnnotationScene, UAnnotationGraphicsView
+from annotable import UAnnotationBox, ImageAnnotationScene
 from carousel import UAnnotationThumbnail
-from utility import EWorkMode, EAnnotationStatus
-from utility import GColorList, FClassData
-from custom_widgets import UHorizontalScrollArea
+from utility import EWorkMode, EAnnotationStatus, FClassData, FDatasetInfo
+from dataset import UDatasetCreator
 
 class TrainApp(QMainWindow, Ui_TrainApp):
     def __init__(self):
@@ -33,6 +31,7 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.image_matrix = None
 
         self.model_yolo = None
+        self.dataset_info: Optional[FDatasetInfo] = None
 
         self.class_list_item_model = QStandardItemModel()
 
@@ -73,6 +72,8 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.toggle_round_images.clicked.connect(self.toggle_roulette_visibility)
 
         self.global_signal_holder.command_key_pressed.connect(self.annotate_on_button_pressed)
+
+        self.button_load_dataset.clicked.connect(self.on_clicked_load_dataset)
 
         # Изменение label для отображения количества размеченных и неразмеченных изображений
         self.thumbnails_count: int = 0
@@ -212,6 +213,23 @@ class TrainApp(QMainWindow, Ui_TrainApp):
                 self.class_combobox.itemData(int(d_class))
             )
 
+    def on_clicked_load_dataset(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Выберите YAML файл",
+            "",
+            "YAML Files (*.yaml);;All Files (*)",
+            options=QFileDialog.Options()
+        )
+        if file_path:
+            try:
+                self.dataset_info = FDatasetInfo(file_path)
+                #self.dataset_info.set_dataset_info()
+                self.button_create_dataset.setText("Добавить в датасет")
+            except Exception as e:
+                self.dataset_info = None
+                print(f"Ошибка {repr(e)}")
+
     def annotate_on_button_pressed(self, key: int):
         if key == Qt.Key_Space:
             self.auto_annotate()
@@ -226,7 +244,7 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         if self.class_combobox.currentIndex() != index:
             self.class_combobox.setCurrentIndex(index)
 
-    def on_added_thumbnail(self, thumbnail: UAnnotationThumbnail):
+    def on_added_thumbnail(self, thumbnail: UAnnotationThumbnail = None):
         self.thumbnails_count += 1
         self.overall_images_label.setText(str(self.thumbnails_count))
 
@@ -248,8 +266,21 @@ class TrainApp(QMainWindow, Ui_TrainApp):
     def show_dialog_create_dataset(self):
         if len(self.annotate_scene.available_classes) <= 0 or len(self.thumbnail_carousel.thumbnails) <= 0:
             return
-        dialog = UDatasetDialog(self.annotate_scene.available_classes, self.thumbnail_carousel.thumbnails)
-        dialog.exec_()
+        if self.dataset_info is None:
+            dialog = UDatasetDialog(
+                self.annotate_scene.available_classes,
+                self.thumbnail_carousel.thumbnails
+            )
+            dialog.exec_()
+        else:
+            dialog = UDatasetDialog(
+                self.annotate_scene.available_classes,
+                self.thumbnail_carousel.thumbnails,
+                self.dataset_info
+            )
+            dialog.label_dataset_path.setText(self.dataset_info.path_yaml)
+            dialog.button_choose_path_dataset.setEnabled(False)
+            dialog.exec_()
 
 def main():
     app = QApplication(sys.argv)

@@ -401,7 +401,7 @@ QPushButton:pressed {
          <widget class="UAnnotationGraphicsView" name="annotate_view">
           <property name="minimumSize">
            <size>
-            <width>0</width>
+            <width>480</width>
             <height>480</height>
            </size>
           </property>
@@ -695,6 +695,13 @@ QPushButton:pressed {
               </size>
              </property>
             </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_load_dataset">
+             <property name="text">
+              <string>Загрузить датасет</string>
+             </property>
+            </widget>
            </item>
            <item>
             <widget class="QPushButton" name="button_create_dataset">
