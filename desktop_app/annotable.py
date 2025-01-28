@@ -6,7 +6,8 @@ from PyQt5.QtWidgets import (
     QGraphicsPixmapItem, QMenu, QAction,
     QApplication, QMainWindow, QVBoxLayout, QComboBox, QPushButton, QWidget
 )
-from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QTransform, QFont, QFontMetricsF, QCursor, QPixmap, QIcon
+from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QTransform, QFont, QFontMetricsF, QCursor, QPixmap, QIcon, \
+    QPainterPath
 from PyQt5.QtCore import Qt, QRectF, QPointF, QSizeF, pyqtSignal
 
 from utility import FAnnotationData
@@ -34,6 +35,7 @@ class UAnnotationBox(QGraphicsRectItem):
             width: float,
             height:float,
             class_data: FClassData,
+            scale: float = 1.0,
             parent = None
     ):
         super().__init__(parent)
@@ -54,7 +56,7 @@ class UAnnotationBox(QGraphicsRectItem):
         self.class_name = class_data.Name
 
         self.line_width = 4
-        self.draw_scale = 1
+        self.draw_scale = scale
 
         #self.setPen(QPen(self.color, self.line_width, Qt.SolidLine))
 
@@ -98,6 +100,13 @@ class UAnnotationBox(QGraphicsRectItem):
             rect = QRectF(rect.right(), rect.top(), -rect.width(), rect.height())
 
         self.setRect(rect)
+
+    def set_draw_scale(self, scale: float):
+        if scale > 1.0:
+            self.draw_scale = 1.0
+        else:
+            self.draw_scale = 1.0 / scale
+        print(self.draw_scale)
 
     def get_resize_handles(self):
         rect = self.rect()
@@ -154,27 +163,53 @@ class UAnnotationBox(QGraphicsRectItem):
     def hoverMoveEvent(self, event):
         for name, handle in self.get_resize_handles().items():
             if handle.contains(event.pos()):
-                cursor = UAnnotationBox.get_resize_cursor(name)
-                if QApplication.overrideCursor() is QCursor(cursor):
-                    pass
+                cursor = QCursor(UAnnotationBox.get_resize_cursor(name))
+                current_cursor = QApplication.overrideCursor()
+                if current_cursor:
+                    if current_cursor.shape() == cursor.shape():
+                        pass
+                    else:
+                        QApplication.restoreOverrideCursor()
+                        QApplication.setOverrideCursor(cursor)
                 else:
-                    QApplication.restoreOverrideCursor()
-                    QApplication.setOverrideCursor(QCursor(cursor))
-                super().hoverMoveEvent(event)
+                    QApplication.setOverrideCursor(cursor)
                 return
-
-        if QApplication.overrideCursor() is not QCursor(Qt.SizeAllCursor):
-            QApplication.restoreOverrideCursor()
-            QApplication.setOverrideCursor(QCursor(Qt.SizeAllCursor))
-        super().hoverMoveEvent(event)
+            elif self.rect().contains(event.pos()):
+                current_cursor = QApplication.overrideCursor()
+                if current_cursor:
+                    if current_cursor.shape() == QCursor(Qt.SizeAllCursor).shape():
+                        pass
+                    else:
+                        QApplication.restoreOverrideCursor()
+                        QApplication.setOverrideCursor(QCursor(Qt.SizeAllCursor))
+                else:
+                    QApplication.setOverrideCursor(QCursor(Qt.SizeAllCursor))
+            else:
+                QApplication.restoreOverrideCursor()
 
     def hoverLeaveEvent(self, event):
         QApplication.restoreOverrideCursor()
-        super().hoverLeaveEvent(event)
+
+    def boundingRect(self):
+        rect = super().boundingRect()
+        size = self.resize_handle_size / 2 * self.draw_scale
+        if self.isSelected():
+            return rect.adjusted(-size, -size, size, size)
+        else:
+            return rect
+
+    def shape(self):
+        if self.isSelected():
+            path = QPainterPath()
+            size = self.resize_handle_size / 2 * self.draw_scale
+            rect = self.rect().adjusted(-size, -size, size, size)  # Расширяем границы
+            path.addRect(rect)
+            return path
+        else:
+            return super().shape()
 
     def paint(self, painter, option, widget=None):
         #super().paint(painter, option, widget)
-
         if self.isSelected():
             # Удаление фона
             self.setBrush(QBrush(Qt.transparent))
@@ -189,12 +224,12 @@ class UAnnotationBox(QGraphicsRectItem):
             if self.resizing is False:
                 # Отрисовка текста на фоне
                 text = f"ID: {self.class_id}, {self.class_name}"
-                font = QFont("Arial", 16)
+                font = QFont("Arial", int(16 * self.draw_scale))
                 font_color = QColor(Qt.black)
 
                 font_metrics = QFontMetricsF(font)
                 text_background_rect = font_metrics.boundingRect(text)
-                text_background_rect.adjust(15, 2, 15, 2)
+                text_background_rect.adjust(-6, -2, 12, 4)
 
                 # Изменение начала координат для фона
                 top_left = self.get_resize_handles()['top_left']
@@ -212,7 +247,7 @@ class UAnnotationBox(QGraphicsRectItem):
 
         else:
             painter.setBrush(QBrush(self.background_color))
-            painter.setPen(QPen(self.color, self.line_width * self.draw_scale, Qt.SolidLine))
+            painter.setPen(QPen(self.color, int(self.line_width * self.draw_scale), Qt.SolidLine))
             painter.drawRect(self.boundingRect())
 
     def itemChange(self, change, value):
@@ -225,15 +260,17 @@ class UAnnotationBox(QGraphicsRectItem):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            scene = self.scene()
+            if scene is not None:
+                scene.clearSelection()
+            self.setSelected(True)
             for name, handle in self.get_resize_handles().items():
                 if handle.contains(event.pos()):
                     self.resizing = True
                     self.active_handle = name
                     break
-            scene = self.scene()
-            if scene is not None:
-                scene.clearSelection()
-            self.setSelected(True)
+            if self.resizing is False and self.rect().contains(event.pos()):
+                super().mousePressEvent(event)
         else:
             super().mousePressEvent(event)
 
@@ -259,7 +296,8 @@ class UAnnotationBox(QGraphicsRectItem):
                 rect.setLeft(pos.x())
             self.setRect(rect)
         else:
-            super().mouseMoveEvent(event)
+            if self.rect().contains(event.pos()):
+                super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if self.resizing:
@@ -271,6 +309,8 @@ class UAnnotationBox(QGraphicsRectItem):
             super().mouseReleaseEvent(event)
 
 class UAnnotationGraphicsView(QGraphicsView):
+    view_scale_changed = pyqtSignal(float)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setRenderHint(QPainter.Antialiasing)
@@ -292,10 +332,11 @@ class UAnnotationGraphicsView(QGraphicsView):
         scale_change = 1.1 if event.angleDelta().y() > 0 else 0.9
         self.scale_factor *= scale_change
         self.setTransform(QTransform().scale(self.scale_factor, self.scale_factor))
+        self.view_scale_changed.emit(self.scale_factor)
 
 
 class ImageAnnotationScene(QGraphicsScene):
-    def __init__(self, commander: UGlobalSignalHolder = None, parent=None):
+    def __init__(self, commander: UGlobalSignalHolder = None, view: UAnnotationGraphicsView = None, parent = None):
         super().__init__(parent)
         self.annotate_start_point : Optional[QPointF] = None
         self.current_rect : Optional[UAnnotationBox] = None
@@ -303,6 +344,7 @@ class ImageAnnotationScene(QGraphicsScene):
         self.work_mode = EWorkMode.DragMode
 
         self.commander = commander
+        self.view = view
 
         self.image : Optional[QGraphicsPixmapItem] = None
 
@@ -315,6 +357,8 @@ class ImageAnnotationScene(QGraphicsScene):
             self.commander.change_work_mode.connect(self.set_work_mode)
             self.commander.changed_class_annotate.connect(self.set_annotate_class)
 
+            self.commander.added_new_class.connect(self.add_class)
+
 
     def add_annotation_box(self, x, y, width, height, class_data: FClassData, do_emit: bool = True):
         ann_box = UAnnotationBox(
@@ -323,6 +367,7 @@ class ImageAnnotationScene(QGraphicsScene):
             width,
             height,
             class_data,
+            self.view.scale_factor if self.view else 1.0,
             self.image
         )
 
@@ -332,6 +377,9 @@ class ImageAnnotationScene(QGraphicsScene):
         elif self.work_mode.value == EWorkMode.AnnotateMode.value:
             ann_box.setAcceptedMouseButtons(Qt.NoButton)
             ann_box.setAcceptHoverEvents(False)
+
+        if self.view:
+            self.view.view_scale_changed.connect(ann_box.set_draw_scale)
 
         if self.commander:
             self.commander.ctrl_pressed.connect(ann_box.on_ctrl_pressed)
@@ -367,7 +415,8 @@ class ImageAnnotationScene(QGraphicsScene):
         )
         self.boxes_on_scene.remove(box)
         self.removeItem(box)
-
+        if QApplication.overrideCursor():
+            QApplication.restoreOverrideCursor()
         if len(self.boxes_on_scene) == 0:
             self.commander.decrease_annotated_counter.emit()
 
@@ -411,8 +460,9 @@ class ImageAnnotationScene(QGraphicsScene):
             ann_index = self.boxes_on_scene.index(selected)
             self.commander.updated_annotation.emit(ann_index, data)
 
-
     def add_class(self, class_data: FClassData):
+        if class_data is None:
+            return
         self.available_classes.append(class_data)
 
     def set_classes_list(self, class_list: list[FClassData]):
@@ -538,7 +588,7 @@ class ImageAnnotationScene(QGraphicsScene):
             action = ImageAnnotationScene.set_action(
                 menu,
                 str(class_d),
-                FClassData.get_save_color(class_d.Cid)
+                class_d.Color
             )
             action.triggered.connect(
                 lambda checked=False, index=class_d.Cid: self.commander.changed_class_annotate.emit(index)

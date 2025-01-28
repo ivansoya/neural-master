@@ -181,7 +181,7 @@ QPushButton:pressed {
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="add_class_button">
+            <widget class="QPushButton" name="button_add_class">
              <property name="enabled">
               <bool>false</bool>
              </property>

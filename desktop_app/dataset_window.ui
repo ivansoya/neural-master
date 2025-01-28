@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>416</width>
-    <height>329</height>
+    <height>341</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Создание датасета</string>
   </property>
   <property name="styleSheet">
    <string notr="true">QDialog {
@@ -74,7 +74,7 @@
        </property>
        <property name="maximumSize">
         <size>
-         <width>400</width>
+         <width>16777215</width>
          <height>16777215</height>
         </size>
        </property>
@@ -96,6 +96,25 @@ border-radius: 5px; /* Закругленные углы */</string>
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QComboBox" name="combo_dataset_type">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <item>
+      <property name="text">
+       <string>Датасет YOLOv8 Yaml</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Датасет YOLOv8 Txt</string>
+      </property>
+     </item>
+    </widget>
    </item>
    <item>
     <spacer name="verticalSpacer_2">
@@ -185,6 +204,9 @@ border-radius: 5px; /* Закругленные углы */</string>
    </item>
    <item>
     <widget class="QSlider" name="slider_train_val">
+     <property name="value">
+      <number>75</number>
+     </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>

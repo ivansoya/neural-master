@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt, QObject, QEvent, pyqtSignal, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 
-from utility import EWorkMode
+from utility import EWorkMode, FClassData
 
 
 class UGlobalSignalHolder(QObject):
@@ -15,6 +15,8 @@ class UGlobalSignalHolder(QObject):
     added_new_annotation = pyqtSignal(object)
     updated_annotation = pyqtSignal(int, object)
     deleted_annotation = pyqtSignal(int)
+
+    added_new_class = pyqtSignal(FClassData)
 
     change_work_mode = pyqtSignal(int)
     changed_class_annotate = pyqtSignal(int)
@@ -39,9 +41,12 @@ class UGlobalSignalHolder(QObject):
         self.delay_timer.timeout.connect(self.on_freq)
 
         self.current_key = -1
+        self.is_blocked = False
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress:
+            if self.is_blocked is True:
+                return super().eventFilter(obj, event)
             if event.key() == Qt.Key_Control:
                 self.ctrl_pressed.emit(event.key())
                 return True
@@ -80,6 +85,8 @@ class UGlobalSignalHolder(QObject):
                 return True
 
         elif event.type() == QEvent.KeyRelease:
+            if self.is_blocked is True:
+                return super().eventFilter(obj, event)
             if event.key() == Qt.Key_Control:
                 self.ctrl_released.emit(event.key())
                 return True
@@ -100,6 +107,9 @@ class UGlobalSignalHolder(QObject):
 
     def on_end_delay(self):
         self.freq_timer.start()
+
+    def set_block(self, block: float):
+        self.is_blocked = block
 
     def on_freq(self):
         if (self.current_key == Qt.Key_Left or self.current_key == Qt.Key_Right or

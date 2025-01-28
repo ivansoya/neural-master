@@ -17,6 +17,8 @@ from annotable import UAnnotationBox, ImageAnnotationScene
 from carousel import UAnnotationThumbnail
 from utility import EWorkMode, EAnnotationStatus, FClassData, FDatasetInfo
 from dataset import UDatasetCreator
+from window_class_add import UAddClassWindow
+
 
 class TrainApp(QMainWindow, Ui_TrainApp):
     def __init__(self):
@@ -35,7 +37,8 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
         self.class_list_item_model = QStandardItemModel()
 
-        self.annotate_scene = ImageAnnotationScene(commander = self.global_signal_holder)
+        self.annotate_scene = ImageAnnotationScene(commander = self.global_signal_holder, view = self.annotate_view)
+        self.thumbnail_carousel.set_commander(self.global_signal_holder)
         self.annotate_view.setScene(self.annotate_scene)
 
         self.global_signal_holder.ctrl_pressed.connect(self.annotate_view.enable_drag_mode)
@@ -89,6 +92,10 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
         self.button_create_dataset.clicked.connect(self.show_dialog_create_dataset)
 
+        # Добавление нового класса
+        self.button_add_class.clicked.connect(self.on_clicked_add_class)
+        self.global_signal_holder.added_new_class.connect(self.on_get_new_class)
+
     def load_model(self):
         model_file, _ = QFileDialog.getOpenFileName(self, "Выбрать pt модель", "",
                                                      "Image Files (*.pt)")
@@ -100,19 +107,22 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
             self.class_list_item_model.clear()
             self.annotate_scene.available_classes.clear()
+            self.thumbnail_carousel.available_classes.clear()
             for i in range(0, len(class_names)):
                 class_t = FClassData(i, class_names[i], FClassData.get_save_color(i))
                 self.annotate_scene.add_class(class_t)
+                self.thumbnail_carousel.add_class(class_t)
                 item_t = QStandardItem(str(class_t))
                 item_t.setData(class_t, Qt.UserRole)
                 self.class_list_item_model.appendRow(item_t)
+
 
             self.current_model_label.setText(os.path.basename(self.model_yolo.model_name))
 
             self.class_combobox.setModel(self.class_list_item_model)
 
             self.class_combobox.setEnabled(True)
-            self.add_class_button.setEnabled(True)
+            self.button_add_class.setEnabled(True)
             self.auto_annotate_checkbox.setEnabled(True)
 
         return
@@ -194,6 +204,8 @@ class TrainApp(QMainWindow, Ui_TrainApp):
     def auto_annotate(self):
         if self.image_matrix is None or self.model_yolo is None:
             return
+        if self.thumbnail_carousel.current_selected.annotation_status.value == EAnnotationStatus.Annotated.value:
+            return
 
         result = self.model_yolo.predict(self.image_matrix, imgsz=(640, 640))[0]
 
@@ -213,18 +225,29 @@ class TrainApp(QMainWindow, Ui_TrainApp):
                 self.class_combobox.itemData(int(d_class))
             )
 
+    def on_clicked_add_class(self):
+        self.global_signal_holder.set_block(True)
+        id_class = self.class_combobox.count()
+        window = UAddClassWindow(id_class, self.global_signal_holder)
+        window.exec_()
+
+    def on_get_new_class(self, class_data: FClassData):
+        item_t = QStandardItem(str(class_data))
+        item_t.setData(class_data, Qt.UserRole)
+        self.class_list_item_model.appendRow(item_t)
+        self.class_combobox.update()
+
     def on_clicked_load_dataset(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Выберите YAML файл",
             "",
-            "YAML Files (*.yaml);;All Files (*)",
+            "Файлы датасетов (*.yaml *.txt);;Все файлы (*)",
             options=QFileDialog.Options()
         )
         if file_path:
             try:
                 self.dataset_info = FDatasetInfo(file_path)
-                #self.dataset_info.set_dataset_info()
                 self.button_create_dataset.setText("Добавить в датасет")
             except Exception as e:
                 self.dataset_info = None
@@ -278,8 +301,10 @@ class TrainApp(QMainWindow, Ui_TrainApp):
                 self.thumbnail_carousel.thumbnails,
                 self.dataset_info
             )
-            dialog.label_dataset_path.setText(self.dataset_info.path_yaml)
+            dialog.label_dataset_path.setText(self.dataset_info.datafile_path)
             dialog.button_choose_path_dataset.setEnabled(False)
+            dialog.combo_dataset_type.setCurrentIndex(self.dataset_info.get_type_index())
+            dialog.combo_dataset_type.setEnabled(False)
             dialog.exec_()
 
 def main():

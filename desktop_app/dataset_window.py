@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(416, 329)
+        Dialog.resize(416, 341)
         Dialog.setMaximumSize(QtCore.QSize(416, 16777215))
         Dialog.setStyleSheet("QDialog {\n"
 "    background-color: white;\n"
@@ -37,7 +37,7 @@ class Ui_Dialog(object):
         self.horizontalLayout_2.addWidget(self.button_choose_path_dataset)
         self.label_dataset_path = QtWidgets.QLabel(Dialog)
         self.label_dataset_path.setMinimumSize(QtCore.QSize(0, 0))
-        self.label_dataset_path.setMaximumSize(QtCore.QSize(400, 16777215))
+        self.label_dataset_path.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(11)
         self.label_dataset_path.setFont(font)
@@ -50,6 +50,14 @@ class Ui_Dialog(object):
         self.label_dataset_path.setObjectName("label_dataset_path")
         self.horizontalLayout_2.addWidget(self.label_dataset_path)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
+        self.combo_dataset_type = QtWidgets.QComboBox(Dialog)
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.combo_dataset_type.setFont(font)
+        self.combo_dataset_type.setObjectName("combo_dataset_type")
+        self.combo_dataset_type.addItem("")
+        self.combo_dataset_type.addItem("")
+        self.verticalLayout.addWidget(self.combo_dataset_type)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
         self.label = QtWidgets.QLabel(Dialog)
@@ -97,6 +105,7 @@ class Ui_Dialog(object):
         self.horizontalLayout_3.addWidget(self.label_val_percentage)
         self.verticalLayout.addLayout(self.horizontalLayout_3)
         self.slider_train_val = QtWidgets.QSlider(Dialog)
+        self.slider_train_val.setProperty("value", 75)
         self.slider_train_val.setOrientation(QtCore.Qt.Horizontal)
         self.slider_train_val.setObjectName("slider_train_val")
         self.verticalLayout.addWidget(self.slider_train_val)
@@ -146,9 +155,11 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        Dialog.setWindowTitle(_translate("Dialog", "Создание датасета"))
         self.label_2.setText(_translate("Dialog", "Выбор пути к датасету"))
         self.button_choose_path_dataset.setText(_translate("Dialog", "->"))
+        self.combo_dataset_type.setItemText(0, _translate("Dialog", "Датасет YOLOv8 Yaml"))
+        self.combo_dataset_type.setItemText(1, _translate("Dialog", "Датасет YOLOv8 Txt"))
         self.label.setText(_translate("Dialog", "<html><head/><body><p>Отношение тренировочных данных к валидационным</p></body></html>"))
         self.label_train_percentage.setText(_translate("Dialog", "75"))
         self.label_val_percentage.setText(_translate("Dialog", "25"))

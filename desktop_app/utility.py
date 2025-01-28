@@ -1,11 +1,12 @@
 import os.path
+from typing import Optional
+
 import yaml
 import configparser
 from enum import Enum
 from PyQt5.QtGui import QColor
 
 import random
-
 
 GColorList = [
     QColor(255, 0, 0),
@@ -25,27 +26,22 @@ class EAnnotationStatus(Enum):
     Annotated = 2
     MarkedDrop = 3
 
+class EDatasetType(Enum):
+    YamlYOLO = 1
+    TxtYOLO = 2
+
+class EImagesType(Enum):
+    Train = 1
+    Valid = 2
+    Test = 3
+
 class FDatasetInfo:
     config_name = "config.cfg"
     section = "Save"
     counter_option = "counter"
 
-    def __init__(self, path:str):
-        if os.path.isfile(path):
-            if path.endswith(".yaml"):
-                self.path_yaml = path
-                self.path_general: str = os.path.dirname(self.path_yaml)
-                self.path_config: str = os.path.join(self.path_general, self.config_name).replace("\\", "/")
-                self.is_exists = True
-            else:
-                print(f"Невозможно прочитать файл {path}")
-                return
-        elif os.path.isdir(path):
-            self.path_yaml = os.path.join(path, "data.yaml").replace("\\", "/")
-            self.path_general: str = path
-            self.path_config: str = os.path.join(self.path_general, self.config_name).replace("\\", "/")
-        else:
-            print(f"Невозможно прочитать файл {path}")
+    def __init__(self, path:str, dataset_type: EDatasetType = None):
+        self.dataset_type: Optional[EDatasetType] = None
 
         self.counter: int = 1
         self.paths: dict[str, str] = dict()
@@ -53,22 +49,61 @@ class FDatasetInfo:
         self.nc: int = 0
         self.class_names: list[str] = list()
 
+        # Используется при загрузке готового датасета
+        if os.path.isfile(path):
+            self.datafile_path = path
+            self.path_general: str = os.path.dirname(self.datafile_path)
+            self.path_config: str = os.path.join(self.path_general, self.config_name).replace("\\", "/")
+            if path.endswith(".yaml"):
+                self.dataset_type = EDatasetType.YamlYOLO
+            elif path.endswith(".txt"):
+                self.dataset_type = EDatasetType.TxtYOLO
+            else:
+                print(f"Невозможно прочитать файл {path}")
+                return
+        # Создание нового датасета
+        elif os.path.isdir(path):
+            self.dataset_type = dataset_type
+            if self.dataset_type is None:
+                print("Некорректные данные при создании датасета! Был указан тип None!")
+                return
+            else:
+                self.path_general: str = path
+                self.path_config: str = os.path.join(self.path_general, self.config_name).replace("\\", "/")
+            if self.dataset_type.value == EDatasetType.YamlYOLO.value:
+                self.datafile_path = os.path.join(path, "data.yaml").replace("\\", "/")
+            elif self.dataset_type.value == EDatasetType.TxtYOLO.value:
+                self.datafile_path = os.path.join(path, "classes.txt").replace("\\", "/")
+        else:
+            print(f"Невозможно прочитать файл {path}")
+
         self.set_dataset_info()
 
     def set_dataset_info(self):
-        if os.path.exists(self.path_yaml) is False:
-            print(f"Не существует файла {self.path_yaml}")
-            self.paths = {
-                "train_images": os.path.join(self.path_general, "train/images").replace("\\", "/"),
-                "train_labels": os.path.join(self.path_general, "train/labels").replace("\\", "/"),
-                "valid_images": os.path.join(self.path_general, "valid/images").replace("\\", "/"),
-                "valid_labels": os.path.join(self.path_general, "valid/labels").replace("\\","/"),
-                "test_images": os.path.join(self.path_general, "test/images").replace("\\", "/"),
-                "test_labels": os.path.join(self.path_general, "test/labels").replace("\\","/"),
-            }
-        elif self.check_yaml_file() == -2:
-            print(f"Не удалось открыть файл {self.path_yaml}")
-            return False
+        if os.path.exists(self.datafile_path) is False:
+            print(f"Не существует файла {self.datafile_path}")
+            if self.dataset_type.value == EDatasetType.YamlYOLO.value:
+                self.paths = {
+                    "train_images": os.path.join(self.path_general, "train/images").replace("\\", "/"),
+                    "train_labels": os.path.join(self.path_general, "train/labels").replace("\\", "/"),
+                    "valid_images": os.path.join(self.path_general, "valid/images").replace("\\", "/"),
+                    "valid_labels": os.path.join(self.path_general, "valid/labels").replace("\\","/"),
+                    "test_images": os.path.join(self.path_general, "test/images").replace("\\", "/"),
+                    "test_labels": os.path.join(self.path_general, "test/labels").replace("\\","/"),
+                }
+            elif self.dataset_type.value == EDatasetType.TxtYOLO.value:
+                self.paths = {
+                    "images": os.path.join(self.path_general, "images").replace("\\", "/"),
+                    "labels": os.path.join(self.path_general, "labels").replace("\\", "/"),
+                }
+        else:
+            if self.dataset_type.value == EDatasetType.YamlYOLO.value:
+                if self.check_yaml_yolo_file() == -2:
+                    print(f"Не удалось открыть файл {self.datafile_path}")
+                    return False
+            elif self.dataset_type.value == EDatasetType.TxtYOLO.value:
+                if self.check_txt_yolo_file() == -1:
+                    return False
 
         if os.path.exists(self.path_config):
             self.check_config_file()
@@ -81,8 +116,8 @@ class FDatasetInfo:
               f"names: {self.class_names}\n"
               f"counter: {self.counter}")
 
-    def check_yaml_file(self):
-        with open(self.path_yaml, "r") as data_yaml:
+    def check_yaml_yolo_file(self):
+        with open(self.datafile_path, "r") as data_yaml:
             try:
                 data = yaml.safe_load(data_yaml)
 
@@ -100,6 +135,31 @@ class FDatasetInfo:
             except yaml.YAMLError as e:
                 print(f"Ошибка Yaml: {str(e)}")
                 return -2
+
+    def check_txt_yolo_file(self):
+        with open(self.datafile_path, "r") as data_txt:
+            try:
+                self.class_names = [line.strip() for line in data_txt]
+                self.nc = len(self.class_names)
+                self.paths = {
+                    "images": os.path.join(self.path_general, "images").replace("\\", "/"),
+                    "labels": os.path.join(self.path_general, "labels").replace("\\", "/"),
+                }
+            except Exception as e:
+                print(f"Ошибка : {str(e)}")
+                return -1
+
+    def create_txt_yolo_file(self, class_names: list[str] = None):
+        if class_names is None:
+            write_names = self.class_names
+        else:
+            write_names = class_names
+        try:
+            with open(self.datafile_path, "w") as data_txt:
+                for line in write_names:
+                    data_txt.write(line + '\n')
+        except Exception as e:
+            print (f"Ошибка: {str(e)}")
 
     def check_config_file(self):
         try:
@@ -128,6 +188,9 @@ class FDatasetInfo:
     def create_dataset_carcass(self):
         for key, value in self.paths.items():
             os.makedirs(value, exist_ok=True)
+
+    def get_type_index(self):
+        return int(self.dataset_type.value) - 1
 
 class FClassData:
     def __init__(self, id_class, name, color: QColor):

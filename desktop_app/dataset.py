@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMessageBox
 
 from carousel import UAnnotationThumbnail
 from dataset_window import Ui_Dialog
-from utility import FClassData, FAnnotationData, EAnnotationStatus, FDatasetInfo
+from utility import FClassData, FAnnotationData, EAnnotationStatus, FDatasetInfo, EDatasetType
 
 import configparser
 
@@ -54,27 +54,38 @@ class UDatasetCreator(QThread):
             self.creation_ended.emit(-1)
             return
 
-        count_val = int(len(self.annotation_data) * (1.0 - self.percentage / 100.0))
+        # Распредление для Yaml файла YOLO
+        if self.dataset_info.dataset_type.value == EDatasetType.YamlYOLO.value:
+            count_val = int(len(self.annotation_data) * (1.0 - self.percentage / 100.0))
+            try:
+                list_for_val = random.sample(self.annotation_data, count_val)
+            except Exception:
+                list_for_val = []
+            list_for_train = [ann for ann in self.annotation_data if ann not in list_for_val]
+            # Непосредственная генерация датасета
+            try:
+                self.generation(
+                    self.dataset_info.paths["train_images"],
+                    self.dataset_info.paths["train_labels"],
+                    list_for_train,
+                )
+                self.generation(
+                    self.dataset_info.paths["valid_images"],
+                    self.dataset_info.paths["valid_labels"],
+                    list_for_val)
+            except Exception as e:
+                print(str(e))
 
-        try:
-            list_for_val = random.sample(self.annotation_data, count_val)
-        except Exception:
-            list_for_val = []
-        list_for_train = [ann for ann in self.annotation_data if ann not in list_for_val]
-
-        # Непосредственная генерация датасета
-        try:
-            self.generation(
-                self.dataset_info.paths["train_images"],
-                self.dataset_info.paths["train_labels"],
-                list_for_train,
-            )
-            self.generation(
-                self.dataset_info.paths["valid_images"],
-                self.dataset_info.paths["valid_labels"],
-                list_for_val)
-        except Exception as e:
-            print(str(e))
+        # Генерация для txt файла YOLO
+        elif self.dataset_info.dataset_type.value == EDatasetType.TxtYOLO.value:
+            try:
+                self.generation(
+                    self.dataset_info.paths["images"],
+                    self.dataset_info.paths["labels"],
+                    self.annotation_data
+                )
+            except Exception as e:
+                print(f"Ошибка: {str(e)}")
 
         self.creation_ended.emit(self.dataset_info.counter)
 
@@ -139,7 +150,7 @@ class UDatasetDialog(QDialog, Ui_Dialog):
     def on_button_choose_path_clicked(self):
         path_to_dataset = QFileDialog.getExistingDirectory(self, "Выберите папку").replace("/", "\\")
         try:
-            self.dataset_info = FDatasetInfo(path_to_dataset)
+            self.dataset_info = FDatasetInfo(path_to_dataset, EDatasetType(self.combo_dataset_type.currentIndex() + 1))
             self.label_dataset_path.setText(f"{self.dataset_info.path_general}")
         except Exception as e:
             print(f"Ошибка: {str(e)}")
@@ -154,7 +165,10 @@ class UDatasetDialog(QDialog, Ui_Dialog):
         else:
             try:
                 self.dataset_info.create_dataset_carcass()
-                self.create_yaml_file()
+                if self.dataset_info.dataset_type.value == EDatasetType.YamlYOLO.value:
+                    self.create_yaml_file()
+                elif self.dataset_info.dataset_type.value == EDatasetType.TxtYOLO.value:
+                    self.dataset_info.create_txt_yolo_file([name.Name for name in self.class_list])
             except Exception as e:
                 print(f"Ошибка: {str(e)}")
                 return
@@ -168,7 +182,7 @@ class UDatasetDialog(QDialog, Ui_Dialog):
             self.dataset_creator.start()
 
     def create_yaml_file(self):
-        with open(self.dataset_info.path_yaml, 'w+') as data_file:
+        with open(self.dataset_info.datafile_path, 'w+') as data_file:
             name_class_list = []
             for class_item in self.class_list:
                 name_class_list.append(class_item.Name)
