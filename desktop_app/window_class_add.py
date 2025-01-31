@@ -1,5 +1,6 @@
 from typing import Optional
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QDialog, QColorDialog
 
@@ -45,7 +46,17 @@ class UAddClassWindow(QDialog, Ui_dialog_add_class):
 
         if self.commander is not None:
             self.commander.added_new_class.emit(class_data)
-            self.commander.set_block(False)
 
         self.close()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            if self.commander:
+                self.commander.set_block(False)
+        super().keyPressEvent(event)
+
+    def closeEvent(self, event):
+        if self.commander:
+            self.commander.set_block(False)
+        event.accept()
 

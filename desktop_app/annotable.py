@@ -56,7 +56,9 @@ class UAnnotationBox(QGraphicsRectItem):
         self.class_name = class_data.Name
 
         self.line_width = 4
-        self.draw_scale = scale
+        self.draw_scale: float = 1.0
+
+        self.set_draw_scale(scale)
 
         #self.setPen(QPen(self.color, self.line_width, Qt.SolidLine))
 

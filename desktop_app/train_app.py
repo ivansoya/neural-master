@@ -79,16 +79,10 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.button_load_dataset.clicked.connect(self.on_clicked_load_dataset)
 
         # Изменение label для отображения количества размеченных и неразмеченных изображений
-        self.thumbnails_count: int = 0
         self.current_annotated_count: int = 0
-        #self.global_signal_holder.increase_annotated_counter.connect(
-        #    lambda is_increase=True, checked=False:
-        #        self.current_annotated_label.setText(str(self.increment_current_annotated(is_increase)))
-        #)
-        #self.global_signal_holder.decrease_annotated_counter.connect(
-        #    lambda is_increase=False, checked=False:
-        #        self.current_annotated_label.setText(str(self.increment_current_annotated(is_increase)))
-        #)
+        self.current_dropped_count: int = 0
+        self.current_not_annotated_count: int = 0
+        self.global_signal_holder.changed_annotation_status.connect(self.handle_changed_annotation_status)
 
         self.button_create_dataset.clicked.connect(self.show_dialog_create_dataset)
 
@@ -140,7 +134,15 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
             # Очистка старого контента
             self.thumbnail_carousel.clear_thumbnails()
-            self.thumbnails_count = 0
+
+            # Обновление значений
+            self.current_annotated_count = 0
+            self.current_dropped_count = 0
+            self.current_not_annotated_count = 0
+
+            self.label_count_annotated.setText(str(self.current_annotated_count))
+            self.label_count_not_annotated.setText(str(self.current_not_annotated_count))
+            self.label_count_dropped.setText(str(self.current_dropped_count))
 
             self.load_thumbnails()
 
@@ -150,8 +152,9 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         if self.image_paths:
             image_path = self.image_paths.pop(0)
 
-            self.thumbnail_carousel.add_thumbnail(image_path)
-            self.on_added_thumbnail(None)
+            thumb = self.thumbnail_carousel.add_thumbnail(image_path)
+            self.update_labels_by_status(thumb.annotation_status, True)
+            self.label_count_images.setText(str(len(self.thumbnail_carousel.thumbnails)))
 
             QTimer.singleShot(10, lambda: self.load_thumbnails())
 
@@ -267,10 +270,6 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         if self.class_combobox.currentIndex() != index:
             self.class_combobox.setCurrentIndex(index)
 
-    def on_added_thumbnail(self, thumbnail: UAnnotationThumbnail = None):
-        self.thumbnails_count += 1
-        self.overall_images_label.setText(str(self.thumbnails_count))
-
     def toggle_roulette_visibility(self):
         if self.thumbnail_carousel.isVisible():
             self.thumbnail_carousel.setVisible(False)
@@ -306,6 +305,22 @@ class TrainApp(QMainWindow, Ui_TrainApp):
             dialog.combo_dataset_type.setCurrentIndex(self.dataset_info.get_type_index())
             dialog.combo_dataset_type.setEnabled(False)
             dialog.exec_()
+
+    def handle_changed_annotation_status(self, prev: EAnnotationStatus, current: EAnnotationStatus):
+        self.update_labels_by_status(prev, False)
+        self.update_labels_by_status(current, True)
+
+    def update_labels_by_status(self, status: EAnnotationStatus, to_increase: bool):
+        value = 1 if to_increase is True else -1
+        if status.value == EAnnotationStatus.Annotated.value:
+            self.current_annotated_count += value
+            self.label_count_annotated.setText(str(self.current_annotated_count))
+        elif status.value == EAnnotationStatus.NoAnnotation.value:
+            self.current_not_annotated_count += value
+            self.label_count_not_annotated.setText(str(self.current_not_annotated_count))
+        elif status.value == EAnnotationStatus.MarkedDrop.value:
+            self.current_dropped_count += value
+            self.label_count_dropped.setText(str(self.current_dropped_count))
 
 def main():
     app = QApplication(sys.argv)

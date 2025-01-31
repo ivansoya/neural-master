@@ -1,4 +1,3 @@
-import sys
 from typing import Optional
 
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QUrl, QThreadPool, QRunnable, QRectF, QThread
@@ -7,7 +6,6 @@ from PyQt5.QtWidgets import (
     QApplication, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QLabel
 )
-from sympy.abc import lamda
 
 from commander import UGlobalSignalHolder
 from utility import FAnnotationData, FClassData, EAnnotationStatus
@@ -67,7 +65,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
     def add_annotation(self, data: FAnnotationData):
         self.annotation_data_list.append(data)
         if len(self.annotation_data_list) > 0:
-            self.annotation_status = EAnnotationStatus.Annotated
+            self.set_annotated_status(EAnnotationStatus.Annotated)
         self.update()
 
     def delete_annotation(self, index: int):
@@ -75,7 +73,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             return
         self.annotation_data_list.pop(index)
         if len(self.annotation_data_list) <= 0 and self.annotation_status.value != EAnnotationStatus.MarkedDrop.value:
-             self.annotation_status = EAnnotationStatus.NoAnnotation
+             self.set_annotated_status(EAnnotationStatus.NoAnnotation)
         self.update()
 
     def update_annotation(self, index: int, data: FAnnotationData):
@@ -164,8 +162,12 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
         return self.annotation_status
 
     def set_annotated_status(self, status: EAnnotationStatus):
-        self.annotation_status = status
-        self.update()
+        if self.annotation_status.value == status.value:
+            pass
+        else:
+            self.emitter.changed_status.emit(self.annotation_status, status)
+            self.annotation_status = status
+            self.update()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -189,6 +191,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
 class UPixmapSignalEmitter(QObject):
     clicked = pyqtSignal(UAnnotationThumbnail)
+    changed_status = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -311,12 +314,14 @@ class UThumbnailCarousel(QWidget):
         )
         thumbnail.setTransformationMode(Qt.SmoothTransformation)
 
+        thumbnail.emitter.clicked.connect(self.on_thumbnail_clicked)
+        if self.commander:
+            thumbnail.emitter.changed_status.connect(self.commander.emit_global_changed_annotation_status)
+
         self.scene.addItem(thumbnail)
         thumbnail.setPos(self.x_position, self.y_position)
 
         self.x_position += thumbnail.width() + self.thumbnail_spacing
-
-        thumbnail.emitter.clicked.connect(self.on_thumbnail_clicked)
 
         thumbnail.set_index(len(self.thumbnails))
         self.thumbnails.append(thumbnail)
