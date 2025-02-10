@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Видео потоки</title>
+    <script>
+        function toggleVideo(index) {
+            let videoElement = document.getElementById("video-" + index);
+            let videoImg = document.getElementById("video-img-" + index);
+
+            if (videoElement.style.display === "none") {
+                videoElement.style.display = "block";
+                videoImg.src = "/video_feed/" + index;  // Загружаем поток
+            } else {
+                videoElement.style.display = "none";
+                videoImg.src = "";  // Останавливаем поток
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Потоки видео</h1>
+
+    {% for index, url in video_list %}
+        <div>
+            <h2>Видео {{ index + 1 }}</h2>
+            <button onclick="toggleVideo({{ index }})">Открыть</button>
+            <div id="video-{{ index }}" style="display:none;">
+                <img id="video-img-{{ index }}" width="600">
+            </div>
+        </div>
+    {% endfor %}
+</body>
+</html>

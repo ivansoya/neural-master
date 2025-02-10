@@ -337,7 +337,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.view_scale_changed.emit(self.scale_factor)
 
 
-class ImageAnnotationScene(QGraphicsScene):
+class UAnnotationScene(QGraphicsScene):
     def __init__(self, commander: UGlobalSignalHolder = None, view: UAnnotationGraphicsView = None, parent = None):
         super().__init__(parent)
         self.annotate_start_point : Optional[QPointF] = None
@@ -587,7 +587,7 @@ class ImageAnnotationScene(QGraphicsScene):
 
         menu = QMenu()
         for class_d in self.available_classes:
-            action = ImageAnnotationScene.set_action(
+            action = UAnnotationScene.set_action(
                 menu,
                 str(class_d),
                 class_d.Color

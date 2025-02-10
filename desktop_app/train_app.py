@@ -13,7 +13,7 @@ from ultralytics import YOLO
 from dataset import UDatasetDialog
 from design import Ui_TrainApp
 from commander import UGlobalSignalHolder
-from annotable import UAnnotationBox, ImageAnnotationScene
+from annotable import UAnnotationBox, UAnnotationScene
 from carousel import UAnnotationThumbnail
 from utility import EWorkMode, EAnnotationStatus, FClassData, FDatasetInfo
 from dataset import UDatasetCreator
@@ -37,7 +37,7 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
         self.class_list_item_model = QStandardItemModel()
 
-        self.annotate_scene = ImageAnnotationScene(commander = self.global_signal_holder, view = self.annotate_view)
+        self.annotate_scene = UAnnotationScene(commander = self.global_signal_holder, view = self.annotate_view)
         self.thumbnail_carousel.set_commander(self.global_signal_holder)
         self.annotate_view.setScene(self.annotate_scene)
 
@@ -91,8 +91,8 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.global_signal_holder.added_new_class.connect(self.on_get_new_class)
 
     def load_model(self):
-        model_file, _ = QFileDialog.getOpenFileName(self, "Выбрать pt модель", "",
-                                                     "Image Files (*.pt)")
+        model_file, _ = QFileDialog.getOpenFileName(self, "Выбрать модель", "",
+                                                     "CNN Files (*.pt *.onnx)")
         if model_file:
             self.model_yolo = YOLO(model_file)
 
