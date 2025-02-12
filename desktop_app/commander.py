@@ -3,7 +3,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWid
 
 from utility import EWorkMode, FClassData, EAnnotationStatus
 
-
 class UGlobalSignalHolder(QObject):
     ctrl_pressed = pyqtSignal(int)
     ctrl_released = pyqtSignal(int)

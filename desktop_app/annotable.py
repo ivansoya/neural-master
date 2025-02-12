@@ -1,6 +1,7 @@
 from typing import Optional
 import math
 
+from PIL.DdsImagePlugin import item1
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem,
     QGraphicsPixmapItem, QMenu, QAction,
@@ -161,6 +162,18 @@ class UAnnotationBox(QGraphicsRectItem):
 
     def height(self):
         return self.rect().height()
+
+    def resolution_width(self):
+        if self.parentItem() and isinstance(self.parentItem(), QGraphicsPixmapItem):
+            return self.parentItem().boundingRect().width()
+        else:
+            return 0
+
+    def resolution_height(self):
+        if self.parentItem() and isinstance(self.parentItem(), QGraphicsPixmapItem):
+            return self.parentItem().boundingRect().height()
+        else:
+            return 0
 
     def hoverMoveEvent(self, event):
         for name, handle in self.get_resize_handles().items():
@@ -386,14 +399,9 @@ class UAnnotationScene(QGraphicsScene):
         if self.commander:
             self.commander.ctrl_pressed.connect(ann_box.on_ctrl_pressed)
             self.commander.ctrl_released.connect(ann_box.on_ctrl_release)
-
-            data = FAnnotationData(x, y, width, height, class_data.Cid,
-                                   res_w=self.image.boundingRect().width(),
-                                   res_h=self.image.boundingRect().height()
-                                   )
             if do_emit is True:
-                self.commander.added_new_annotation.emit(data)
-            print("Добавлен новый бокс под номером", len(self.boxes_on_scene), "данные бокса:", str(data))
+                self.commander.added_new_annotation.emit(ann_box)
+            print("Добавлен новый бокс под номером", len(self.boxes_on_scene), "данные бокса:", str(class_data))
 
         self.boxes_on_scene.append(ann_box)
 

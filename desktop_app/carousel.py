@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
 
 from commander import UGlobalSignalHolder
 from utility import FAnnotationData, FClassData, EAnnotationStatus
+from annotable import UAnnotationBox
 
 class ImageLoaderThread(QThread):
     image_loaded = pyqtSignal(QPixmap)
@@ -373,10 +374,21 @@ class UThumbnailCarousel(QWidget):
         if self.current_selected.annotation_status is False:
             self.annotated_thumbnails_indexes.remove(self.thumbnails.index(self.current_selected))
 
-    def handle_signal_on_added_annotation(self, data: FAnnotationData):
+    def handle_signal_on_added_annotation(self, annotation_box: UAnnotationBox):
         if self.current_selected is None:
             return
-        self.current_selected.add_annotation(data)
+        self.current_selected.add_annotation(
+            FAnnotationData(
+                annotation_box.x(),
+                annotation_box.y(),
+                annotation_box.width(),
+                annotation_box.height(),
+                annotation_box.class_id,
+                annotation_box.resolution_width(),
+                annotation_box.resolution_height()
+            )
+        )
+        print(f"Добавлен бокс с разрешением: {annotation_box.resolution_width()}x{annotation_box.resolution_height()}")
         if self.current_selected.annotation_status is True:
             index = self.thumbnails.index(self.current_selected)
             if index not in self.annotated_thumbnails_indexes:
