@@ -3,23 +3,13 @@ import random
 import shutil
 from typing import Optional
 
-import yaml
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from carousel import UAnnotationThumbnail
-from dataset_window import Ui_Dialog
-from utility import FClassData, FAnnotationData, EAnnotationStatus, FDatasetInfo, EDatasetType
+from design.dataset_window import Ui_Dialog
+from utility import FClassData, FAnnotationItem, EAnnotationStatus, FDatasetInfo, EDatasetType
 
-import configparser
-
-class FAnnItem:
-    def __init__(self, ann_list: list[FAnnotationData], image_path: str):
-        self.annotation_list = ann_list
-        self.image_path = image_path
-
-    def get_item_data(self):
-        return self.annotation_list, self.image_path
 
 class UDatasetCreator(QThread):
     progress_bar_updated = pyqtSignal(int)
@@ -37,7 +27,7 @@ class UDatasetCreator(QThread):
         self.len_data = 0
         self.progress_counter = 0
 
-        self.annotation_data: list[FAnnItem] = list()
+        self.annotation_data: list[FAnnotationItem] = list()
 
     def run(self):
         print(f"Общее количество картинок: {len(self.thumb_list)}")
@@ -45,7 +35,7 @@ class UDatasetCreator(QThread):
         for i in range(len(self.thumb_list)):
             if self.thumb_list[i].get_annotated_status().value == EAnnotationStatus.Annotated.value:
                 self.annotation_data.append(
-                    FAnnItem(self.thumb_list[i].annotation_data_list, self.thumb_list[i].image_path)
+                    FAnnotationItem(self.thumb_list[i].annotation_data_list, self.thumb_list[i].image_path)
                 )
             self.progress_bar_updated.emit(int(100 * i / len(self.thumb_list)))
         self.len_data = len(self.annotation_data)
@@ -89,7 +79,7 @@ class UDatasetCreator(QThread):
 
         self.creation_ended.emit(self.dataset_info.counter)
 
-    def generation(self, image_folder: str, label_folder: str, ann_data: list[FAnnItem]):
+    def generation(self, image_folder: str, label_folder: str, ann_data: list[FAnnotationItem]):
         for i in range(len(ann_data)):
             image_name_img = f"Number_{self.dataset_info.counter:024b}_{os.path.basename(ann_data[i].image_path)}"
             self.dataset_info.counter += 1

@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QDialog, QColorDialog
 
-from add_class_window import Ui_dialog_add_class
+from design.add_class_window import Ui_dialog_add_class
 from commander import UGlobalSignalHolder
 from utility import FClassData
 

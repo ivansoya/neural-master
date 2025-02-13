@@ -228,3 +228,11 @@ class FAnnotationData:
                 f"{(self.Y + self.Height / 2) / float(self.Resolution_h)} "
                 f"{self.Width / float(self.Resolution_w)} "
                 f"{self.Height / float(self.Resolution_h)}")
+
+class FAnnotationItem:
+    def __init__(self, ann_list: list[FAnnotationData], image_path: str):
+        self.annotation_list = ann_list
+        self.image_path = image_path
+
+    def get_item_data(self):
+        return self.annotation_list, self.image_path
