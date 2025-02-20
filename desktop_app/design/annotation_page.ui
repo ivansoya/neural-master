@@ -104,6 +104,23 @@ QPushButton:hover {
        </property>
       </spacer>
      </item>
+     <item>
+      <widget class="QPushButton" name="button_clear_dataset">
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+padding: 5px 20px;
+border: 1px solid gray;
+}
+
+QPushButton:hover {
+	border: 1px solid #0048ff;
+}</string>
+       </property>
+       <property name="text">
+        <string>Закрыть проект </string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
@@ -132,7 +149,7 @@ QPushButton:hover {
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_6">
           <item>
-           <widget class="QPushButton" name="load_images_button_2">
+           <widget class="QPushButton" name="load_images_button">
             <property name="enabled">
              <bool>true</bool>
             </property>
@@ -148,7 +165,7 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="load_model_button_2">
+           <widget class="QPushButton" name="load_model_button">
             <property name="enabled">
              <bool>true</bool>
             </property>
@@ -197,7 +214,7 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="current_model_label_2">
+           <widget class="QLabel" name="current_model_label">
             <property name="font">
              <font>
               <pointsize>10</pointsize>
@@ -212,7 +229,7 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="class_combobox_2">
+           <widget class="QComboBox" name="class_combobox">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -236,7 +253,7 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="button_add_class_2">
+           <widget class="QPushButton" name="button_add_class">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -246,7 +263,7 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="auto_annotate_checkbox_2">
+           <widget class="QCheckBox" name="auto_annotate_checkbox">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -292,7 +309,7 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="select_dragmode_button_2">
+           <widget class="QPushButton" name="select_dragmode_button">
             <property name="minimumSize">
              <size>
               <width>0</width>
@@ -325,7 +342,7 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="select_annotatemode_button_2">
+           <widget class="QPushButton" name="select_annotatemode_button">
             <property name="minimumSize">
              <size>
               <width>0</width>
@@ -420,7 +437,7 @@ QPushButton:hover {
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="selected_label_2">
+             <widget class="QLabel" name="selected_label">
               <property name="font">
                <font>
                 <pointsize>12</pointsize>
@@ -453,7 +470,7 @@ QPushButton:hover {
         </widget>
        </item>
        <item>
-        <widget class="UAnnotationGraphicsView" name="annotate_view_2">
+        <widget class="UAnnotationGraphicsView" name="annotate_view">
          <property name="minimumSize">
           <size>
            <width>480</width>
@@ -606,7 +623,7 @@ QPushButton:hover {
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_8">
               <item>
-               <widget class="QLabel" name="label_count_images_2">
+               <widget class="QLabel" name="label_count_images">
                 <property name="font">
                  <font>
                   <pointsize>12</pointsize>
@@ -621,7 +638,7 @@ QPushButton:hover {
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="label_count_annotated_2">
+               <widget class="QLabel" name="label_count_annotated">
                 <property name="font">
                  <font>
                   <pointsize>12</pointsize>
@@ -636,7 +653,7 @@ QPushButton:hover {
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="label_count_not_annotated_2">
+               <widget class="QLabel" name="label_count_not_annotated">
                 <property name="font">
                  <font>
                   <pointsize>12</pointsize>
@@ -651,7 +668,7 @@ QPushButton:hover {
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="label_count_dropped_2">
+               <widget class="QLabel" name="label_count_dropped">
                 <property name="font">
                  <font>
                   <pointsize>12</pointsize>
@@ -670,7 +687,7 @@ QPushButton:hover {
            </layout>
           </item>
           <item>
-           <widget class="UListAnnotationWidget" name="list_widget_annotated_on_scene_2">
+           <widget class="UListAnnotationWidget" name="list_widget_annotated_on_scene">
             <property name="minimumSize">
              <size>
               <width>0</width>
@@ -689,7 +706,7 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="button_go_to_not_annotated_2">
+           <widget class="QPushButton" name="button_go_to_not_annotated">
             <property name="text">
              <string>Перейти к неразмеченному</string>
             </property>
@@ -709,7 +726,7 @@ QPushButton:hover {
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="button_create_dataset_2">
+           <widget class="QPushButton" name="button_create_dataset">
             <property name="styleSheet">
              <string notr="true">QWidget &gt; QPushButton {
 	background-color: rgb(88, 239, 255);
@@ -730,7 +747,7 @@ QWidget &gt; QPushButton:hover {
       </layout>
      </item>
      <item>
-      <widget class="UThumbnailCarousel" name="thumbnail_carousel_2" native="true">
+      <widget class="UThumbnailCarousel" name="thumbnail_carousel" native="true">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -755,7 +772,7 @@ QWidget &gt; QPushButton:hover {
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="toggle_round_images_2">
+      <widget class="QPushButton" name="toggle_round_images">
        <property name="enabled">
         <bool>true</bool>
        </property>

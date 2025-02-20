@@ -52,11 +52,11 @@ QPushButton:pressed {
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
-     <widget class="QStackedWidget" name="stackedWidget">
+     <widget class="QStackedWidget" name="stacked_page_loader">
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
-      <widget class="QWidget" name="page_save_load">
+      <widget class="UPageLoader" name="page_save_load">
        <layout class="QVBoxLayout" name="page_vertical_layout">
         <property name="spacing">
          <number>0</number>
@@ -75,8 +75,24 @@ QPushButton:pressed {
         </property>
        </layout>
       </widget>
-      <widget class="QWidget" name="page_annotation">
+      <widget class="UPageAnnotation" name="page_annotation">
        <layout class="QVBoxLayout" name="page_2_vertical_layout">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+       </layout>
+      </widget>
+      <widget class="UPageDataset" name="page_dataset">
+       <layout class="QVBoxLayout" name="page_3_vertical_layout">
         <property name="leftMargin">
          <number>0</number>
         </property>
@@ -107,6 +123,26 @@ QPushButton:pressed {
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UPageLoader</class>
+   <extends>QWidget</extends>
+   <header location="global">page_load_create</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>UPageAnnotation</class>
+   <extends>QWidget</extends>
+   <header location="global">page_annotation</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>UPageDataset</class>
+   <extends>QWidget</extends>
+   <header location="global">page_dataset</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

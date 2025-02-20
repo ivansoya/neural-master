@@ -44,22 +44,28 @@ class Ui_TrainApp(object):
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.centralwidget)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.stackedWidget = QtWidgets.QStackedWidget(self.centralwidget)
-        self.stackedWidget.setObjectName("stackedWidget")
-        self.page_save_load = QtWidgets.QWidget()
+        self.stacked_page_loader = QtWidgets.QStackedWidget(self.centralwidget)
+        self.stacked_page_loader.setObjectName("stacked_page_loader")
+        self.page_save_load = UPageLoader()
         self.page_save_load.setObjectName("page_save_load")
         self.page_vertical_layout = QtWidgets.QVBoxLayout(self.page_save_load)
         self.page_vertical_layout.setContentsMargins(0, 0, 0, 0)
         self.page_vertical_layout.setSpacing(0)
         self.page_vertical_layout.setObjectName("page_vertical_layout")
-        self.stackedWidget.addWidget(self.page_save_load)
-        self.page_annotation = QtWidgets.QWidget()
+        self.stacked_page_loader.addWidget(self.page_save_load)
+        self.page_annotation = UPageAnnotation()
         self.page_annotation.setObjectName("page_annotation")
         self.page_2_vertical_layout = QtWidgets.QVBoxLayout(self.page_annotation)
         self.page_2_vertical_layout.setContentsMargins(0, 0, 0, 0)
         self.page_2_vertical_layout.setObjectName("page_2_vertical_layout")
-        self.stackedWidget.addWidget(self.page_annotation)
-        self.verticalLayout_2.addWidget(self.stackedWidget)
+        self.stacked_page_loader.addWidget(self.page_annotation)
+        self.page_dataset = UPageDataset()
+        self.page_dataset.setObjectName("page_dataset")
+        self.page_3_vertical_layout = QtWidgets.QVBoxLayout(self.page_dataset)
+        self.page_3_vertical_layout.setContentsMargins(0, 0, 0, 0)
+        self.page_3_vertical_layout.setObjectName("page_3_vertical_layout")
+        self.stacked_page_loader.addWidget(self.page_dataset)
+        self.verticalLayout_2.addWidget(self.stacked_page_loader)
         TrainApp.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(TrainApp)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1153, 21))
@@ -70,12 +76,15 @@ class Ui_TrainApp(object):
         TrainApp.setStatusBar(self.statusbar)
 
         self.retranslateUi(TrainApp)
-        self.stackedWidget.setCurrentIndex(1)
+        self.stacked_page_loader.setCurrentIndex(2)
         QtCore.QMetaObject.connectSlotsByName(TrainApp)
 
     def retranslateUi(self, TrainApp):
         _translate = QtCore.QCoreApplication.translate
         TrainApp.setWindowTitle(_translate("TrainApp", "Train App"))
+from page_annotation import UPageAnnotation
+from page_dataset import UPageDataset
+from page_load_create import UPageLoader
 
 
 if __name__ == "__main__":
