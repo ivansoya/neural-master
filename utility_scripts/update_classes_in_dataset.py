@@ -2,8 +2,6 @@ import os
 import glob
 import argparse
 import shutil
-from re import match
-
 
 def update_file_with_map(file_path: str, map_conv: dict[int, int]):
     lines: list[str] = list()

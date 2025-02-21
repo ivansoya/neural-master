@@ -75,6 +75,18 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="button_skip_creation">
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Перейти на страницу аннотаций без проекта</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_5">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
