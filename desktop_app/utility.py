@@ -204,7 +204,21 @@ class FClassData:
     @staticmethod
     def get_save_color(id_class: int):
         if id_class >= len(GColorList):
-            return QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+            #return QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+            step = 255
+            r, g, b = 255, 255, 255
+
+            for i in range((id_class - len(GColorList)) % 3 + 1):
+                step //= 2
+                if i % 3 == 0:
+                    r = step if id_class % 2 == 0 else 255 - step
+                elif i % 3 == 1:
+                    g = step if id_class % 2 == 0 else 255 - step
+                else:
+                    b = step if id_class % 2 == 0 else 255 - step
+
+            return QColor(r, g, b)
         else:
             return GColorList[id_class]
 
