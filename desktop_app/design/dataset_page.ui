@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1388</width>
-    <height>855</height>
+    <height>867</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -38,6 +38,26 @@ QPushButton:pressed {
       <number>0</number>
      </property>
      <item>
+      <widget class="QPushButton" name="button_to_datasets_settings">
+       <property name="mouseTracking">
+        <bool>true</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+padding: 5px 20px;
+border: 1px solid #7a7b7d;
+}
+
+QPushButton:hover {
+	border: 1px solid #0048ff;
+}</string>
+       </property>
+       <property name="text">
+        <string>Окно организации датасета</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="button_to_annotation_scene">
        <property name="mouseTracking">
         <bool>true</bool>
@@ -57,26 +77,6 @@ QPushButton:hover {
        </property>
        <property name="text">
         <string>Окно разметки</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="button_to_datasets_settings">
-       <property name="mouseTracking">
-        <bool>true</bool>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton {
-padding: 5px 20px;
-border: 1px solid #7a7b7d;
-}
-
-QPushButton:hover {
-	border: 1px solid #0048ff;
-}</string>
-       </property>
-       <property name="text">
-        <string>Окно организации датасета</string>
        </property>
       </widget>
      </item>
@@ -208,21 +208,217 @@ QPushButton:hover {
       </widget>
      </item>
      <item>
-      <widget class="QGraphicsView" name="view_gallery">
-       <property name="horizontalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOff</enum>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <property name="spacing">
+        <number>0</number>
        </property>
-      </widget>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Фильтр по классам:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="combo_class_filter">
+           <property name="minimumSize">
+            <size>
+             <width>150</width>
+             <height>0</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="button_refresh">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+	padding: 5px 10px
+}</string>
+           </property>
+           <property name="text">
+            <string>Обновить</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QGraphicsView" name="view_gallery">
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOff</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <widget class="QWidget" name="verticalWidget" native="true">
        <property name="minimumSize">
         <size>
-         <width>200</width>
+         <width>260</width>
          <height>0</height>
         </size>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout"/>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QPushButton" name="button_add_dataset">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Добавить датасет</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_add_class">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Добавить новый класс</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Maximum</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_set_model_local">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Подключить модель локально</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_set_model_remote">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Подключить модель удаленно</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Maximum</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_dataset_to_annotation">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Разметить выбранный датасет</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_delete_dataset">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Удалить выбранный датасет</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_selected_to_annotate">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Разметить выбранные изображения</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </widget>
      </item>
     </layout>

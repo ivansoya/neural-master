@@ -1,9 +1,9 @@
 import os.path
-from typing import Optional
 
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QThread
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QFileDialog, QDialog, QMessageBox
 
+from loader import UProjectAnnotationLoader
 from commander import UGlobalSignalHolder
 from design.page_save_load import Ui_page_load_dataset
 from design.window_create_project import Ui_window_create_project
@@ -11,14 +11,10 @@ from project import UTrainProject
 
 
 class UPageLoader(QWidget, Ui_page_load_dataset):
-    def __init__(self):
+    def __init__(self, commander: UGlobalSignalHolder, project: UTrainProject):
         super().__init__()
         self.setupUi(self)
 
-        self.commander: Optional[UGlobalSignalHolder] = None
-        self.project: Optional[UTrainProject] = None
-
-    def initialize(self, commander: UGlobalSignalHolder, project: UTrainProject):
         self.commander = commander
         self.project = project
 
@@ -28,7 +24,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
 
     def get_to_annotation_page(self):
         if isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(1)
+            self.parent().setCurrentIndex(2)
 
     def load_project(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Открыть существующий проект", "*.cfg", "Все файлы (*)")
@@ -40,6 +36,10 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
         if error:
             QDialogCreateProject.show_error(error)
             return
+        else:
+
+            if isinstance(self.parent(), QStackedWidget):
+                self.parent().setCurrentIndex(1)
 
     def create_project(self):
         self.commander.set_block(True)

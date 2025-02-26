@@ -6,8 +6,10 @@ from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QImage, QPixmap, QStanda
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from design.train_app import Ui_TrainApp
 from commander import UGlobalSignalHolder
+from page_annotation import UPageAnnotation
+from page_dataset import UPageDataset
+from page_load_create import UPageLoader
 from project import UTrainProject
-
 
 class TrainApp(QMainWindow, Ui_TrainApp):
     def __init__(self):
@@ -19,9 +21,13 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.global_signal_holder = UGlobalSignalHolder()
         QApplication.instance().installEventFilter(self.global_signal_holder)
 
-        self.page_annotation.initialize(self.global_signal_holder, self.project)
-        self.page_save_load.initialize(self.global_signal_holder, self.project)
-        self.page_dataset.initialize(self.global_signal_holder, self.project)
+        self.page_save_load = UPageLoader(self.global_signal_holder, self.project)
+        self.page_dataset = UPageDataset(self.global_signal_holder, self.project)
+        self.page_annotation = UPageAnnotation(self.global_signal_holder, self.project)
+
+        self.stacked_page_loader.addWidget(self.page_save_load)
+        self.stacked_page_loader.addWidget(self.page_dataset)
+        self.stacked_page_loader.addWidget(self.page_annotation)
 
         self.stacked_page_loader.setCurrentIndex(0)
 

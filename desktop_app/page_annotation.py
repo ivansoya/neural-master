@@ -21,7 +21,7 @@ from window_class_add import UAddClassWindow
 
 
 class UPageAnnotation(QWidget, Ui_annotataion_page):
-    def __init__(self):
+    def __init__(self, commander: UGlobalSignalHolder, project: UTrainProject):
         super().__init__()
         self.setupUi(self)
 
@@ -34,20 +34,15 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         self.class_list_item_model = QStandardItemModel()
 
-        self.commander: Optional[UGlobalSignalHolder] = None
-        self.annotate_scene: Optional[UAnnotationScene] = None
+        self.commander = commander
+
+        self.annotate_scene = UAnnotationScene(commander=self.commander, view=self.annotate_view)
+        self.thumbnail_carousel.set_commander(self.commander)
+        self.annotate_view.setScene(self.annotate_scene)
 
         self.current_annotated_count: int = 0
         self.current_dropped_count: int = 0
         self.current_not_annotated_count: int = 0
-
-    def initialize(self, commander: UGlobalSignalHolder, project: UTrainProject):
-
-        self.commander = commander
-
-        self.annotate_scene = UAnnotationScene(commander = self.commander, view = self.annotate_view)
-        self.thumbnail_carousel.set_commander(self.commander)
-        self.annotate_view.setScene(self.annotate_scene)
 
         self.commander.ctrl_pressed.connect(self.annotate_view.enable_drag_mode)
         self.commander.ctrl_released.connect(self.annotate_view.disable_drag_mode)
@@ -84,7 +79,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         self.commander.command_key_pressed.connect(self.annotate_on_button_pressed)
 
-        #self.button_load_dataset.clicked.connect(self.on_clicked_load_dataset)
+        # self.button_load_dataset.clicked.connect(self.on_clicked_load_dataset)
 
         # Изменение label для отображения количества размеченных и неразмеченных изображений
         self.commander.changed_annotation_status.connect(self.handle_changed_annotation_status)
@@ -97,6 +92,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         # Инициализация переходов по страницам
         self.button_to_datasets_settings.clicked.connect(self.get_to_dataset_page)
+
 
     def load_model(self):
         model_file, _ = QFileDialog.getOpenFileName(self, "Выбрать модель", "",
@@ -334,4 +330,4 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     def get_to_dataset_page(self):
         if isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(2)
+            self.parent().setCurrentIndex(1)

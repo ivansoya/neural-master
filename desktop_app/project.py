@@ -1,7 +1,7 @@
 import configparser
 import os.path
 
-from utility import FClassData, FAnnotationData
+from utility import FClassData, FAnnotationData, FAnnotationItem
 
 TASKS = "tasks"
 DATASETS = "datasets"
@@ -27,8 +27,10 @@ class UTrainProject:
         self.classes: list[FClassData] = list()
         self.counter = 0
         self.name = ""
+        self.path = ""
 
         # Изменяемые данные в процессе работы программы
+        self.current_annotations: dict[str, list[FAnnotationItem]] = dict()
 
 
     def create(self, path: str, name:str, classes:list[str], counter:int = 0):
@@ -46,6 +48,7 @@ class UTrainProject:
                 FClassData(index, classes[index], FClassData.get_save_color(index)) for index in range(len(classes))
             ]
             self.name = name
+            self.path = path
             config[MAIN_SECTION][NAME] = self.name
 
             os.makedirs(os.path.join(path, TASKS).strip().replace('\\', '/'), exist_ok=False)
@@ -75,6 +78,7 @@ class UTrainProject:
                 FClassData(index, class_strings[index], FClassData.get_save_color(index)) for index in range(len(class_strings))
             ]
             self.name = config.get(MAIN_SECTION, NAME)
+            self.path = os.path.basename(path_to_project)
 
             print(f"Загружен проект {self.name}!")
             print(f"Список строенных датасетов: {self.datasets}")
@@ -85,3 +89,12 @@ class UTrainProject:
 
         except Exception as error:
             return str(error)
+
+    def add_annotation_to_dataset(self, dataset:str, ann_item:FAnnotationItem):
+        if dataset in self.datasets:
+            if dataset not in self.current_annotations:
+                self.current_annotations[dataset] = list()
+            self.current_annotations[dataset].append(ann_item)
+            return
+        else:
+            return f"Ошибка в функции add_annotation_to_dataset! Не существует датасета {dataset}!"

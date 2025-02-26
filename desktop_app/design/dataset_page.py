@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_page_dataset(object):
     def setupUi(self, page_dataset):
         page_dataset.setObjectName("page_dataset")
-        page_dataset.resize(1388, 855)
+        page_dataset.resize(1388, 867)
         page_dataset.setStyleSheet("QPushButton {\n"
 "    background-color: lightgray;\n"
 "    color: black;            \n"
@@ -36,6 +36,18 @@ class Ui_page_dataset(object):
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setSpacing(0)
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
+        self.button_to_datasets_settings = QtWidgets.QPushButton(page_dataset)
+        self.button_to_datasets_settings.setMouseTracking(True)
+        self.button_to_datasets_settings.setStyleSheet("QPushButton {\n"
+"padding: 5px 20px;\n"
+"border: 1px solid #7a7b7d;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    border: 1px solid #0048ff;\n"
+"}")
+        self.button_to_datasets_settings.setObjectName("button_to_datasets_settings")
+        self.horizontalLayout_7.addWidget(self.button_to_datasets_settings)
         self.button_to_annotation_scene = QtWidgets.QPushButton(page_dataset)
         self.button_to_annotation_scene.setMouseTracking(True)
         self.button_to_annotation_scene.setTabletTracking(False)
@@ -49,18 +61,6 @@ class Ui_page_dataset(object):
 "}")
         self.button_to_annotation_scene.setObjectName("button_to_annotation_scene")
         self.horizontalLayout_7.addWidget(self.button_to_annotation_scene)
-        self.button_to_datasets_settings = QtWidgets.QPushButton(page_dataset)
-        self.button_to_datasets_settings.setMouseTracking(True)
-        self.button_to_datasets_settings.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid #7a7b7d;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_to_datasets_settings.setObjectName("button_to_datasets_settings")
-        self.horizontalLayout_7.addWidget(self.button_to_datasets_settings)
         self.button_to_statistics = QtWidgets.QPushButton(page_dataset)
         self.button_to_statistics.setMouseTracking(True)
         self.button_to_statistics.setStyleSheet("QPushButton {\n"
@@ -120,15 +120,92 @@ class Ui_page_dataset(object):
         self.verticalLayout_2.setStretch(1, 2)
         self.verticalLayout_2.setStretch(3, 1)
         self.horizontalLayout.addWidget(self.verticalWidget)
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout()
+        self.verticalLayout_3.setSpacing(0)
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setSpacing(10)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.label_3 = QtWidgets.QLabel(page_dataset)
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
+        self.horizontalLayout_2.addWidget(self.label_3)
+        self.combo_class_filter = QtWidgets.QComboBox(page_dataset)
+        self.combo_class_filter.setMinimumSize(QtCore.QSize(150, 0))
+        self.combo_class_filter.setObjectName("combo_class_filter")
+        self.horizontalLayout_2.addWidget(self.combo_class_filter)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem1)
+        self.button_refresh = QtWidgets.QPushButton(page_dataset)
+        font = QtGui.QFont()
+        font.setPointSize(8)
+        self.button_refresh.setFont(font)
+        self.button_refresh.setStyleSheet("QPushButton {\n"
+"    padding: 5px 10px\n"
+"}")
+        self.button_refresh.setObjectName("button_refresh")
+        self.horizontalLayout_2.addWidget(self.button_refresh)
+        self.verticalLayout_3.addLayout(self.horizontalLayout_2)
         self.view_gallery = QtWidgets.QGraphicsView(page_dataset)
         self.view_gallery.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.view_gallery.setObjectName("view_gallery")
-        self.horizontalLayout.addWidget(self.view_gallery)
+        self.verticalLayout_3.addWidget(self.view_gallery)
+        self.horizontalLayout.addLayout(self.verticalLayout_3)
         self.verticalWidget1 = QtWidgets.QWidget(page_dataset)
-        self.verticalWidget1.setMinimumSize(QtCore.QSize(200, 0))
+        self.verticalWidget1.setMinimumSize(QtCore.QSize(260, 0))
         self.verticalWidget1.setObjectName("verticalWidget1")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalWidget1)
         self.verticalLayout.setObjectName("verticalLayout")
+        self.button_add_dataset = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.button_add_dataset.setFont(font)
+        self.button_add_dataset.setObjectName("button_add_dataset")
+        self.verticalLayout.addWidget(self.button_add_dataset)
+        self.button_add_class = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.button_add_class.setFont(font)
+        self.button_add_class.setObjectName("button_add_class")
+        self.verticalLayout.addWidget(self.button_add_class)
+        spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Maximum)
+        self.verticalLayout.addItem(spacerItem2)
+        self.button_set_model_local = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.button_set_model_local.setFont(font)
+        self.button_set_model_local.setObjectName("button_set_model_local")
+        self.verticalLayout.addWidget(self.button_set_model_local)
+        self.button_set_model_remote = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.button_set_model_remote.setFont(font)
+        self.button_set_model_remote.setObjectName("button_set_model_remote")
+        self.verticalLayout.addWidget(self.button_set_model_remote)
+        spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Maximum)
+        self.verticalLayout.addItem(spacerItem3)
+        self.button_dataset_to_annotation = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.button_dataset_to_annotation.setFont(font)
+        self.button_dataset_to_annotation.setObjectName("button_dataset_to_annotation")
+        self.verticalLayout.addWidget(self.button_dataset_to_annotation)
+        self.button_delete_dataset = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.button_delete_dataset.setFont(font)
+        self.button_delete_dataset.setObjectName("button_delete_dataset")
+        self.verticalLayout.addWidget(self.button_delete_dataset)
+        self.button_selected_to_annotate = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.button_selected_to_annotate.setFont(font)
+        self.button_selected_to_annotate.setObjectName("button_selected_to_annotate")
+        self.verticalLayout.addWidget(self.button_selected_to_annotate)
+        spacerItem4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout.addItem(spacerItem4)
         self.horizontalLayout.addWidget(self.verticalWidget1)
         self.page_main_layout.addLayout(self.horizontalLayout)
 
@@ -138,12 +215,21 @@ class Ui_page_dataset(object):
     def retranslateUi(self, page_dataset):
         _translate = QtCore.QCoreApplication.translate
         page_dataset.setWindowTitle(_translate("page_dataset", "Форма для аннотации"))
-        self.button_to_annotation_scene.setText(_translate("page_dataset", "Окно разметки"))
         self.button_to_datasets_settings.setText(_translate("page_dataset", "Окно организации датасета"))
+        self.button_to_annotation_scene.setText(_translate("page_dataset", "Окно разметки"))
         self.button_to_statistics.setText(_translate("page_dataset", "Окно статистики"))
         self.button_clear_dataset.setText(_translate("page_dataset", "Закрыть проект"))
         self.label_2.setText(_translate("page_dataset", "Датасеты"))
         self.label.setText(_translate("page_dataset", "Резервированно"))
+        self.label_3.setText(_translate("page_dataset", "Фильтр по классам:"))
+        self.button_refresh.setText(_translate("page_dataset", "Обновить"))
+        self.button_add_dataset.setText(_translate("page_dataset", "Добавить датасет"))
+        self.button_add_class.setText(_translate("page_dataset", "Добавить новый класс"))
+        self.button_set_model_local.setText(_translate("page_dataset", "Подключить модель локально"))
+        self.button_set_model_remote.setText(_translate("page_dataset", "Подключить модель удаленно"))
+        self.button_dataset_to_annotation.setText(_translate("page_dataset", "Разметить выбранный датасет"))
+        self.button_delete_dataset.setText(_translate("page_dataset", "Удалить выбранный датасет"))
+        self.button_selected_to_annotate.setText(_translate("page_dataset", "Разметить выбранные изображения"))
 
 
 if __name__ == "__main__":
