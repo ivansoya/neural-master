@@ -1,13 +1,15 @@
 import os.path
+from typing import Optional
 
 from PyQt5.QtCore import pyqtSignal, QThread
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QFileDialog, QDialog, QMessageBox
 
-from loader import UProjectAnnotationLoader
+from loader import UThreadDatasetLoadAnnotations, UOverlayLoader
 from commander import UGlobalSignalHolder
 from design.page_save_load import Ui_page_load_dataset
 from design.window_create_project import Ui_window_create_project
 from project import UTrainProject
+from utility import UMessageBox
 
 
 class UPageLoader(QWidget, Ui_page_load_dataset):
@@ -18,13 +20,19 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
         self.commander = commander
         self.project = project
 
+        self.thread_load: Optional[UThreadDatasetLoadAnnotations] = None
+        self.overlay: Optional[UOverlayLoader] = None
+
         self.button_create_train_project.clicked.connect(self.create_project)
         self.button_load_train_project.clicked.connect(self.load_project)
-        self.button_skip_creation.clicked.connect(self.get_to_annotation_page)
+        self.button_skip_creation.clicked.connect(lambda: self.go_to_another_page(2))
 
-    def get_to_annotation_page(self):
+    def go_to_another_page(self, page_index = 1):
         if isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(2)
+            if page_index >= self.parent().count():
+                QDialogCreateProject.show_error(f"Невозможно перейти на страницу под номером {page_index}")
+                return
+            self.parent().setCurrentIndex(page_index)
 
     def load_project(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Открыть существующий проект", "*.cfg", "Все файлы (*)")
@@ -37,9 +45,36 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
             QDialogCreateProject.show_error(error)
             return
         else:
+            if self.overlay or (self.thread_load and self.thread_load.isRunning()):
+                QDialogCreateProject.show_error("Невозможно загрузить датасеты. Уже идет загрузка датасетов!")
+                return
 
-            if isinstance(self.parent(), QStackedWidget):
-                self.parent().setCurrentIndex(1)
+            self.overlay = UOverlayLoader(self)
+            self.overlay.show()
+
+            self.thread_load = UThreadDatasetLoadAnnotations(self.project, self.project.datasets)
+
+            self.thread_load.signal_start_dataset.connect(self.overlay.update_label_dataset)
+            self.thread_load.signal_loaded_label.connect(self.overlay.update_progress)
+            self.thread_load.signal_end_load.connect(self.on_end_load)
+            self.thread_load.signal_error.connect(self.on_error_load)
+            self.thread_load.signal_warning.connect(
+                lambda error_str:UMessageBox.show_error(error_str, "Предупреждение", int(QMessageBox.Warning))
+            )
+
+            self.thread_load.start()
+
+    def on_error_load(self, dataset: str, error: str):
+        self.project.remove_annotations_from_dataset(dataset)
+        UMessageBox.show_error(error)
+
+        self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+
+    def on_end_load(self, datasets: list[str]):
+        self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+        UMessageBox.show_error("Датасеты загружены!", "Успех", int(QMessageBox.Ok))
+        # Перейти на страницу с датасетами
+        self.go_to_another_page(1)
 
     def create_project(self):
         self.commander.set_block(True)

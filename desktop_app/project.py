@@ -1,5 +1,8 @@
 import configparser
 import os.path
+import shutil
+
+from sympy.physics.units import current
 
 from utility import FClassData, FAnnotationData, FAnnotationItem
 
@@ -11,6 +14,9 @@ MAIN_SECTION = "main"
 COUNTER = "counter"
 CLASSES = "classes"
 NAME = "name"
+
+LABELS = "labels"
+IMAGES = "images"
 
 class UTrainProject:
     def __init__(self):
@@ -68,17 +74,17 @@ class UTrainProject:
             config = configparser.ConfigParser()
             config.read(path_to_project)
 
-            self.tasks = config.get(MAIN_SECTION, TASKS).strip("[]").split(", ")
-            self.datasets = config.get(MAIN_SECTION, DATASETS).strip("[]").split(", ")
-            self.reserved = config.get(MAIN_SECTION, RESERVED).strip("[]").split(", ")
+            self.tasks = [str_t for str_t in config.get(MAIN_SECTION, TASKS).strip("[]").strip().split(", ") if str_t]
+            self.datasets = [str_t for str_t in config.get(MAIN_SECTION, DATASETS).strip("[]").strip().split(", ") if str_t]
+            self.reserved = [str_t for str_t in config.get(MAIN_SECTION, RESERVED).strip("[]").strip().split(", ") if str_t]
 
             self.counter = config.getint(MAIN_SECTION, COUNTER)
-            class_strings = config.get(MAIN_SECTION, CLASSES).strip("[]").split(", ")
+            class_strings = [class_t for class_t in config.get(MAIN_SECTION, CLASSES).strip("[]").split(", ") if class_t]
             self.classes = [
                 FClassData(index, class_strings[index], FClassData.get_save_color(index)) for index in range(len(class_strings))
             ]
             self.name = config.get(MAIN_SECTION, NAME)
-            self.path = os.path.basename(path_to_project)
+            self.path = os.path.dirname(path_to_project)
 
             print(f"Загружен проект {self.name}!")
             print(f"Список строенных датасетов: {self.datasets}")
@@ -89,6 +95,53 @@ class UTrainProject:
 
         except Exception as error:
             return str(error)
+
+    def save(self):
+        try:
+            config = configparser.ConfigParser()
+
+            config.add_section(MAIN_SECTION)
+            config[MAIN_SECTION][TASKS] = "[" + ", ".join(self.tasks) + "]"
+            config[MAIN_SECTION][DATASETS] = "[" + ", ".join(self.datasets) + "]"
+            config[MAIN_SECTION][RESERVED] = "[" + ", ".join(self.reserved) + "]"
+
+            config[MAIN_SECTION][COUNTER] = str(self.counter)
+            config[MAIN_SECTION][CLASSES] = "[" + ", ".join([class_t.Name for class_t in self.classes]) + "]"
+            config[MAIN_SECTION][NAME] = self.name
+
+            for dataset in self.datasets:
+                config.add_section(dataset)
+                config[dataset][LABELS] = LABELS
+                config[dataset][IMAGES] = IMAGES
+
+            with open(os.path.join(self.path, self.name + ".cfg").replace('\\', '/'), "w") as file:
+                config.write(file)
+
+        except Exception as error:
+            return str(error)
+
+    def remove_dataset_folder(self, dataset: str):
+        path_to_dataset = os.path.join(self.path, DATASETS, dataset).replace('\\', '/')
+        if os.path.exists(path_to_dataset):
+            shutil.rmtree(path_to_dataset)
+            print(f"Из проекта {self.name} удалена папка датасета {dataset}, находящаяся по пути {path_to_dataset}!")
+        else:
+            print(f"Функция UTrainProject.remove_dataset_folder объекта {self.name}! На найдена папка датасета {dataset} по пути {path_to_dataset}!")
+
+    def add_dataset(self, dataset: str):
+        if dataset not in self.datasets:
+            self.datasets.append(dataset)
+            print(f"В проект {self.name} добавлен датасет {dataset}!")
+
+    def remove_dataset(self, dataset: str):
+        if dataset in self.datasets:
+            self.datasets.remove(dataset)
+            print(f"Из проекта {self.name} удален датасет {dataset}!")
+
+    def remove_annotations_from_dataset(self, dataset):
+        if self.current_annotations.get(dataset):
+            del self.current_annotations[dataset]
+            print(f"В проекте {self.name} из датасета {dataset} удалены все аннотации!")
 
     def add_annotation_to_dataset(self, dataset:str, ann_item:FAnnotationItem):
         if dataset in self.datasets:
