@@ -2,15 +2,15 @@ import os.path
 import shutil
 from typing import Optional
 
-from PyQt5.QtCore import QThread
-from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox
+from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem
 
 from commander import UGlobalSignalHolder
 from design.dataset_page import Ui_page_dataset
 from design.widget_dataset_item import Ui_widget_dataset_item
 from loader import UOverlayLoader, UThreadDatasetLoadAnnotations, UThreadDatasetCopy
 from project import UTrainProject, DATASETS
-from utility import UMessageBox
+from utility import UMessageBox, FAnnotationItem
 
 
 class UPageDataset(QWidget, Ui_page_dataset):
@@ -29,6 +29,10 @@ class UPageDataset(QWidget, Ui_page_dataset):
         # Привязка к кнопкам
         self.button_to_annotation_scene.clicked.connect(self.get_to_annotation_page)
         self.button_add_dataset.clicked.connect(self.add_dataset)
+
+        # Привязка к событиям
+        if self.commander:
+            self.commander.project_load_complete.connect(self.create_list_dataset)
 
     def get_to_annotation_page(self):
         if isinstance(self.parent(), QStackedWidget):
@@ -63,7 +67,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         ):
             return
 
-        self.overlay = UOverlayLoader(self)
+        self.overlay = UOverlayLoader(self.horizontalLayout)
         self.overlay.show()
 
         self.thread_copy = UThreadDatasetCopy(path, self.project)
@@ -112,6 +116,25 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.close_overlay()
 
+    def create_list_dataset(self):
+        # Создание общего предмета
+        all_datasets = sum(
+            (self.project.get_annotations_from_dataset(dataset_name) for dataset_name in self.project.get_datasets()),
+            []
+        )
+        if len(all_datasets) == 0:
+            return
+        all_item = UItemDataset("All annotations", all_datasets, len(all_datasets))
+        self.list_datasets.add_dataset_item(all_item)
+
+        # Создание отдельных датасетов
+        for dataset in self.project.datasets:
+            annotation_list = self.project.get_annotations_from_dataset(dataset)
+            if annotation_list:
+                self.list_datasets.add_dataset_item(
+                    UItemDataset(dataset, annotation_list, len(annotation_list))
+                )
+
     def make_error_with_copy(self, error_str: str):
         UMessageBox.show_error(error_str)
         self.close_overlay()
@@ -127,14 +150,32 @@ class UPageDataset(QWidget, Ui_page_dataset):
             self.overlay = None
 
 
-class UListDataset(QListWidget):
-    def __init__(self, parent = None):
-        super().__init__(parent)
-
 class UItemDataset(QWidget, Ui_widget_dataset_item):
-    def __init__(self, path: str, parent = None):
+    def __init__(self, name: str, annotations: list[FAnnotationItem], count: int, parent = None):
         super().__init__(parent)
         self.setupUi(self)
 
-        self.label_name.setText(os.path.basename(path))
+        self.label_name.setText(name)
+        self.label_count.setText(f"Аннотаций: {count}")
+        self.annotations = annotations
 
+    @property
+    def get_annotations(self):
+        return self.annotations
+
+class UListDataset(QListWidget):
+    signal_on_item_clicked = pyqtSignal(list)
+
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+    def add_dataset_item(self, item: UItemDataset):
+        list_item = QListWidgetItem(self)
+        list_item.setSizeHint(item.sizeHint())
+        self.addItem(list_item)
+        self.setItemWidget(list_item, item)
+
+    def on_item_clicked(self, item: QListWidgetItem):
+        widget = self.itemWidget(item)
+        if isinstance(widget, UItemDataset):
+            self.signal_on_item_clicked.emit(widget.get_paths())

@@ -27,6 +27,8 @@ class UGlobalSignalHolder(QObject):
     increase_annotated_counter = pyqtSignal()
     decrease_annotated_counter = pyqtSignal()
 
+    project_load_complete = pyqtSignal()
+
     def __init__(self):
         super().__init__()
 

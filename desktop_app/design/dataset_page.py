@@ -9,6 +9,7 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from page_dataset import UListDataset
 
 
 class Ui_page_dataset(object):
@@ -104,7 +105,7 @@ class Ui_page_dataset(object):
         self.label_2.setFont(font)
         self.label_2.setObjectName("label_2")
         self.verticalLayout_2.addWidget(self.label_2)
-        self.list_datasets = QtWidgets.QListWidget(self.verticalWidget)
+        self.list_datasets = UListDataset(self.verticalWidget)
         self.list_datasets.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.list_datasets.setObjectName("list_datasets")
         self.verticalLayout_2.addWidget(self.list_datasets)
@@ -149,6 +150,7 @@ class Ui_page_dataset(object):
         self.horizontalLayout_2.addWidget(self.button_refresh)
         self.verticalLayout_3.addLayout(self.horizontalLayout_2)
         self.view_gallery = QtWidgets.QGraphicsView(page_dataset)
+        self.view_gallery.setMinimumSize(QtCore.QSize(420, 420))
         self.view_gallery.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.view_gallery.setObjectName("view_gallery")
         self.verticalLayout_3.addWidget(self.view_gallery)

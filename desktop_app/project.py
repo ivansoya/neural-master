@@ -2,8 +2,6 @@ import configparser
 import os.path
 import shutil
 
-from sympy.physics.units import current
-
 from utility import FClassData, FAnnotationData, FAnnotationItem
 
 TASKS = "tasks"
@@ -151,3 +149,20 @@ class UTrainProject:
             return
         else:
             return f"Ошибка в функции add_annotation_to_dataset! Не существует датасета {dataset}!"
+
+    def get_datasets(self):
+        return self.datasets
+
+    def get_dataset_path(self, dataset_name: str):
+        if dataset_name in self.datasets:
+            return os.path.join(self.name, DATASETS, dataset_name).replace('\\', '/')
+
+    def get_all_dataset_paths(self):
+        paths = list()
+        for dataset_name in self.datasets:
+            paths.append(os.path.join(self.name, DATASETS, dataset_name).replace('\\', '/'))
+        return paths
+
+    def get_annotations_from_dataset(self, dataset_name: str):
+        if dataset_name in self.current_annotations:
+            return self.current_annotations[dataset_name]

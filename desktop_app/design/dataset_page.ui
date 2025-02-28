@@ -180,7 +180,7 @@ QPushButton:hover {
          </widget>
         </item>
         <item>
-         <widget class="QListWidget" name="list_datasets">
+         <widget class="UListDataset" name="list_datasets">
           <property name="maximumSize">
            <size>
             <width>16777215</width>
@@ -273,6 +273,12 @@ QPushButton:hover {
        </item>
        <item>
         <widget class="QGraphicsView" name="view_gallery">
+         <property name="minimumSize">
+          <size>
+           <width>420</width>
+           <height>420</height>
+          </size>
+         </property>
          <property name="horizontalScrollBarPolicy">
           <enum>Qt::ScrollBarAlwaysOff</enum>
          </property>
@@ -425,6 +431,13 @@ QPushButton:hover {
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UListDataset</class>
+   <extends>QListWidget</extends>
+   <header location="global">page_dataset</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

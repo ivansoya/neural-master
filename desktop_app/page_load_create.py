@@ -72,6 +72,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
 
     def on_end_load(self, datasets: list[str]):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+        self.commander.project_load_complete.emit()
         UMessageBox.show_error("Датасеты загружены!", "Успех", int(QMessageBox.Ok))
         # Перейти на страницу с датасетами
         self.go_to_another_page(1)
