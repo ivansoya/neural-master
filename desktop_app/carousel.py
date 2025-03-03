@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
 )
 
 from commander import UGlobalSignalHolder
-from utility import FAnnotationData, FClassData, EAnnotationStatus
+from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses
 from annotable import UAnnotationBox
 
 class ImageLoaderThread(QThread):
@@ -30,7 +30,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
                  image_path: str,
                  height,
                  scale: float,
-                 classes: list[FClassData] = None
+                 classes: FAnnotationClasses = None
                  ):
         super().__init__()
 
@@ -133,9 +133,9 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
         for ann_data in self.annotation_data_list:
             if 0 <= ann_data.ClassID < len(self.classes):
-                color = self.classes[ann_data.ClassID].Color
+                color = self.classes.get_class(ann_data.ClassID).Color
             else:
-                color = FClassData.get_save_color(ann_data.ClassID)
+                color = FAnnotationClasses.get_save_color(ann_data.ClassID)
             pen = QPen(color)
             pen.setWidth(self.annotation_width)
             painter.setPen(pen)
@@ -238,7 +238,7 @@ class UThumbnailCarousel(QWidget):
         self.setLayout(self.main_layout)
 
         self.commander: Optional[UGlobalSignalHolder] = None
-        self.available_classes: Optional[list[FClassData]] = list()
+        self.available_classes: Optional[FAnnotationClasses] = None
         self.thumbnails : list [UAnnotationThumbnail] = []
         self.current_selected : Optional[UAnnotationThumbnail] = None
 
@@ -268,7 +268,7 @@ class UThumbnailCarousel(QWidget):
 
         self.commander.added_new_class.connect(self.add_class)
 
-    def set_available_classes(self, classes: list[FClassData]):
+    def set_available_classes(self, classes: FAnnotationClasses):
         self.available_classes = classes
 
     def clear_thumbnails(self):
@@ -352,10 +352,8 @@ class UThumbnailCarousel(QWidget):
         self.last_displayed_images.clear()
         self.last_displayed_images = [item for item in selected_thumbnails]
 
-    def add_class(self, class_data: FClassData):
-        if class_data is None:
-            return
-        self.available_classes.append(class_data)
+    def add_class(self, name: str):
+        return self.available_classes.add_class_by_name(name)
 
     def on_thumbnail_clicked(self, thumbnail: UAnnotationThumbnail):
         if self.current_selected is thumbnail:

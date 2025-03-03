@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from carousel import UAnnotationThumbnail
 from design.dataset_window import Ui_Dialog
-from utility import FClassData, FAnnotationItem, EAnnotationStatus, FDatasetInfo, EDatasetType
+from utility import FAnnotationClasses, FAnnotationItem, EAnnotationStatus, FDatasetInfo, EDatasetType
 
 
 class UDatasetCreator(QThread):
@@ -103,7 +103,7 @@ class UDatasetCreator(QThread):
 class UDatasetDialog(QDialog, Ui_Dialog):
     def __init__(
             self,
-            classes: list[FClassData],
+            classes: FAnnotationClasses,
             annotations: list[UAnnotationThumbnail],
             dataset: FDatasetInfo = None,
             parent=None
@@ -158,7 +158,7 @@ class UDatasetDialog(QDialog, Ui_Dialog):
                 if self.dataset_info.dataset_type.value == EDatasetType.YamlYOLO.value:
                     self.create_yaml_file()
                 elif self.dataset_info.dataset_type.value == EDatasetType.TxtYOLO.value:
-                    self.dataset_info.create_txt_yolo_file([name.Name for name in self.class_list])
+                    self.dataset_info.create_txt_yolo_file([name.Name for name in self.class_list.get_all_classes()])
             except Exception as e:
                 print(f"Ошибка: {str(e)}")
                 return
@@ -174,7 +174,7 @@ class UDatasetDialog(QDialog, Ui_Dialog):
     def create_yaml_file(self):
         with open(self.dataset_info.datafile_path, 'w+') as data_file:
             name_class_list = []
-            for class_item in self.class_list:
+            for class_item in self.class_list.get_all_classes():
                 name_class_list.append(class_item.Name)
 
             data_file.write(f"train: ../{os.path.join(*os.path.normpath(self.dataset_info.paths["train_images"]).split(os.sep)[-2:]).replace('\\', '/')}\n"

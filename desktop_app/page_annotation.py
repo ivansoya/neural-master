@@ -16,7 +16,7 @@ from commander import UGlobalSignalHolder
 from annotable import UAnnotationBox, UAnnotationScene
 from carousel import UAnnotationThumbnail
 from project import UTrainProject
-from utility import EWorkMode, EAnnotationStatus, FClassData, FDatasetInfo
+from utility import EWorkMode, EAnnotationStatus, FDatasetInfo
 from window_class_add import UAddClassWindow
 
 
@@ -107,11 +107,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.annotate_scene.available_classes.clear()
             self.thumbnail_carousel.available_classes.clear()
             for i in range(0, len(class_names)):
-                class_t = FClassData(i, class_names[i], FClassData.get_save_color(i))
-                self.annotate_scene.add_class(class_t)
-                self.thumbnail_carousel.add_class(class_t)
-                item_t = QStandardItem(str(class_t))
-                item_t.setData(class_t, Qt.UserRole)
+                self.annotate_scene.add_class(class_names[i])
+                self.thumbnail_carousel.add_class(class_names[i])
+                item_t = QStandardItem(str(class_names[i]))
+                item_t.setData(class_names[i], Qt.UserRole)
                 self.class_list_item_model.appendRow(item_t)
 
 
@@ -240,7 +239,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         window = UAddClassWindow(id_class, self.commander)
         window.exec_()
 
-    def on_get_new_class(self, class_data: FClassData):
+    def on_get_new_class(self, class_data: str):
         item_t = QStandardItem(str(class_data))
         item_t.setData(class_data, Qt.UserRole)
         self.class_list_item_model.appendRow(item_t)

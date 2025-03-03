@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QDialog, QColorDialog
 
 from design.add_class_window import Ui_dialog_add_class
 from commander import UGlobalSignalHolder
-from utility import FClassData
+from utility import FAnnotationClasses
 
 
 class UAddClassWindow(QDialog, Ui_dialog_add_class):
@@ -40,9 +40,9 @@ class UAddClassWindow(QDialog, Ui_dialog_add_class):
         else:
             self.class_name = class_name
         if self.selected_color is None:
-            self.selected_color = FClassData.get_save_color(self.id_class)
+            self.selected_color = FAnnotationClasses.get_save_color(self.id_class)
 
-        class_data = FClassData(self.id_class, self.class_name, self.selected_color)
+        class_data = (self.id_class, self.class_name, self.selected_color)
 
         if self.commander is not None:
             self.commander.added_new_class.emit(class_data)

@@ -1,7 +1,8 @@
 from PyQt5.QtCore import Qt, QObject, QEvent, pyqtSignal, QTimer
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 
-from utility import EWorkMode, FClassData, EAnnotationStatus
+from utility import EWorkMode, EAnnotationStatus
 
 class UGlobalSignalHolder(QObject):
     ctrl_pressed = pyqtSignal(int)
@@ -12,12 +13,12 @@ class UGlobalSignalHolder(QObject):
     delete_pressed = pyqtSignal(int)
 
     added_new_annotation = pyqtSignal(object)
-    updated_annotation = pyqtSignal(int, object)
+    updated_annotation = pyqtSignal(int, int, str, QColor)
     deleted_annotation = pyqtSignal(int)
 
     # Первый статус - изначальный, второй - новый
     changed_annotation_status = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
-    added_new_class = pyqtSignal(FClassData)
+    added_new_class = pyqtSignal()
 
     change_work_mode = pyqtSignal(int)
     changed_class_annotate = pyqtSignal(int)

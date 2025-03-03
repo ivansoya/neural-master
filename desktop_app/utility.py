@@ -9,6 +9,7 @@ from PyQt5.QtGui import QColor
 import random
 
 from PyQt5.QtWidgets import QMessageBox
+from sympy.solvers.diophantine import classify_diop
 
 GColorList = [
     QColor(255, 0, 0),
@@ -37,14 +38,51 @@ class EImagesType(Enum):
     Valid = 2
     Test = 3
 
-class FClassData:
-    def __init__(self, id_class, name, color: QColor):
-        self.Cid = id_class
-        self.Name = name
-        self.Color = color
+class FAnnotationClasses:
+    class FClassData:
+        def __init__(self, name: str, color: QColor):
+            self.Name = name
+            self.Color = color
+
+    def __init__(self):
+        self.class_dict: dict[int, FAnnotationClasses.FClassData] = dict()
 
     def __str__(self):
-        return f"{self.Cid}: {self.Name}"
+        str_dict = ""
+        for key, value in self.class_dict.items():
+            str_dict += f"{key}: {value.Name}, цвет: {value.Color}\n"
+        return str_dict
+
+    def add_classes_from_strings(self, str_list: list[str]):
+        for index in range(len(str_list)):
+            error = self.add_class(index, str_list[index], FAnnotationClasses.get_save_color(index))
+            if error: return error
+        return
+
+    def add_class_by_name(self, name: str):
+        index = len(self)
+        return self.add_class(index, name, FAnnotationClasses.get_save_color(index))
+
+    def add_class(self, class_id: int, name: str, color: QColor):
+        if class_id in self.class_dict:
+            return f"Ошибка! Класс под ID {class_id} уже существует!"
+        self.class_dict[class_id] = FAnnotationClasses.FClassData(name, color)
+        return
+
+    def get_class(self, class_id: int):
+        return self.class_dict.get(class_id)
+
+    def get_all_classes(self):
+        return self.class_dict.values()
+
+    def get_all_ids(self):
+        return self.class_dict.keys()
+
+    def get_items(self):
+        return self.class_dict.items()
+
+    def __len__(self):
+        return len(self.class_dict)
 
     @staticmethod
     def get_save_color(id_class: int):
@@ -55,7 +93,8 @@ class FClassData:
             r, g, b = 255, 255, 255
 
             for i in range((id_class - len(GColorList)) % 3 + 1):
-                step //= 2
+                if i % 3 == 0 and i != 0:
+                    step //= 2
                 if i % 3 == 0:
                     r = step if id_class % 2 == 0 else 255 - step
                 elif i % 3 == 1:

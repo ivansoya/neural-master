@@ -2,7 +2,7 @@ import configparser
 import os.path
 import shutil
 
-from utility import FClassData, FAnnotationData, FAnnotationItem
+from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem
 
 TASKS = "tasks"
 DATASETS = "datasets"
@@ -28,7 +28,7 @@ class UTrainProject:
         # Список зарезервированных аннотаций
         self.reserved: list[str] = list()
 
-        self.classes: list[FClassData] = list()
+        self.classes = FAnnotationClasses()
         self.counter = 0
         self.name = ""
         self.path = ""
@@ -48,9 +48,7 @@ class UTrainProject:
 
             config[MAIN_SECTION][COUNTER] = str(counter)
             config[MAIN_SECTION][CLASSES] = "[" + ", ".join(classes) + "]"
-            self.classes = [
-                FClassData(index, classes[index], FClassData.get_save_color(index)) for index in range(len(classes))
-            ]
+            self.classes.add_classes_from_strings(classes)
             self.name = name
             self.path = path
             config[MAIN_SECTION][NAME] = self.name
@@ -78,9 +76,7 @@ class UTrainProject:
 
             self.counter = config.getint(MAIN_SECTION, COUNTER)
             class_strings = [class_t for class_t in config.get(MAIN_SECTION, CLASSES).strip("[]").split(", ") if class_t]
-            self.classes = [
-                FClassData(index, class_strings[index], FClassData.get_save_color(index)) for index in range(len(class_strings))
-            ]
+            self.classes.add_classes_from_strings(class_strings)
             self.name = config.get(MAIN_SECTION, NAME)
             self.path = os.path.dirname(path_to_project)
 
@@ -88,7 +84,7 @@ class UTrainProject:
             print(f"Список строенных датасетов: {self.datasets}")
             print(f"Список задач для разметки: {self.tasks}")
             print(f"Список зарезервированных аннотаций: {self.reserved}")
-            print(f"Список классов: {[class_name.Name for class_name in self.classes]}")
+            print(f"Список классов: {[class_value.Name for class_value in self.classes.get_all_classes()]}")
             print(f"Счетчик: {self.counter}")
 
         except Exception as error:
@@ -104,7 +100,7 @@ class UTrainProject:
             config[MAIN_SECTION][RESERVED] = "[" + ", ".join(self.reserved) + "]"
 
             config[MAIN_SECTION][COUNTER] = str(self.counter)
-            config[MAIN_SECTION][CLASSES] = "[" + ", ".join([class_t.Name for class_t in self.classes]) + "]"
+            config[MAIN_SECTION][CLASSES] = "[" + ", ".join([class_t.Name for class_t in self.classes.get_all_classes()]) + "]"
             config[MAIN_SECTION][NAME] = self.name
 
             for dataset in self.datasets:

@@ -9,7 +9,6 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from page_dataset import UListDataset
 
 
 class Ui_page_dataset(object):
@@ -93,7 +92,7 @@ class Ui_page_dataset(object):
         self.horizontalLayout.setContentsMargins(0, -1, 0, -1)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.verticalWidget = QtWidgets.QWidget(page_dataset)
-        self.verticalWidget.setMaximumSize(QtCore.QSize(300, 16777213))
+        self.verticalWidget.setMaximumSize(QtCore.QSize(250, 16777213))
         self.verticalWidget.setObjectName("verticalWidget")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.verticalWidget)
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -106,6 +105,7 @@ class Ui_page_dataset(object):
         self.label_2.setObjectName("label_2")
         self.verticalLayout_2.addWidget(self.label_2)
         self.list_datasets = UListDataset(self.verticalWidget)
+        self.list_datasets.setMinimumSize(QtCore.QSize(250, 0))
         self.list_datasets.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.list_datasets.setObjectName("list_datasets")
         self.verticalLayout_2.addWidget(self.list_datasets)
@@ -118,8 +118,8 @@ class Ui_page_dataset(object):
         self.list_reserved = QtWidgets.QListWidget(self.verticalWidget)
         self.list_reserved.setObjectName("list_reserved")
         self.verticalLayout_2.addWidget(self.list_reserved)
-        self.verticalLayout_2.setStretch(1, 2)
-        self.verticalLayout_2.setStretch(3, 1)
+        self.verticalLayout_2.setStretch(1, 3)
+        self.verticalLayout_2.setStretch(3, 2)
         self.horizontalLayout.addWidget(self.verticalWidget)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setSpacing(0)
@@ -149,8 +149,8 @@ class Ui_page_dataset(object):
         self.button_refresh.setObjectName("button_refresh")
         self.horizontalLayout_2.addWidget(self.button_refresh)
         self.verticalLayout_3.addLayout(self.horizontalLayout_2)
-        self.view_gallery = QtWidgets.QGraphicsView(page_dataset)
-        self.view_gallery.setMinimumSize(QtCore.QSize(420, 420))
+        self.view_gallery = UImageGallery(page_dataset)
+        self.view_gallery.setMinimumSize(QtCore.QSize(650, 420))
         self.view_gallery.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.view_gallery.setObjectName("view_gallery")
         self.verticalLayout_3.addWidget(self.view_gallery)
@@ -232,6 +232,8 @@ class Ui_page_dataset(object):
         self.button_dataset_to_annotation.setText(_translate("page_dataset", "Разметить выбранный датасет"))
         self.button_delete_dataset.setText(_translate("page_dataset", "Удалить выбранный датасет"))
         self.button_selected_to_annotate.setText(_translate("page_dataset", "Разметить выбранные изображения"))
+from image_gallery import UImageGallery
+from list_datasets import UListDataset
 
 
 if __name__ == "__main__":

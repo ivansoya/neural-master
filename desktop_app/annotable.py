@@ -12,7 +12,7 @@ from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QTransform, QFont, QFont
 from PyQt5.QtCore import Qt, QRectF, QPointF, QSizeF, pyqtSignal
 
 from utility import FAnnotationData
-from utility import EWorkMode, FClassData
+from utility import EWorkMode, FAnnotationClasses
 from commander import UGlobalSignalHolder
 
 class UAnnotationBox(QGraphicsRectItem):
@@ -35,7 +35,7 @@ class UAnnotationBox(QGraphicsRectItem):
             y1: float,
             width: float,
             height:float,
-            class_data: FClassData,
+            class_data: tuple[int, str, QColor],
             scale: float = 1.0,
             parent = None
     ):
@@ -52,9 +52,7 @@ class UAnnotationBox(QGraphicsRectItem):
 
         self.setRect(x1, y1, width, height)
 
-        self.color = class_data.Color
-        self.class_id = class_data.Cid
-        self.class_name = class_data.Name
+        self.class_id, self.class_name, self.color = class_data
 
         self.line_width = 4
         self.draw_scale: float = 1.0
@@ -141,10 +139,10 @@ class UAnnotationBox(QGraphicsRectItem):
         else:
             return 'default'
 
-    def update_annotate_class(self, class_data: FClassData):
-        self.color = class_data.Color
-        self.class_id = class_data.Cid
-        self.class_name = class_data.Name
+    def update_annotate_class(self, class_id: int, name: str, color: QColor):
+        self.color = color
+        self.class_id = class_id
+        self.class_name = name
 
         self.background_color = QColor(self.color)
         self.background_color.setAlpha(50)
@@ -355,7 +353,7 @@ class UAnnotationScene(QGraphicsScene):
         super().__init__(parent)
         self.annotate_start_point : Optional[QPointF] = None
         self.current_rect : Optional[UAnnotationBox] = None
-        self.annotate_class : Optional[FClassData] = None
+        self.annotate_class : Optional[int] = None
         self.work_mode = EWorkMode.DragMode
 
         self.commander = commander
@@ -364,7 +362,7 @@ class UAnnotationScene(QGraphicsScene):
         self.image : Optional[QGraphicsPixmapItem] = None
 
         self.boxes_on_scene : list[UAnnotationBox] = list()
-        self.available_classes: list[FClassData] = list()
+        self.available_classes: Optional[FAnnotationClasses] = None
 
         self.setSceneRect(QRectF(0, 0, 32000, 32000))  # Устанавливаем размер сцены (ширина, высота)
 
@@ -375,7 +373,7 @@ class UAnnotationScene(QGraphicsScene):
             self.commander.added_new_class.connect(self.add_class)
 
 
-    def add_annotation_box(self, x, y, width, height, class_data: FClassData, do_emit: bool = True):
+    def add_annotation_box(self, x, y, width, height, class_data: tuple[int, str, QColor], do_emit: bool = True):
         ann_box = UAnnotationBox(
             x,
             y,
@@ -470,13 +468,11 @@ class UAnnotationScene(QGraphicsScene):
             ann_index = self.boxes_on_scene.index(selected)
             self.commander.updated_annotation.emit(ann_index, data)
 
-    def add_class(self, class_data: FClassData):
-        if class_data is None:
-            return
-        self.available_classes.append(class_data)
+    def add_class(self, name: str):
+        self.available_classes.add_class_by_name(name)
 
-    def set_classes_list(self, class_list: list[FClassData]):
-        self.available_classes = class_list
+    def set_classes_list(self, classes: FAnnotationClasses):
+        self.available_classes = classes
 
     def get_selected_annotation_box(self):
         items = self.selectedItems()

@@ -33,12 +33,6 @@ class Ui_widget_dataset_item(object):
         self.verticalLayout.addWidget(self.label_name)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.label_2 = QtWidgets.QLabel(widget_dataset_item)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_2.setFont(font)
-        self.label_2.setObjectName("label_2")
-        self.horizontalLayout.addWidget(self.label_2)
         self.label_count = QtWidgets.QLabel(widget_dataset_item)
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -57,7 +51,6 @@ class Ui_widget_dataset_item(object):
         _translate = QtCore.QCoreApplication.translate
         widget_dataset_item.setWindowTitle(_translate("widget_dataset_item", "widget_dataset_item"))
         self.label_name.setText(_translate("widget_dataset_item", "Датасет 1"))
-        self.label_2.setText(_translate("widget_dataset_item", "Изображений:"))
         self.label_count.setText(_translate("widget_dataset_item", "0"))
 
 
