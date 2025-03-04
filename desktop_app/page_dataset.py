@@ -3,7 +3,7 @@ import shutil
 from typing import Optional
 
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem
 
 from commander import UGlobalSignalHolder
@@ -33,19 +33,14 @@ class UThreadDisplayDataset(QThread):
     def run(self):
         for index in range(self.ann_len):
             data, image_path = self.annotations[index].get_item_data()
+            annotation_list = list()
+            for annotation in data:
+                color, error = self.classes.get_color(annotation.ClassID)
+                annotation_list.append((annotation.X, annotation.Y, annotation.Width, annotation.Height, color))
             self.signal_on_image_loaded.emit(
                 UAnnotationImage(
                     image_path,
-                    [
-                        (
-                            annotation.X,
-                            annotation.Y,
-                            annotation.Width,
-                            annotation.Height,
-                            self.classes.get_class(annotation.ClassID).Color
-                       )
-                      for annotation in data
-                    ],
+                    annotation_list,
                     self.size
                 )
             )
@@ -89,10 +84,14 @@ class UPageDataset(QWidget, Ui_page_dataset):
             )
             return
 
-        self.view_gallery.update_grid()
+        self.overlay = UOverlayLoader(self)
 
-        self.overlay = UOverlayLoader(self.view_gallery)
-        self.overlay.show()
+        try:
+            self.view_gallery.clear_scene()
+        except Exception as error:
+            self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+            UMessageBox.show_error(str(error))
+            return
 
         self.thread_display = UThreadDisplayDataset(self.project.classes, annotations, self.view_gallery.get_cell_size())
         self.thread_display.signal_on_image_loaded.connect(self.display_image_at_gallery)
@@ -107,6 +106,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
     def on_ended_thread_display(self):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+        self.view_gallery.update_visibility(force=True)
 
     def on_error_thread_display(self, error_msg: str):
         UMessageBox.show_error(error_msg)
@@ -131,7 +131,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         with open(classes_path, "r") as file:
             classes_list = [line.strip() for line in file]
 
-        if classes_list != [cls.Name for cls in self.project.classes]:
+        if classes_list != [cls.Name for cls in self.project.classes.get_all_classes()]:
             UMessageBox.show_error(f"Классы выбранного датасета не совпадают с классами проекта!")
             return
 
@@ -141,8 +141,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         ):
             return
 
-        self.overlay = UOverlayLoader(self.horizontalLayout)
-        self.overlay.show()
+        self.overlay = UOverlayLoader(self.dataset_display)
 
         self.thread_copy = UThreadDatasetCopy(path, self.project)
 
@@ -179,6 +178,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
             UMessageBox.show_error(error)
         else:
             UMessageBox.show_error("Датасет был успешно добавлен в проект и загружен!", "Успех!", int(QMessageBox.Ok))
+        # Обновление списка датасетов
+        self.list_datasets.clear()
+        self.create_list_dataset()
         self.close_overlay()
 
     def make_error_with_load_annotations(self, dataset: str, error_str: str):

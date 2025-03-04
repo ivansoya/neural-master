@@ -4,12 +4,13 @@ from typing import Optional
 import yaml
 import configparser
 from enum import Enum
+
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 
 import random
 
 from PyQt5.QtWidgets import QMessageBox
-from sympy.solvers.diophantine import classify_diop
 
 GColorList = [
     QColor(255, 0, 0),
@@ -68,6 +69,17 @@ class FAnnotationClasses:
             return f"Ошибка! Класс под ID {class_id} уже существует!"
         self.class_dict[class_id] = FAnnotationClasses.FClassData(name, color)
         return
+
+    def get_color(self, class_id: int):
+        if class_id not in self.class_dict:
+            return (QColor(Qt.gray),
+                    f"Ошибка в функции FAnnotationClasses.get_color! Не существует класса с айди {class_id}!")
+        return self.class_dict[class_id].Color, None
+
+    def get_name(self, class_id: int):
+        if class_id not in self.class_dict:
+            return f"Ошибка в функции FAnnotationClasses.get_name! Не существует класса с айди {class_id}!", False
+        return self.class_dict[class_id].Name, True
 
     def get_class(self, class_id: int):
         return self.class_dict.get(class_id)

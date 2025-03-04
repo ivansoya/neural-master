@@ -50,7 +50,6 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
                 return
 
             self.overlay = UOverlayLoader(self)
-            self.overlay.show()
 
             self.thread_load = UThreadDatasetLoadAnnotations(self.project, self.project.datasets)
 

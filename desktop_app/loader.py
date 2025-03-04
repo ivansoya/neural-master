@@ -3,8 +3,8 @@ import shutil
 from typing import Optional
 import imageio.v3 as iio
 
-from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer
-from PyQt5.QtGui import QPainter, QColor
+from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer, QRectF
+from PyQt5.QtGui import QPainter, QColor, QPixmap
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
 
 from project import UTrainProject, DATASETS
@@ -12,8 +12,9 @@ from utility import FAnnotationItem, FAnnotationData
 
 class UOverlayLoader(QWidget):
     def __init__(self, parent):
-        super().__init__(parent)
-        self.setGeometry(0, 0, parent.width(), parent.height())
+        super().__init__()
+        self.setParent(parent)
+        self.setGeometry(0, 0, self.parent().width(), self.parent().height())
 
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
@@ -35,7 +36,26 @@ class UOverlayLoader(QWidget):
         layout.addWidget(self.label_annotation)
         layout.addWidget(self.progress_bar)
 
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+        self.setAttribute(Qt.WA_NoSystemBackground, True)
+
+        # Создаем QPixmap для overlay
+        self.pixmap = QPixmap(self.size())
+        self.pixmap.fill(QColor(0, 0, 0, 200))  # Заполняем прозрачным фоном
+
         self.setLayout(layout)
+        self.raise_()
+        self.show()
+        self.update()
+
+    def mousePressEvent(self, a0):
+        pass
+
+    def mouseReleaseEvent(self, a0):
+        pass
+
+    def mouseMoveEvent(self, a0):
+        pass
 
     def update_label_dataset(self, text: str, current: int, count: int):
         self.label_dataset.setText(f"Загрузка датасета {text}: {current} из {count}")
@@ -47,14 +67,14 @@ class UOverlayLoader(QWidget):
         self.label_annotation.setText(label)
         self.progress_bar.setValue(int(float(current) / count * 100))
 
+    def resizeEvent(self, event):
+        self.setGeometry(0, 0, self.parent().width(), self.parent().height())
+        self.update()
+        super().resizeEvent(event)
+
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        painter.setBrush(QColor(0, 0, 0, 200))
-        painter.setPen(Qt.transparent)
-
-        painter.drawRect(self.rect())
+        painter.drawPixmap(0, 0, self.pixmap)
         painter.end()
 
     @staticmethod
