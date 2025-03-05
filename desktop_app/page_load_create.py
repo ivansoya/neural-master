@@ -64,7 +64,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
             self.thread_load.start()
 
     def on_error_load(self, dataset: str, error: str):
-        self.project.remove_annotations_from_dataset(dataset)
+        self.project.remove_all_annotations_from_dataset(dataset)
         UMessageBox.show_error(error)
 
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)

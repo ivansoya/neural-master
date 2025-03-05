@@ -12,7 +12,7 @@ from utility import FAnnotationItem, FAnnotationData
 
 class UOverlayLoader(QWidget):
     def __init__(self, parent):
-        super().__init__()
+        super().__init__(parent)
         self.setParent(parent)
         self.setGeometry(0, 0, self.parent().width(), self.parent().height())
 
@@ -37,7 +37,6 @@ class UOverlayLoader(QWidget):
         layout.addWidget(self.progress_bar)
 
         self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
-        self.setAttribute(Qt.WA_NoSystemBackground, True)
 
         # Создаем QPixmap для overlay
         self.pixmap = QPixmap(self.size())
@@ -47,15 +46,6 @@ class UOverlayLoader(QWidget):
         self.raise_()
         self.show()
         self.update()
-
-    def mousePressEvent(self, a0):
-        pass
-
-    def mouseReleaseEvent(self, a0):
-        pass
-
-    def mouseMoveEvent(self, a0):
-        pass
 
     def update_label_dataset(self, text: str, current: int, count: int):
         self.label_dataset.setText(f"Загрузка датасета {text}: {current} из {count}")
@@ -90,18 +80,19 @@ class UThreadDatasetCopy(QThread):
     signal_on_ended = pyqtSignal(str)
     signal_on_error = pyqtSignal(str)
 
-    def __init__(self, path_to_dataset, project: UTrainProject):
+    def __init__(self, project: UTrainProject, source_dataset_path, target_copy_type: str = DATASETS):
         super().__init__()
 
         self.project = project
-        self.path_to_dataset = path_to_dataset
+        self.source_dataset_path = source_dataset_path
+        self.target_copy_type = target_copy_type
 
     def run(self):
         try:
-            path_to_images = os.path.join(self.path_to_dataset, "images").replace('\\', '/')
-            path_to_labels = os.path.join(self.path_to_dataset, "labels").replace('\\', '/')
+            path_to_images = os.path.join(self.source_dataset_path, "images").replace('\\', '/')
+            path_to_labels = os.path.join(self.source_dataset_path, "labels").replace('\\', '/')
 
-            dataset_path_new = os.path.join(self.project.path, DATASETS, os.path.basename(self.path_to_dataset)).replace('\\','/')
+            dataset_path_new = os.path.join(self.project.path, self.target_copy_type, os.path.basename(self.source_dataset_path)).replace('\\', '/')
             images_path_new = os.path.join(str(dataset_path_new), "images").replace('\\', '/')
             labels_path_new = os.path.join(str(dataset_path_new), "labels").replace('\\', '/')
 
@@ -113,7 +104,7 @@ class UThreadDatasetCopy(QThread):
 
             self.go_folder(path_to_images, images_path_new, (".png", ".jpg", ".jpeg"))
 
-            self.signal_on_ended.emit(os.path.basename(self.path_to_dataset))
+            self.signal_on_ended.emit(os.path.basename(self.source_dataset_path))
 
         except Exception as error:
             self.signal_on_error.emit(str(error))
@@ -226,7 +217,7 @@ class UThreadDatasetLoadAnnotations(QThread):
                     )
                 ann_item = FAnnotationItem(ann_list, image_path)
             if ann_item:
-                error = self.project.add_annotation_to_dataset(dataset, ann_item)
+                error = self.project.add_annotation(dataset, ann_item)
                 if error:
                     return error
                 return

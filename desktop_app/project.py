@@ -2,6 +2,7 @@ import configparser
 import os.path
 import shutil
 
+from supporting.error_text import UErrorsText
 from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem
 
 TASKS = "tasks"
@@ -35,6 +36,7 @@ class UTrainProject:
 
         # Изменяемые данные в процессе работы программы
         self.current_annotations: dict[str, list[FAnnotationItem]] = dict()
+        self.reserved_annotations: dict[str, list[FAnnotationItem]] = dict()
 
 
     def create(self, path: str, name:str, classes:list[str], counter:int = 0):
@@ -80,6 +82,8 @@ class UTrainProject:
             self.name = config.get(MAIN_SECTION, NAME)
             self.path = os.path.dirname(path_to_project)
 
+            self._init_dicts()
+
             print(f"Загружен проект {self.name}!")
             print(f"Список строенных датасетов: {self.datasets}")
             print(f"Список задач для разметки: {self.tasks}")
@@ -114,51 +118,140 @@ class UTrainProject:
         except Exception as error:
             return str(error)
 
-    def remove_dataset_folder(self, dataset: str):
-        path_to_dataset = os.path.join(self.path, DATASETS, dataset).replace('\\', '/')
+    def remove_project_folder(self, dataset_name: str, type_dataset: str = DATASETS):
+        path_to_dataset = os.path.join(self.path, DATASETS, dataset_name).replace('\\', '/')
         if os.path.exists(path_to_dataset):
             shutil.rmtree(path_to_dataset)
-            print(f"Из проекта {self.name} удалена папка датасета {dataset}, находящаяся по пути {path_to_dataset}!")
+            print(f"Из проекта {self.name} удалена папка датасета {dataset_name}, находящаяся по пути {path_to_dataset}!")
         else:
-            print(f"Функция UTrainProject.remove_dataset_folder объекта {self.name}! На найдена папка датасета {dataset} по пути {path_to_dataset}!")
+            print(f"Функция UTrainProject.remove_dataset_folder объекта {self.name}! На найдена папка датасета {dataset_name} по пути {path_to_dataset}!")
 
-    def add_dataset(self, dataset: str):
+    def add_dataset(self, dataset: str, type_dataset: str = DATASETS):
+        ref_dataset_list = self._get_ref_to_list(type_dataset)
+        ref_reserved_dict = self._get_ref_to_annotation_dict(type_dataset)
+        if not ref_dataset_list or not ref_reserved_dict:
+            return UErrorsText.not_existing_type_dataset("UTrainProject.add_dataset", type_dataset)
+
         if dataset not in self.datasets:
             self.datasets.append(dataset)
+            ref_reserved_dict[dataset] = list()
             print(f"В проект {self.name} добавлен датасет {dataset}!")
 
-    def remove_dataset(self, dataset: str):
-        if dataset in self.datasets:
-            self.datasets.remove(dataset)
-            print(f"Из проекта {self.name} удален датасет {dataset}!")
+    def remove_dataset(self, dataset: str, type_dataset: str = DATASETS):
+        dict_dataset = self._get_ref_to_list(type_dataset)
+        if not dict_dataset:
+            return UErrorsText.not_existing_type_dataset("UTrainProject.remove_dataset", type_dataset)
 
-    def remove_annotations_from_dataset(self, dataset):
-        if self.current_annotations.get(dataset):
-            del self.current_annotations[dataset]
+        if dataset in dict_dataset:
+            dict_dataset.remove(dataset)
+            print(f"Из проекта {self.name} удален датасет {dataset}!")
+        else:
+            return UErrorsText.not_existing_dataset_in_project("UTrainProject.remove_dataset", dataset)
+
+    def delete_dataset_from_project(self, dataset: str, type_dataset: str = DATASETS):
+        path_dataset_folder = os.path.join(self.path, type_dataset, dataset).replace('\\', '/')
+        if not os.path.exists(path_dataset_folder):
+            return UErrorsText.not_existing_path_to_dataset("UTrainProject.delete_dataset", path_dataset_folder)
+
+        self.remove_dataset(dataset)
+        self.remove_all_annotations_from_dataset(dataset, type_dataset)
+        shutil.rmtree(path_dataset_folder)
+
+    def remove_all_annotations_from_dataset(self, dataset, type_dataset: str = DATASETS):
+        ref_annotation_dict = self._get_ref_to_annotation_dict(type_dataset)
+        if not ref_annotation_dict:
+            return UErrorsText.not_existing_type_dataset("UTrainProject.remove_annotations", type_dataset)
+
+        if ref_annotation_dict.get(dataset):
+            del ref_annotation_dict[dataset]
             print(f"В проекте {self.name} из датасета {dataset} удалены все аннотации!")
 
-    def add_annotation_to_dataset(self, dataset:str, ann_item:FAnnotationItem):
-        if dataset in self.datasets:
-            if dataset not in self.current_annotations:
-                self.current_annotations[dataset] = list()
-            self.current_annotations[dataset].append(ann_item)
+    def add_annotation(self, dataset:str, ann_item:FAnnotationItem, type_dataset: str = DATASETS):
+        ref_dataset_dict = self._get_ref_to_list(type_dataset)
+        ref_annotations_dict = self._get_ref_to_annotation_dict(type_dataset)
+        if not ref_dataset_dict or not ref_annotations_dict:
+            return UErrorsText.not_existing_type_dataset("UTrainProject.add_annotation", type_dataset)
+
+        if dataset in ref_dataset_dict:
+            if dataset not in ref_annotations_dict:
+                ref_annotations_dict[dataset] = list()
+            ref_annotations_dict[dataset].append(ann_item)
             return
         else:
-            return f"Ошибка в функции add_annotation_to_dataset! Не существует датасета {dataset}!"
+            return UErrorsText.not_existing_dataset_in_project("UTrainProject.add_annotation", dataset)
+
+    def delete_annotation(self, dataset: str, ann_item: FAnnotationItem, type_dataset: str = DATASETS):
+        ref_dataset_list = self._get_ref_to_list(type_dataset)
+        ref_annotations_dict = self._get_ref_to_annotation_dict(type_dataset)
+        if not ref_dataset_list or not ref_annotations_dict:
+            return UErrorsText.not_existing_type_dataset("UTrainProject.delete_annotation", type_dataset)
+
+        if dataset not in ref_dataset_list:
+            return UErrorsText.not_existing_dataset_in_project("UTrainProject.delete_annotation", dataset)
+        if dataset not in ref_annotations_dict:
+            return UErrorsText.not_existing_annotations("UTrainProject.delete_annotation", dataset)
+
+        try:
+            ref_annotations_dict[dataset].remove(ann_item)
+        except ValueError:
+            return UErrorsText.not_existing_annotation_in_dataset("UTrainProject.delete_annotation", dataset)
 
     def get_datasets(self):
         return self.datasets
+
+    def get_current_annotations(self):
+        return self.current_annotations
+
+    def get_reserved(self):
+        return self.reserved
+
+    def get_reserved_annotations(self):
+        return self.reserved_annotations
 
     def get_dataset_path(self, dataset_name: str):
         if dataset_name in self.datasets:
             return os.path.join(self.name, DATASETS, dataset_name).replace('\\', '/')
 
-    def get_all_dataset_paths(self):
+    def get_reserved_path(self, reserved_name: str):
+        if reserved_name in self.reserved:
+            return os.path.join(self.name, RESERVED, reserved_name).replace('\\', '/')
+
+    def get_all_dataset_paths(self, type_dataset: str = DATASETS):
+        dict_ref = self._get_ref_to_list(type_dataset)
+        if not dict_ref:
+            UErrorsText.not_existing_type_dataset("UTrainProject.get_all_dataset_paths", type_dataset)
+
         paths = list()
-        for dataset_name in self.datasets:
-            paths.append(os.path.join(self.name, DATASETS, dataset_name).replace('\\', '/'))
+        for dataset_name in dict_ref:
+            paths.append(os.path.join(self.name, type_dataset, dataset_name).replace('\\', '/'))
         return paths
 
     def get_annotations_from_dataset(self, dataset_name: str):
         if dataset_name in self.current_annotations:
             return self.current_annotations[dataset_name]
+
+    def get_annotations_from_reserved(self, reserved_name: str):
+        if reserved_name in self.reserved_annotations:
+            return self.reserved_annotations[reserved_name]
+
+    def _get_ref_to_list(self, type_dataset: str):
+        if type_dataset == DATASETS:
+            return self.datasets
+        elif type_dataset == RESERVED:
+            return self.reserved
+        else:
+            return None
+
+    def _get_ref_to_annotation_dict(self, type_dataset:str):
+        if type_dataset == DATASETS:
+            return self.current_annotations
+        elif type_dataset == RESERVED:
+            return self.reserved_annotations
+        else:
+            return None
+
+    def _init_dicts(self):
+        for dataset_name in self.datasets:
+            self.current_annotations[dataset_name] = list()
+        for reserved_name in self.reserved:
+            self.reserved_annotations[reserved_name] = list()

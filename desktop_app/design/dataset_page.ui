@@ -260,6 +260,18 @@ QPushButton:hover {
            </spacer>
           </item>
           <item>
+           <widget class="QPushButton" name="button_reset_selected">
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+	padding: 5px 10px
+}</string>
+            </property>
+            <property name="text">
+             <string>Снять выделения</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="button_refresh">
             <property name="font">
              <font>
@@ -291,6 +303,35 @@ QPushButton:hover {
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QScrollArea" name="scroll_classes">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="verticalScrollBarPolicy">
+           <enum>Qt::ScrollBarAlwaysOff</enum>
+          </property>
+          <property name="horizontalScrollBarPolicy">
+           <enum>Qt::ScrollBarAsNeeded</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollAreaWidgetContents">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>842</width>
+             <height>38</height>
+            </rect>
+           </property>
+          </widget>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>
@@ -306,7 +347,7 @@ QPushButton:hover {
           <widget class="QPushButton" name="button_add_dataset">
            <property name="font">
             <font>
-             <pointsize>11</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -318,7 +359,7 @@ QPushButton:hover {
           <widget class="QPushButton" name="button_add_class">
            <property name="font">
             <font>
-             <pointsize>11</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -337,7 +378,7 @@ QPushButton:hover {
            <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
-             <height>40</height>
+             <height>20</height>
             </size>
            </property>
           </spacer>
@@ -346,7 +387,7 @@ QPushButton:hover {
           <widget class="QPushButton" name="button_set_model_local">
            <property name="font">
             <font>
-             <pointsize>11</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -358,7 +399,7 @@ QPushButton:hover {
           <widget class="QPushButton" name="button_set_model_remote">
            <property name="font">
             <font>
-             <pointsize>11</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -377,7 +418,7 @@ QPushButton:hover {
            <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
-             <height>40</height>
+             <height>20</height>
             </size>
            </property>
           </spacer>
@@ -386,7 +427,7 @@ QPushButton:hover {
           <widget class="QPushButton" name="button_dataset_to_annotation">
            <property name="font">
             <font>
-             <pointsize>11</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -395,26 +436,82 @@ QPushButton:hover {
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="button_delete_dataset">
-           <property name="font">
-            <font>
-             <pointsize>11</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Удалить выбранный датасет</string>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QPushButton" name="button_selected_to_annotate">
            <property name="font">
             <font>
-             <pointsize>11</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
             <string>Разметить выбранные изображения</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_4">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="button_move_selected_to_reserved">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Резервировать выбранное</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="button_move_dataset_to_reserved">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Резервировать датасет</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_5">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="button_delete_dataset">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Удалить выбранный датасет</string>
            </property>
           </widget>
          </item>

@@ -2,49 +2,50 @@ import os.path
 import shutil
 from typing import Optional
 
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem
 
 from commander import UGlobalSignalHolder
 from design.dataset_page import Ui_page_dataset
-from design.widget_dataset_item import Ui_widget_dataset_item
 from image_gallery import UAnnotationImage
-from list_datasets import UItemDataset
+from list_datasets import UItemDataset, UListDataset
 from loader import UOverlayLoader, UThreadDatasetLoadAnnotations, UThreadDatasetCopy
-from project import UTrainProject, DATASETS
+from project import UTrainProject, RESERVED, DATASETS
 from utility import UMessageBox, FAnnotationItem, FAnnotationClasses
 
 
 class UThreadDisplayDataset(QThread):
-    signal_on_image_loaded = pyqtSignal(UAnnotationImage)
+    signal_on_image_loaded = pyqtSignal(object)
     signal_on_progress_changed = pyqtSignal(str, int, int)
     signal_on_ended = pyqtSignal()
     signal_on_error = pyqtSignal(str)
 
-    def __init__(self, classes: FAnnotationClasses, annotations: list[FAnnotationItem], image_size: int = 200):
+    def __init__(self,
+                 classes: FAnnotationClasses,
+                 annotations: dict[str, list[FAnnotationItem]],
+                 image_size: int = 200
+    ):
         super().__init__()
 
         self.annotations = annotations
         self.size = image_size
-        self.ann_len = len(self.annotations)
+        self.ann_len = sum(len(ann) for ann in self.annotations.values())
         self.classes = classes
 
     def run(self):
-        for index in range(self.ann_len):
-            data, image_path = self.annotations[index].get_item_data()
-            annotation_list = list()
-            for annotation in data:
-                color, error = self.classes.get_color(annotation.ClassID)
-                annotation_list.append((annotation.X, annotation.Y, annotation.Width, annotation.Height, color))
-            self.signal_on_image_loaded.emit(
-                UAnnotationImage(
-                    image_path,
-                    annotation_list,
-                    self.size
-                )
-            )
-            self.signal_on_progress_changed.emit(image_path, index + 1, self.ann_len)
+        indicator = 1
+        for dataset, annotation_data in self.annotations.items():
+            for index in range(len(annotation_data)):
+                data, image_path = self.annotations[dataset][index].get_item_data()
+                annotation_list = list()
+                for annotation in data:
+                    color, error = self.classes.get_color(annotation.ClassID)
+                    annotation_list.append((annotation.X, annotation.Y, annotation.Width, annotation.Height, color))
+                image_temp: UAnnotationImage = UAnnotationImage(image_path, dataset, annotation_list, self.size)
+                self.signal_on_image_loaded.emit(image_temp)
+                indicator += 1
+                self.signal_on_progress_changed.emit(image_path, indicator, self.ann_len)
         self.signal_on_ended.emit()
 
 class UPageDataset(QWidget, Ui_page_dataset):
@@ -68,6 +69,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.button_add_dataset.clicked.connect(self.add_dataset)
 
         self.list_datasets.signal_on_item_clicked.connect(self.start_thread_display_at_gallery)
+        self.list_reserved.signal_on_item_clicked.connect(self.start_thread_display_at_gallery)
+
+        self.button_move_dataset_to_reserved.clicked.connect(self.move_dataset_to_reserved)
 
         # Привязка к событиям
         if self.commander:
@@ -77,14 +81,14 @@ class UPageDataset(QWidget, Ui_page_dataset):
         if isinstance(self.parent(), QStackedWidget):
             self.parent().setCurrentIndex(2)
 
-    def start_thread_display_at_gallery(self, annotations: list[FAnnotationItem]):
+    def start_thread_display_at_gallery(self, annotations: dict[str, list[FAnnotationItem]]):
         if self.overlay or (self.thread_display and self.thread_display.isRunning()):
             UMessageBox.show_error(
                 "Невозможно запустить процесс отображения изображений! В текущее время он уже работает!"
             )
             return
 
-        self.overlay = UOverlayLoader(self)
+        self.overlay = UOverlayLoader(self.dataset_display)
 
         try:
             self.view_gallery.clear_scene()
@@ -101,8 +105,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.thread_display.run()
 
-    def display_image_at_gallery(self, gallery_item: UAnnotationImage):
-        self.view_gallery.add_item(gallery_item)
+    def display_image_at_gallery(self, gallery_item):
+        if isinstance(gallery_item, UAnnotationImage):
+            self.view_gallery.add_item(gallery_item)
 
     def on_ended_thread_display(self):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
@@ -143,7 +148,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.overlay = UOverlayLoader(self.dataset_display)
 
-        self.thread_copy = UThreadDatasetCopy(path, self.project)
+        self.thread_copy = UThreadDatasetCopy(self.project, path)
 
         self.thread_copy.signal_on_copy.connect(self.overlay.update_progress)
         self.thread_copy.signal_on_error.connect(self.make_error_with_copy)
@@ -187,29 +192,74 @@ class UPageDataset(QWidget, Ui_page_dataset):
         UMessageBox.show_error(error_str)
 
         self.project.remove_dataset(dataset)
-        self.project.remove_annotations_from_dataset(dataset)
-        self.project.remove_dataset_folder(dataset)
+        self.project.remove_all_annotations_from_dataset(dataset)
+        self.project.remove_project_folder(dataset)
 
         self.close_overlay()
 
+    def move_dataset_to_reserved(self):
+        if self.overlay or (self.thread_copy and self.thread_copy.isRunning()):
+            return
+
+        dataset_item = UListDataset.get_item_widget(self.list_reserved)
+        if not dataset_item or not dataset_item.name in self.project.datasets:
+            return
+        path_to_dataset_target = os.path.join(self.project.path, DATASETS, dataset_item.name).replace('\\', '/')
+
+        self.overlay = UOverlayLoader(self.dataset_display)
+
+        self.thread_copy = UThreadDatasetCopy(self.project, path_to_dataset_target, RESERVED)
+
+        self.thread_copy.signal_on_copy.connect(self.overlay.update_progress)
+        self.thread_copy.signal_on_error.connect(self.make_error_with_copy)
+        self.thread_copy.signal_on_ended.connect(self.end_moving_dataset_to_reserved)
+
+        self.thread_copy.start()
+
+    def end_moving_dataset_to_reserved(self, dataset_name: str):
+        self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+
+        self.create_list_reserved()
+        self.create_list_dataset()
+
+        self.project.remove_project_folder(dataset_name, RESERVED)
+
+    def create_list_reserved(self):
+        for dataset in self.project.reserved:
+            try:
+                reserved_temp = {dataset: self.project.get_reserved_annotations()[dataset]}
+                self.list_reserved.add_dataset_item(
+                    UItemDataset(
+                        dataset,
+                        reserved_temp
+                    )
+                )
+            except Exception as error:
+                return str(error)
+
     def create_list_dataset(self):
         # Создание общего предмета
-        all_datasets = sum(
-            (self.project.get_annotations_from_dataset(dataset_name) for dataset_name in self.project.get_datasets()),
-            []
-        )
-        if len(all_datasets) == 0:
+        sum_len = sum(len(ann_list) for ann_list in self.project.current_annotations.values())
+        if sum_len == 0:
             return
-        all_item = UItemDataset("All annotations", all_datasets, len(all_datasets))
+        all_item = UItemDataset(
+            "All annotations",
+            self.project.current_annotations
+        )
         self.list_datasets.add_dataset_item(all_item)
 
         # Создание отдельных датасетов
         for dataset in self.project.datasets:
-            annotation_list = self.project.get_annotations_from_dataset(dataset)
-            if annotation_list:
+            try:
+                annotation_temp = {dataset: self.project.get_current_annotations()[dataset]}
                 self.list_datasets.add_dataset_item(
-                    UItemDataset(dataset, annotation_list, len(annotation_list))
+                    UItemDataset(
+                        dataset,
+                        annotation_temp
+                    )
                 )
+            except Exception as error:
+                return str(error)
 
     def make_error_with_copy(self, error_str: str):
         UMessageBox.show_error(error_str)

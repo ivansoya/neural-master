@@ -6,19 +6,24 @@ from utility import FAnnotationItem
 
 
 class UItemDataset(QWidget, Ui_widget_dataset_item):
-    def __init__(self, name: str, annotations: list[FAnnotationItem], count: int, parent = None):
+    def __init__(self, name: str, annotations: dict[str, list[FAnnotationItem]], parent = None):
         super().__init__(parent)
         self.setupUi(self)
 
+        self.name = name
+        self.count = sum(len(ann) for ann in annotations.values())
         self.label_name.setText(name)
-        self.label_count.setText(f"Аннотаций: {count}")
+        self.label_count.setText(f"Аннотаций: {self.count}")
         self.annotations = annotations
+
+    def get_dataset_name(self):
+        return self.name
 
     def get_annotations(self):
         return self.annotations
 
 class UListDataset(QListWidget):
-    signal_on_item_clicked = pyqtSignal(list)
+    signal_on_item_clicked = pyqtSignal(dict)
 
     def __init__(self, parent = None):
         super().__init__(parent)
@@ -34,3 +39,14 @@ class UListDataset(QListWidget):
         widget = self.itemWidget(item)
         if isinstance(widget, UItemDataset):
             self.signal_on_item_clicked.emit(widget.get_annotations())
+
+    @staticmethod
+    def get_item_widget(list_widget: 'UListDataset'):
+        if not list_widget:
+            return
+        item = list_widget.currentItem()
+        if item:
+            widget = list_widget.itemWidget(item)
+            if widget and isinstance(widget, UItemDataset):
+                return widget
+        return

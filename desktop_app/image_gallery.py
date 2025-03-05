@@ -110,6 +110,7 @@ class UAnnotationImage(UWidgetGallery):
     def __init__(
             self,
             image_path: str,
+            dataset: str,
             data: list[tuple[int, int, int, int, QColor]],
             size: int = 200,
             parent = None
@@ -117,6 +118,7 @@ class UAnnotationImage(UWidgetGallery):
         super().__init__(parent)
 
         self.image_path = image_path
+        self.dataset = dataset
         self.annotation_data = data
         self.size = size
         self.setFixedSize(self.size, self.size)
@@ -159,6 +161,8 @@ class UAnnotationImage(UWidgetGallery):
             painter.setPen(pen)
             painter.drawRect(self.rect())
 
+    def get_dataset_name(self):
+        return self.dataset
 
 class UImageGallery(QGraphicsView):
     def __init__(self, parent = None):
@@ -179,6 +183,9 @@ class UImageGallery(QGraphicsView):
         self.setViewportUpdateMode(QGraphicsView.BoundingRectViewportUpdate)
 
     def add_item(self, item: UWidgetGallery):
+        if not isinstance(item, UWidgetGallery):
+            print("Попытка добавить невалидный тип объекта в галерею!")
+            return
         if item in self.list_widgets:
             print(f"Ошибка в функции UImageGallery.add_item! Передаваемый объект уже существует в списке!")
             return
@@ -189,7 +196,6 @@ class UImageGallery(QGraphicsView):
         proxy = self.scene.addWidget(item)
         proxy.setPos(pos_x, pos_y)
         self.list_widgets.append(proxy)
-
         self.update_scene_rect()
 
     def update_grid(self):
@@ -248,6 +254,9 @@ class UImageGallery(QGraphicsView):
 
         self.last_visible = current_visible
 
+    def get_selected_widgets(self):
+        return  [item for item in self.scene.selectedItems() if isinstance(item, UWidgetGallery)]
+
     def clear_scene(self):
         self.verticalScrollBar().setValue(0)
         for item in self.list_widgets[::-1]:
@@ -279,5 +288,5 @@ class UImageGallery(QGraphicsView):
     def _set_widgets_load(self, widget_indexes: list[int], loaded: bool):
         for index in widget_indexes:
             widget = self.list_widgets[index].widget()
-            if isinstance(widget, UAnnotationImage):
+            if isinstance(widget, UWidgetGallery):
                 widget.set_loaded(loaded)
