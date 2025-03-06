@@ -304,32 +304,25 @@ QPushButton:hover {
          </widget>
         </item>
         <item>
-         <widget class="QScrollArea" name="scroll_classes">
+         <widget class="UScrollFilter" name="scroll_classes">
           <property name="maximumSize">
            <size>
             <width>16777215</width>
             <height>40</height>
            </size>
           </property>
+          <property name="styleSheet">
+           <string notr="true">background-color: white;</string>
+          </property>
           <property name="verticalScrollBarPolicy">
            <enum>Qt::ScrollBarAlwaysOff</enum>
           </property>
           <property name="horizontalScrollBarPolicy">
-           <enum>Qt::ScrollBarAsNeeded</enum>
+           <enum>Qt::ScrollBarAlwaysOff</enum>
           </property>
           <property name="widgetResizable">
            <bool>true</bool>
           </property>
-          <widget class="QWidget" name="scrollAreaWidgetContents">
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>842</width>
-             <height>38</height>
-            </rect>
-           </property>
-          </widget>
          </widget>
         </item>
        </layout>
@@ -546,6 +539,12 @@ QPushButton:hover {
    <class>UImageGallery</class>
    <extends>QGraphicsView</extends>
    <header location="global">image_gallery</header>
+  </customwidget>
+  <customwidget>
+   <class>UScrollFilter</class>
+   <extends>QScrollArea</extends>
+   <header location="global">scroll_filter.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

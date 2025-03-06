@@ -51,7 +51,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
 
             self.overlay = UOverlayLoader(self)
 
-            self.thread_load = UThreadDatasetLoadAnnotations(self.project, self.project.datasets)
+            self.thread_load = UThreadDatasetLoadAnnotations(self.project)
 
             self.thread_load.signal_start_dataset.connect(self.overlay.update_label_dataset)
             self.thread_load.signal_loaded_label.connect(self.overlay.update_progress)

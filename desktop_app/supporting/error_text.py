@@ -19,5 +19,13 @@ class UErrorsText:
         return f"Ошибка в {function_name}! В проекте нет аннотаций для датасета {dataset}!"
 
     @staticmethod
+    def annotations_already_exist(function_name: str, dataset: str):
+        return f"Ошибка в {function_name}! В проекте уже есть аннотации в датасете {dataset}!"
+
+    @staticmethod
     def not_existing_annotation_in_dataset(function_name: str, dataset: str):
         return f"Ошибка в {function_name}! В датасете {dataset} не существует переданной в функцию {function_name} аннотации!"
+
+    @staticmethod
+    def type_swap_is_equal(function_name: str):
+        return f"Ошибка в {function_name}! Указанный тип датасетов для свапа указан одинаковым!"

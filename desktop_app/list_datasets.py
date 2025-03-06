@@ -42,7 +42,7 @@ class UListDataset(QListWidget):
 
     @staticmethod
     def get_item_widget(list_widget: 'UListDataset'):
-        if not list_widget:
+        if list_widget is None:
             return
         item = list_widget.currentItem()
         if item:

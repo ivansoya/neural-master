@@ -162,16 +162,13 @@ class Ui_page_dataset(object):
         self.view_gallery.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.view_gallery.setObjectName("view_gallery")
         self.verticalLayout_3.addWidget(self.view_gallery)
-        self.scroll_classes = QtWidgets.QScrollArea(self.dataset_display)
+        self.scroll_classes = UScrollFilter(self.dataset_display)
         self.scroll_classes.setMaximumSize(QtCore.QSize(16777215, 40))
+        self.scroll_classes.setStyleSheet("background-color: white;")
         self.scroll_classes.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.scroll_classes.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        self.scroll_classes.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.scroll_classes.setWidgetResizable(True)
         self.scroll_classes.setObjectName("scroll_classes")
-        self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 842, 38))
-        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.scroll_classes.setWidget(self.scrollAreaWidgetContents)
         self.verticalLayout_3.addWidget(self.scroll_classes)
         self.horizontalLayout.addLayout(self.verticalLayout_3)
         self.verticalWidget1 = QtWidgets.QWidget(self.dataset_display)
@@ -272,6 +269,7 @@ class Ui_page_dataset(object):
         self.button_delete_dataset.setText(_translate("page_dataset", "Удалить выбранный датасет"))
 from image_gallery import UImageGallery
 from list_datasets import UListDataset
+from scroll_filter import UScrollFilter
 
 
 if __name__ == "__main__":

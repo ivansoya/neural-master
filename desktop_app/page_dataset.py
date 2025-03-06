@@ -71,11 +71,24 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.list_datasets.signal_on_item_clicked.connect(self.start_thread_display_at_gallery)
         self.list_reserved.signal_on_item_clicked.connect(self.start_thread_display_at_gallery)
 
-        self.button_move_dataset_to_reserved.clicked.connect(self.move_dataset_to_reserved)
+        self.button_move_dataset_to_reserved.clicked.connect(
+            lambda: self.move_selected_dataset(self.list_datasets, self.project.get_datasets(), DATASETS, RESERVED)
+        )
+
+        # Привязка к спискам
+        self.list_datasets.itemClicked.connect(self.on_item_current_dataset_selected)
+        self.list_reserved.itemClicked.connect(self.on_item_reserved_selected)
 
         # Привязка к событиям
         if self.commander:
-            self.commander.project_load_complete.connect(self.create_list_dataset)
+            self.commander.project_load_complete.connect(self.initiate_after_project_load)
+
+    def initiate_after_project_load(self):
+        self.create_list_dataset()
+        self.create_list_reserved()
+
+        for class_id, class_t in self.project.classes.get_items():
+            self.scroll_classes.add_filter(class_t.Color, class_id, class_t.Name)
 
     def get_to_annotation_page(self):
         if isinstance(self.parent(), QStackedWidget):
@@ -197,34 +210,70 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.close_overlay()
 
-    def move_dataset_to_reserved(self):
+    def move_selected_dataset(
+            self,
+            widget_list: UListDataset,
+            dataset_list: list[str],
+            source_type: str,
+            target_type: str
+        ):
         if self.overlay or (self.thread_copy and self.thread_copy.isRunning()):
             return
 
-        dataset_item = UListDataset.get_item_widget(self.list_reserved)
-        if not dataset_item or not dataset_item.name in self.project.datasets:
+        dataset_item = UListDataset.get_item_widget(widget_list)
+        if not dataset_item or (not dataset_item.name in dataset_list):
             return
-        path_to_dataset_target = os.path.join(self.project.path, DATASETS, dataset_item.name).replace('\\', '/')
+        path_to_dataset_source = os.path.join(self.project.path, source_type, dataset_item.name).replace('\\', '/')
 
         self.overlay = UOverlayLoader(self.dataset_display)
 
-        self.thread_copy = UThreadDatasetCopy(self.project, path_to_dataset_target, RESERVED)
+        self.thread_copy = UThreadDatasetCopy(self.project, path_to_dataset_source, target_type)
 
         self.thread_copy.signal_on_copy.connect(self.overlay.update_progress)
         self.thread_copy.signal_on_error.connect(self.make_error_with_copy)
-        self.thread_copy.signal_on_ended.connect(self.end_moving_dataset_to_reserved)
+        self.thread_copy.signal_on_ended.connect(
+            lambda dataset_name: self.end_swap_dataset(dataset_name, source_type, target_type)
+        )
 
         self.thread_copy.start()
 
-    def end_moving_dataset_to_reserved(self, dataset_name: str):
+    def end_swap_dataset(self, dataset_name: str, source_type: str, target_type: str):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+
+        self.project.swap_annotations(dataset_name, source_type, target_type)
+        self.project.remove_all_annotations_from_dataset(dataset_name, source_type)
+        self.project.remove_dataset(dataset_name, source_type)
+
+        self.project.add_dataset(dataset_name, target_type)
+        self.project.save()
+
+        self.project.remove_project_folder(dataset_name, source_type)
 
         self.create_list_reserved()
         self.create_list_dataset()
 
-        self.project.remove_project_folder(dataset_name, RESERVED)
+    def on_item_current_dataset_selected(self):
+        self.button_move_dataset_to_reserved.setText("Резервировать датасет")
+        self.button_move_selected_to_reserved.setText("Резервировать выбранное")
+
+        self.button_move_dataset_to_reserved.clicked.connect(
+            lambda : self.move_selected_dataset(self.list_datasets, self.project.get_datasets(), DATASETS, RESERVED)
+        )
+
+        self.list_reserved.clearSelection()
+
+    def on_item_reserved_selected(self):
+        self.button_move_dataset_to_reserved.setText("Восстановить датасет")
+        self.button_move_selected_to_reserved.setText("Восстановить выбранное")
+
+        self.button_move_dataset_to_reserved.clicked.connect(
+            lambda: self.move_selected_dataset(self.list_reserved, self.project.get_reserved(), RESERVED, DATASETS)
+        )
+
+        self.list_datasets.clearSelection()
 
     def create_list_reserved(self):
+        self.list_reserved.clear()
         for dataset in self.project.reserved:
             try:
                 reserved_temp = {dataset: self.project.get_reserved_annotations()[dataset]}
@@ -238,6 +287,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 return str(error)
 
     def create_list_dataset(self):
+        self.list_datasets.clear()
         # Создание общего предмета
         sum_len = sum(len(ann_list) for ann_list in self.project.current_annotations.values())
         if sum_len == 0:

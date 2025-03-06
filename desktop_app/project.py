@@ -107,10 +107,10 @@ class UTrainProject:
             config[MAIN_SECTION][CLASSES] = "[" + ", ".join([class_t.Name for class_t in self.classes.get_all_classes()]) + "]"
             config[MAIN_SECTION][NAME] = self.name
 
-            for dataset in self.datasets:
-                config.add_section(dataset)
-                config[dataset][LABELS] = LABELS
-                config[dataset][IMAGES] = IMAGES
+            #for dataset in self.datasets:
+            #    config.add_section(dataset)
+            #    config[dataset][LABELS] = LABELS
+            #    config[dataset][IMAGES] = IMAGES
 
             with open(os.path.join(self.path, self.name + ".cfg").replace('\\', '/'), "w") as file:
                 config.write(file)
@@ -119,7 +119,7 @@ class UTrainProject:
             return str(error)
 
     def remove_project_folder(self, dataset_name: str, type_dataset: str = DATASETS):
-        path_to_dataset = os.path.join(self.path, DATASETS, dataset_name).replace('\\', '/')
+        path_to_dataset = os.path.join(self.path, type_dataset, dataset_name).replace('\\', '/')
         if os.path.exists(path_to_dataset):
             shutil.rmtree(path_to_dataset)
             print(f"Из проекта {self.name} удалена папка датасета {dataset_name}, находящаяся по пути {path_to_dataset}!")
@@ -128,13 +128,11 @@ class UTrainProject:
 
     def add_dataset(self, dataset: str, type_dataset: str = DATASETS):
         ref_dataset_list = self._get_ref_to_list(type_dataset)
-        ref_reserved_dict = self._get_ref_to_annotation_dict(type_dataset)
-        if not ref_dataset_list or not ref_reserved_dict:
+        if ref_dataset_list is None:
             return UErrorsText.not_existing_type_dataset("UTrainProject.add_dataset", type_dataset)
 
-        if dataset not in self.datasets:
-            self.datasets.append(dataset)
-            ref_reserved_dict[dataset] = list()
+        if dataset not in ref_dataset_list:
+            ref_dataset_list.append(dataset)
             print(f"В проект {self.name} добавлен датасет {dataset}!")
 
     def remove_dataset(self, dataset: str, type_dataset: str = DATASETS):
@@ -156,6 +154,24 @@ class UTrainProject:
         self.remove_dataset(dataset)
         self.remove_all_annotations_from_dataset(dataset, type_dataset)
         shutil.rmtree(path_dataset_folder)
+
+    def swap_annotations(self, dataset_name: str, type_source: str, type_target: str):
+        if type_source == type_target:
+            return UErrorsText.type_swap_is_equal("UTrainProject.swap_annotations")
+        source_ann_dict = self._get_ref_to_annotation_dict(type_source)
+        target_ann_dict = self._get_ref_to_annotation_dict(type_target)
+        if target_ann_dict is None or source_ann_dict is None:
+            return UErrorsText.not_existing_type_dataset("UTrainProject.swap_annotations", "")
+
+        if not dataset_name in source_ann_dict:
+            return UErrorsText.not_existing_annotations("UTrainProject.swap_annotations", dataset_name)
+        if dataset_name in target_ann_dict and len(target_ann_dict[dataset_name]) > 0:
+            return UErrorsText.annotations_already_exist("UTrainProject.swap_annotations", dataset_name)
+
+        ann_list = source_ann_dict.pop(dataset_name)
+        for ann_data in ann_list:
+            ann_data.image_path = ann_data.image_path.replace('/' + type_source + '/', '/' + type_target + '/')
+        target_ann_dict[dataset_name] = ann_list
 
     def remove_all_annotations_from_dataset(self, dataset, type_dataset: str = DATASETS):
         ref_annotation_dict = self._get_ref_to_annotation_dict(type_dataset)

@@ -6,8 +6,9 @@ import imageio.v3 as iio
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer, QRectF
 from PyQt5.QtGui import QPainter, QColor, QPixmap
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
+from debugpy.launcher.debuggee import process
 
-from project import UTrainProject, DATASETS
+from project import UTrainProject, DATASETS, RESERVED
 from utility import FAnnotationItem, FAnnotationData
 
 class UOverlayLoader(QWidget):
@@ -144,23 +145,35 @@ class UThreadDatasetLoadAnnotations(QThread):
         self.current_labels = 0
 
     def run(self):
+        is_run_reserved = False
         if self.input_datasets is None:
-            self.input_datasets = self.project.datasets
-        self.count_datasets = len(self.input_datasets)
-        if self.count_datasets == 0:
-            self.signal_warning.emit(f"Warning в UThreadDatasetLoadAnnotations.load_annotations!"
-                                     f"В проекте нет датасетов!")
-            self.signal_end_load.emit()
-            return
-        self.current_dataset = 1
-        for dataset in self.input_datasets:
-            if dataset not in self.project.datasets:
+            self.input_datasets = self.project.get_datasets()
+            is_run_reserved = True
+        if len(self.input_datasets) == 0:
+            if not (is_run_reserved and len(self.project.reserved) != 0):
+                self.signal_warning.emit(f"Warning в UThreadDatasetLoadAnnotations.load_annotations!"
+                                         f"В проекте нет датасетов!")
+                self.signal_end_load.emit(self.input_datasets)
+                return
+
+        self.process_dataset_list(self.input_datasets, DATASETS)
+
+        if is_run_reserved:
+            self.process_dataset_list(self.project.get_reserved(), RESERVED)
+
+        self.signal_end_load.emit(self.input_datasets)
+
+    def process_dataset_list(self, dataset_list: list[str], type_dataset: str):
+        count_datasets = len(dataset_list)
+        current_dataset = 1
+        for dataset in dataset_list:
+            if not((dataset in self.project.datasets) or (dataset in self.project.reserved)):
                 self.signal_warning.emit(f"Warning в UThreadDatasetLoadAnnotations.load_annotations!"
                                     f"Датасет отсутствует {dataset} в проекте!")
                 continue
             try:
-                image_path = str(os.path.join(self.project.path, DATASETS, dataset, "images").replace('\\', '/'))
-                label_path = str(os.path.join(self.project.path, DATASETS, dataset, "labels").replace('\\', '/'))
+                image_path = str(os.path.join(self.project.path, type_dataset, dataset, "images").replace('\\', '/'))
+                label_path = str(os.path.join(self.project.path, type_dataset, dataset, "labels").replace('\\', '/'))
             except Exception as error:
                 self.signal_error.emit(dataset, str(error))
                 return
@@ -171,14 +184,14 @@ class UThreadDatasetLoadAnnotations(QThread):
                 self.signal_warning.emit(f"Warning в UThreadDatasetLoadAnnotations.load_annotations!"
                                          f"В датасете {dataset} отсутствуют аннотации!")
                 continue
-            self.current_labels = 1
-            self.signal_start_dataset.emit(dataset, self.current_dataset, self.count_datasets)
-            percentage = 1
+            current_labels = 1
+            self.signal_start_dataset.emit(dataset, current_dataset, count_datasets)
             for label in labels:
                 for image in images:
                     if image.split('.')[0] == label.split('.')[0]:
                         error = self.read_annotation(
                             dataset,
+                            type_dataset,
                             os.path.join(label_path, label).strip().replace('\\', '/'),
                             os.path.join(image_path, image).strip().replace('\\', '/'),
                         )
@@ -186,16 +199,12 @@ class UThreadDatasetLoadAnnotations(QThread):
                             self.signal_error.emit(dataset, f"Ошибка в UThreadDatasetLoadAnnotations.load_annotations! {error}")
                             return
                         images.remove(image)
-                        t_p = int(float(self.current_labels) / self.count_labels * 100)
-                        if t_p > percentage:
-                            self.signal_loaded_label.emit(label, self.current_labels, self.count_labels)
-                            percentage = t_p
+                        self.signal_loaded_label.emit(label, current_labels, self.count_labels)
                         continue
-                self.current_labels += 1
+                current_labels += 1
             self.current_dataset += 1
-        self.signal_end_load.emit(self.input_datasets)
 
-    def read_annotation(self, dataset: str, filename: str, image_path: str):
+    def read_annotation(self, dataset: str, type_dataset: str, filename: str, image_path: str):
         try:
             image_data = iio.immeta(image_path)
             width_res, height_res = image_data["shape"]
@@ -217,7 +226,7 @@ class UThreadDatasetLoadAnnotations(QThread):
                     )
                 ann_item = FAnnotationItem(ann_list, image_path)
             if ann_item:
-                error = self.project.add_annotation(dataset, ann_item)
+                error = self.project.add_annotation(dataset, ann_item, type_dataset)
                 if error:
                     return error
                 return
