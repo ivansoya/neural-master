@@ -4,6 +4,7 @@ from typing import Optional
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QRectF, QRect
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPixmap, QColor
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QWidget, QGraphicsPixmapItem, QGraphicsProxyWidget
+from sympy import false
 
 from utility import FAnnotationItem, FAnnotationClasses
 
@@ -13,12 +14,14 @@ class UThreadImageLoader(QThread):
     def __init__(
             self,
             image_path: str,
-            annotation_data: list[tuple[int, int, int, int, QColor]],
+            annotation_data: list[tuple[int, int, int, int, int, QColor]],
+            show_dict: dict[int, bool],
             size: int,
     ):
         super().__init__()
         self.is_running = True
         self.size = size
+        self.show_dict = show_dict
         self.annotation_data = annotation_data
         self.image_path = image_path
 
@@ -36,17 +39,22 @@ class UThreadImageLoader(QThread):
         for annotation in self.annotation_data:
             if not self.is_running:
                 return
-
-            x, y, width, height, color = annotation
-            pen = QPen(color)
-            pen.setWidth(int(self.line_width * (pixmap.width() // self.size)))
-            painter.setPen(pen)
-            painter.drawRect(
-                int(max(0, x - width // 2)),
-                int(max(0, y - height // 2)),
-                width,
-                height
-            )
+            try:
+                class_id, x, y, width, height, color = annotation
+                if self.show_dict[class_id] is False:
+                    continue
+                pen = QPen(color)
+                pen.setWidth(int(self.line_width * (pixmap.width() // self.size)))
+                painter.setPen(pen)
+                painter.drawRect(
+                    int(max(0, x - width // 2)),
+                    int(max(0, y - height // 2)),
+                    width,
+                    height
+                )
+            except Exception as error:
+                print(str(error))
+                continue
 
         painter.end()
         scaled_pixmap = pixmap.scaled(
@@ -105,13 +113,13 @@ class UWidgetGallery(QWidget):
         t_width: int = self.board_width // 2
         painter.drawRect(self.rect().adjusted(t_width, t_width, -t_width, -t_width))
 
-
 class UAnnotationImage(UWidgetGallery):
     def __init__(
             self,
             image_path: str,
             dataset: str,
-            data: list[tuple[int, int, int, int, QColor]],
+            data: list[tuple[int, int, int, int, int, QColor]],
+            show_dict: dict[int, bool],
             size: int = 200,
             parent = None
     ):
@@ -122,6 +130,7 @@ class UAnnotationImage(UWidgetGallery):
         self.annotation_data = data
         self.size = size
         self.setFixedSize(self.size, self.size)
+        self.show_dict = show_dict
 
         self.pixmap: Optional[QPixmap] = None
         self.thread_load: Optional[UThreadImageLoader] = None
@@ -129,7 +138,7 @@ class UAnnotationImage(UWidgetGallery):
     def on_load(self):
         if self.thread_load and self.thread_load.isRunning():
             return
-        self.thread_load = UThreadImageLoader(self.image_path, self.annotation_data, self.size)
+        self.thread_load = UThreadImageLoader(self.image_path, self.annotation_data, self.show_dict, self.size)
         self.thread_load.signal_on_load.connect(self.on_image_loaded)
         self.thread_load.run()
 
@@ -163,6 +172,20 @@ class UAnnotationImage(UWidgetGallery):
 
     def get_dataset_name(self):
         return self.dataset
+
+    def get_class_id(self):
+        return self.class_id
+
+    def is_show(self):
+        try:
+            to_show = False
+            for annotation in self.annotation_data:
+                class_id, *_ = annotation
+                to_show = self.show_dict[class_id]
+            return to_show
+        except Exception as error:
+            print(str(error))
+            return False
 
 class UImageGallery(QGraphicsView):
     def __init__(self, parent = None):
@@ -198,7 +221,7 @@ class UImageGallery(QGraphicsView):
         self.list_widgets.append(proxy)
         self.update_scene_rect()
 
-    def update_grid(self):
+    def update_grid(self, filter_dict: dict[int, bool] = None):
         self.columns = max(1, self.width() // (self.cell_size + self.margin))
         self.current_margin = max(self.margin, (self.width() - self.cell_size * self.columns - self.margin) // self.margin)
 
@@ -208,6 +231,18 @@ class UImageGallery(QGraphicsView):
         # Обновляем саму сетку с виджетами
         index = 0
         for item in self.list_widgets:
+            widget = item.widget()
+            if filter_dict is not None and isinstance(widget, UAnnotationImage):
+                try:
+                    if widget.is_show() is True:
+                        item.show()
+                    else:
+                        item.hide()
+                        continue
+                except Exception as error:
+                    print(str(error))
+                    pass
+
             pos_x = self.margin // 2 + (index % self.columns) * (self.cell_size + self.current_margin)
             pos_y = self.margin // 2 + (index // self.columns) * (self.cell_size + self.margin)
             item.setPos(pos_x, pos_y)

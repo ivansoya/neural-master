@@ -5,6 +5,7 @@ from typing import Optional
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem
+from select import select
 
 from commander import UGlobalSignalHolder
 from design.dataset_page import Ui_page_dataset
@@ -24,6 +25,7 @@ class UThreadDisplayDataset(QThread):
     def __init__(self,
                  classes: FAnnotationClasses,
                  annotations: dict[str, list[FAnnotationItem]],
+                 show_dict: dict[int, bool],
                  image_size: int = 200
     ):
         super().__init__()
@@ -32,6 +34,7 @@ class UThreadDisplayDataset(QThread):
         self.size = image_size
         self.ann_len = sum(len(ann) for ann in self.annotations.values())
         self.classes = classes
+        self.show_dict = show_dict
 
     def run(self):
         indicator = 1
@@ -41,8 +44,10 @@ class UThreadDisplayDataset(QThread):
                 annotation_list = list()
                 for annotation in data:
                     color, error = self.classes.get_color(annotation.ClassID)
-                    annotation_list.append((annotation.X, annotation.Y, annotation.Width, annotation.Height, color))
-                image_temp: UAnnotationImage = UAnnotationImage(image_path, dataset, annotation_list, self.size)
+                    annotation_list.append(
+                        (annotation.ClassID, annotation.X, annotation.Y, annotation.Width, annotation.Height, color)
+                    )
+                image_temp: UAnnotationImage = UAnnotationImage(image_path, dataset, annotation_list, self.show_dict ,self.size)
                 self.signal_on_image_loaded.emit(image_temp)
                 indicator += 1
                 self.signal_on_progress_changed.emit(image_path, indicator, self.ann_len)
@@ -57,6 +62,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.project = project
 
         # Дополнительные параметры
+        self.filter_dict: dict[int, bool] = dict()
 
         # Дополнительные виджеты
         self.overlay: Optional[UOverlayLoader] = None
@@ -79,6 +85,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.list_datasets.itemClicked.connect(self.on_item_current_dataset_selected)
         self.list_reserved.itemClicked.connect(self.on_item_reserved_selected)
 
+        # Привязка ко списку классов
+        self.scroll_classes.signal_on_item_clicked.connect(self.on_changed_filter)
+
         # Привязка к событиям
         if self.commander:
             self.commander.project_load_complete.connect(self.initiate_after_project_load)
@@ -89,6 +98,12 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         for class_id, class_t in self.project.classes.get_items():
             self.scroll_classes.add_filter(class_t.Color, class_id, class_t.Name)
+            self.filter_dict[class_id] = True
+
+    def on_changed_filter(self, class_id: int, selected: bool):
+        if class_id in self.filter_dict:
+            self.filter_dict[class_id] = selected
+        self.view_gallery.update_grid(self.filter_dict)
 
     def get_to_annotation_page(self):
         if isinstance(self.parent(), QStackedWidget):
@@ -110,7 +125,12 @@ class UPageDataset(QWidget, Ui_page_dataset):
             UMessageBox.show_error(str(error))
             return
 
-        self.thread_display = UThreadDisplayDataset(self.project.classes, annotations, self.view_gallery.get_cell_size())
+        self.thread_display = UThreadDisplayDataset(
+            self.project.classes,
+            annotations,
+            self.filter_dict,
+            self.view_gallery.get_cell_size()
+        )
         self.thread_display.signal_on_image_loaded.connect(self.display_image_at_gallery)
         self.thread_display.signal_on_progress_changed.connect(self.overlay.update_progress)
         self.thread_display.signal_on_ended.connect(self.on_ended_thread_display)

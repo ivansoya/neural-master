@@ -97,7 +97,8 @@ class FAnnotationClasses:
         return len(self.class_dict)
 
     @staticmethod
-    def get_save_color(id_class: int):
+    def get_save_color(class_id: int):
+        """
         if id_class >= len(GColorList):
             #return QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
@@ -117,6 +118,14 @@ class FAnnotationClasses:
             return QColor(r, g, b)
         else:
             return GColorList[id_class]
+        """
+        random.seed(class_id)  # Фиксируем случайность для одинаковых результатов
+
+        hue = random.randint(0, 359)  # Оттенок на цветовом круге
+        saturation = random.randint(150, 255)  # Разброс насыщенности
+        value = random.randint(180, 255)  # Разброс яркости
+
+        return QColor.fromHsv(hue, saturation, value)
 
 class FAnnotationData:
     def __init__(self, x, y, width, height, class_id, res_w = 1920, res_h = 1400):
