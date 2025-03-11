@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>classes_page_design</class>
+ <widget class="QWidget" name="classes_page_design">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1388</width>
+    <height>805</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Форма для аннотации</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QPushButton {
+    background-color: lightgray;
+    color: black;            
+    border: 1px solid lightgray; 
+    padding: 5px 0px;    
+}
+
+QPushButton:hover {
+    background-color: white;
+	border: 1px solid blue;
+}
+
+QPushButton:pressed {
+	background-color: solid lightblue;
+	border: 1px solid black;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="page_main_layout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_7">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QPushButton" name="button_to_datasets_settings">
+       <property name="mouseTracking">
+        <bool>true</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+padding: 5px 20px;
+border: 1px solid #7a7b7d;
+}
+
+QPushButton:hover {
+	border: 1px solid #0048ff;
+}</string>
+       </property>
+       <property name="text">
+        <string>Окно организации датасета</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="button_to_annotation_scene">
+       <property name="mouseTracking">
+        <bool>true</bool>
+       </property>
+       <property name="tabletTracking">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+padding: 5px 20px;
+border: 1px solid gray;
+}
+
+QPushButton:hover {
+	border: 1px solid #0048ff;
+}</string>
+       </property>
+       <property name="text">
+        <string>Окно разметки</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="button_to_statistics">
+       <property name="mouseTracking">
+        <bool>true</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+padding: 5px 20px;
+border: 1px solid gray;
+}
+
+QPushButton:hover {
+	border: 1px solid #0048ff;
+}</string>
+       </property>
+       <property name="text">
+        <string>Окно статистики</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Policy::Expanding</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="button_clear_dataset">
+       <property name="mouseTracking">
+        <bool>true</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+padding: 5px 20px;
+border: 1px solid gray;
+}
+
+QPushButton:hover {
+	border: 1px solid #0048ff;
+}</string>
+       </property>
+       <property name="text">
+        <string>Закрыть проект</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="dataset_display" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="leftMargin">
+       <number>1</number>
+      </property>
+      <property name="rightMargin">
+       <number>1</number>
+      </property>
+      <item>
+       <widget class="UWidgetChart" name="chart_classes" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>600</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Policy::Expanding</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UWidgetChart</class>
+   <extends>QWidget</extends>
+   <header location="global">class_chart</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

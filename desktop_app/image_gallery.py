@@ -4,9 +4,6 @@ from typing import Optional
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QRectF, QRect
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPixmap, QColor
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QWidget, QGraphicsPixmapItem, QGraphicsProxyWidget
-from sympy import false
-
-from utility import FAnnotationItem, FAnnotationClasses
 
 class UThreadImageLoader(QThread):
     signal_on_load = pyqtSignal(QPixmap)
@@ -200,7 +197,10 @@ class UImageGallery(QGraphicsView):
         self.columns = max(1, self.width() // (self.cell_size + self.margin))
 
         self.list_widgets : list[QGraphicsProxyWidget] = list()
+        self.list_displayed_indexes: list[int] = list()
         self.last_visible = list()
+
+        self.filter: Optional[dict[int, bool]] = None
 
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.setViewportUpdateMode(QGraphicsView.BoundingRectViewportUpdate)
@@ -213,15 +213,21 @@ class UImageGallery(QGraphicsView):
             print(f"Ошибка в функции UImageGallery.add_item! Передаваемый объект уже существует в списке!")
             return
         index = len(self.list_widgets)
+        display_index = len(self.list_displayed_indexes)
         self.current_margin = max(self.margin, (self.width() - self.cell_size * self.columns - self.margin) // self.margin)
-        pos_x = self.margin // 2 + (index % self.columns) * (self.cell_size + self.current_margin)
-        pos_y = self.margin // 2 + (index // self.columns) * (self.cell_size + self.margin)
+        pos_x = self.margin // 2 + (display_index % self.columns) * (self.cell_size + self.current_margin)
+        pos_y = self.margin // 2 + (display_index // self.columns) * (self.cell_size + self.margin)
         proxy = self.scene.addWidget(item)
         proxy.setPos(pos_x, pos_y)
         self.list_widgets.append(proxy)
+        self.list_displayed_indexes.append(index)
         self.update_scene_rect()
 
     def update_grid(self, filter_dict: dict[int, bool] = None):
+        if filter_dict != self.filter:
+            self.filter = filter_dict.copy()
+            self._set_widgets_load_by_indexes(self.last_visible, False)
+            self.last_visible = []
         self.columns = max(1, self.width() // (self.cell_size + self.margin))
         self.current_margin = max(self.margin, (self.width() - self.cell_size * self.columns - self.margin) // self.margin)
 
@@ -230,21 +236,29 @@ class UImageGallery(QGraphicsView):
 
         # Обновляем саму сетку с виджетами
         index = 0
+        current_display_index = -1
+        self.list_displayed_indexes.clear()
         for item in self.list_widgets:
             widget = item.widget()
-            if filter_dict is not None and isinstance(widget, UAnnotationImage):
+            if self.filter is not None and isinstance(widget, UAnnotationImage):
                 try:
                     if widget.is_show() is True:
-                        item.show()
+                        current_display_index += 1
+                        self.list_displayed_indexes.append(index)
                     else:
-                        item.hide()
+                        item.setPos(-1000, -1000)
+                        index += 1
                         continue
                 except Exception as error:
                     print(str(error))
                     pass
+            else:
+                current_display_index += 1
+                self.list_displayed_indexes.append(current_display_index)
 
-            pos_x = self.margin // 2 + (index % self.columns) * (self.cell_size + self.current_margin)
-            pos_y = self.margin // 2 + (index // self.columns) * (self.cell_size + self.margin)
+
+            pos_x = self.margin // 2 + (current_display_index  % self.columns) * (self.cell_size + self.current_margin)
+            pos_y = self.margin // 2 + (current_display_index  // self.columns) * (self.cell_size + self.margin)
             item.setPos(pos_x, pos_y)
             index += 1
 
@@ -256,7 +270,7 @@ class UImageGallery(QGraphicsView):
             0,
             0,
             self.columns * (self.current_margin + self.cell_size) - self.current_margin + self.margin // 2,
-            (len(self.list_widgets) // self.columns + 1) * (self.cell_size + self.margin)
+            (len(self.list_displayed_indexes) // self.columns + 1) * (self.cell_size + self.margin)
         )
 
         vertical_scrollbar = self.verticalScrollBar()
@@ -276,16 +290,16 @@ class UImageGallery(QGraphicsView):
         index_first = int(scene_rect.y() // (self.cell_size + self.margin) * self.columns)
         index_last = int(index_first + (int(math.ceil(viewport_rect.height() / (self.cell_size + self.margin))) + 1) * self.columns - 1)
 
-        current_visible = [i for i in range(index_first, index_last + 1) if len(self.list_widgets) > i >= 0]
+        current_visible = [i for i in range(index_first, index_last + 1) if len(self.list_displayed_indexes) > i >= 0]
 
         if current_visible == self.last_visible:
             return
 
         diff_loaded = list(set(current_visible) - set(self.last_visible))
-        self._set_widgets_load(diff_loaded, True)
-
         diff_unloaded = list(set(self.last_visible) - set(current_visible))
-        self._set_widgets_load(diff_unloaded, False)
+
+        self._set_widgets_load_by_indexes(diff_loaded, True)
+        self._set_widgets_load_by_indexes(diff_unloaded, False)
 
         self.last_visible = current_visible
 
@@ -297,11 +311,12 @@ class UImageGallery(QGraphicsView):
         for item in self.list_widgets[::-1]:
             self.scene.removeItem(item)
             self.list_widgets.remove(item)
+        self.list_displayed_indexes.clear()
         self.update_scene_rect()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.update_grid()
+        self.update_grid(self.filter)
 
     def wheelEvent(self, event):
         super().wheelEvent(event)
@@ -320,8 +335,12 @@ class UImageGallery(QGraphicsView):
     def set_margin(self, margin: int):
         self.margin = margin
 
-    def _set_widgets_load(self, widget_indexes: list[int], loaded: bool):
+    def _set_widgets_load_by_indexes(self, widget_indexes: list[int], loaded: bool):
         for index in widget_indexes:
-            widget = self.list_widgets[index].widget()
-            if isinstance(widget, UWidgetGallery):
-                widget.set_loaded(loaded)
+            try:
+                widget = self.list_widgets[self.list_displayed_indexes[index]].widget()
+                if isinstance(widget, UWidgetGallery):
+                    widget.set_loaded(loaded)
+            except Exception as error:
+                print(str(error))
+                continue

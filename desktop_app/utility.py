@@ -72,14 +72,13 @@ class FAnnotationClasses:
 
     def get_color(self, class_id: int):
         if class_id not in self.class_dict:
-            return (QColor(Qt.gray),
-                    f"Ошибка в функции FAnnotationClasses.get_color! Не существует класса с айди {class_id}!")
-        return self.class_dict[class_id].Color, None
+            return None
+        return self.class_dict[class_id].Color
 
     def get_name(self, class_id: int):
         if class_id not in self.class_dict:
-            return f"Ошибка в функции FAnnotationClasses.get_name! Не существует класса с айди {class_id}!", False
-        return self.class_dict[class_id].Name, True
+            return None
+        return self.class_dict[class_id].Name
 
     def get_class(self, class_id: int):
         return self.class_dict.get(class_id)

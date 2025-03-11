@@ -43,7 +43,7 @@ class UThreadDisplayDataset(QThread):
                 data, image_path = self.annotations[dataset][index].get_item_data()
                 annotation_list = list()
                 for annotation in data:
-                    color, error = self.classes.get_color(annotation.ClassID)
+                    color = self.classes.get_color(annotation.ClassID) or QColor(Qt.gray)
                     annotation_list.append(
                         (annotation.ClassID, annotation.X, annotation.Y, annotation.Width, annotation.Height, color)
                     )
@@ -71,7 +71,8 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.thread_display: Optional[UThreadDisplayDataset] = None
 
         # Привязка к кнопкам
-        self.button_to_annotation_scene.clicked.connect(self.get_to_annotation_page)
+        self.button_to_annotation_scene.clicked.connect(lambda: self.go_to_another_page(2))
+        self.button_to_statistics.clicked.connect(lambda: self.go_to_another_page(3))
         self.button_add_dataset.clicked.connect(self.add_dataset)
 
         self.list_datasets.signal_on_item_clicked.connect(self.start_thread_display_at_gallery)
@@ -105,9 +106,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
             self.filter_dict[class_id] = selected
         self.view_gallery.update_grid(self.filter_dict)
 
-    def get_to_annotation_page(self):
+    def go_to_another_page(self, page_index: int):
         if isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(2)
+            self.parent().setCurrentIndex(page_index)
 
     def start_thread_display_at_gallery(self, annotations: dict[str, list[FAnnotationItem]]):
         if self.overlay or (self.thread_display and self.thread_display.isRunning()):

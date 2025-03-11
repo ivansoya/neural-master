@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from design.train_app import Ui_TrainApp
 from commander import UGlobalSignalHolder
 from page_annotation import UPageAnnotation
+from page_classes import UPageClasses
 from page_dataset import UPageDataset
 from page_load_create import UPageLoader
 from project import UTrainProject
@@ -24,10 +25,12 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.page_save_load = UPageLoader(self.global_signal_holder, self.project)
         self.page_dataset = UPageDataset(self.global_signal_holder, self.project)
         self.page_annotation = UPageAnnotation(self.global_signal_holder, self.project)
+        self.page_classes = UPageClasses(self.global_signal_holder, self.project)
 
         self.stacked_page_loader.addWidget(self.page_save_load)
         self.stacked_page_loader.addWidget(self.page_dataset)
         self.stacked_page_loader.addWidget(self.page_annotation)
+        self.stacked_page_loader.addWidget(self.page_classes)
 
         self.stacked_page_loader.setCurrentIndex(0)
 

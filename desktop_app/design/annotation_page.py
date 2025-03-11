@@ -36,6 +36,17 @@ class Ui_annotataion_page(object):
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setSpacing(0)
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
+        self.button_to_datasets_settings = QtWidgets.QPushButton(annotataion_page)
+        self.button_to_datasets_settings.setStyleSheet("QPushButton {\n"
+"padding: 5px 20px;\n"
+"border: 1px solid #7a7b7d;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    border: 1px solid #0048ff;\n"
+"}")
+        self.button_to_datasets_settings.setObjectName("button_to_datasets_settings")
+        self.horizontalLayout_7.addWidget(self.button_to_datasets_settings)
         self.button_to_annotation_scene = QtWidgets.QPushButton(annotataion_page)
         self.button_to_annotation_scene.setTabletTracking(False)
         self.button_to_annotation_scene.setStyleSheet("QPushButton {\n"
@@ -48,17 +59,6 @@ class Ui_annotataion_page(object):
 "}")
         self.button_to_annotation_scene.setObjectName("button_to_annotation_scene")
         self.horizontalLayout_7.addWidget(self.button_to_annotation_scene)
-        self.button_to_datasets_settings = QtWidgets.QPushButton(annotataion_page)
-        self.button_to_datasets_settings.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid #7a7b7d;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_to_datasets_settings.setObjectName("button_to_datasets_settings")
-        self.horizontalLayout_7.addWidget(self.button_to_datasets_settings)
         self.button_to_statistics = QtWidgets.QPushButton(annotataion_page)
         self.button_to_statistics.setStyleSheet("QPushButton {\n"
 "padding: 5px 20px;\n"
@@ -357,8 +357,8 @@ class Ui_annotataion_page(object):
     def retranslateUi(self, annotataion_page):
         _translate = QtCore.QCoreApplication.translate
         annotataion_page.setWindowTitle(_translate("annotataion_page", "Форма для аннотации"))
-        self.button_to_annotation_scene.setText(_translate("annotataion_page", "Окно разметки"))
         self.button_to_datasets_settings.setText(_translate("annotataion_page", "Окно организации датасета"))
+        self.button_to_annotation_scene.setText(_translate("annotataion_page", "Окно разметки"))
         self.button_to_statistics.setText(_translate("annotataion_page", "Окно статистики"))
         self.button_clear_dataset.setText(_translate("annotataion_page", "Закрыть проект "))
         self.load_images_button.setText(_translate("annotataion_page", "Загрузить картинки"))

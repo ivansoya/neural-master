@@ -91,7 +91,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander.added_new_class.connect(self.on_get_new_class)
 
         # Инициализация переходов по страницам
-        self.button_to_datasets_settings.clicked.connect(self.get_to_dataset_page)
+        self.button_to_datasets_settings.clicked.connect(lambda: self.go_to_another_page(1))
+        self.button_to_statistics.clicked.connect(lambda: self.go_to_another_page(3))
 
 
     def load_model(self):
@@ -327,6 +328,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.current_dropped_count += value
             self.label_count_dropped.setText(str(self.current_dropped_count))
 
-    def get_to_dataset_page(self):
+    def go_to_another_page(self, page_index: int):
         if isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(1)
+            self.parent().setCurrentIndex(page_index)
