@@ -6,7 +6,7 @@ from typing import Optional
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QDialog, QFileDialog, QMessageBox
 
-from carousel import UAnnotationThumbnail
+from annotation.carousel import UAnnotationThumbnail
 from design.dataset_window import Ui_Dialog
 from utility import FAnnotationClasses, FAnnotationItem, EAnnotationStatus, FDatasetInfo, EDatasetType
 

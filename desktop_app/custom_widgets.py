@@ -1,9 +1,9 @@
-from PyQt5.QtGui import QPalette, QColor, QFont, QPainter
-from PyQt5.QtWidgets import QScrollArea, QWidget, QLabel, QHBoxLayout, QGraphicsScene, QSpacerItem, QListWidget, \
+from PyQt5.QtGui import QColor, QFont, QPainter
+from PyQt5.QtWidgets import QScrollArea, QWidget, QLabel, QHBoxLayout, QListWidget, \
     QListWidgetItem
 from PyQt5.QtCore import Qt
 
-from annotable import UAnnotationBox, UAnnotationScene
+from annotation.annotable import UAnnotationBox, UAnnotationGraphicsView
 
 
 class UHorizontalScrollArea(QScrollArea):
@@ -61,7 +61,7 @@ class UListAnnotationWidget(QListWidget):
                 del item
                 return
 
-    def add_list_item(self, name, class_id, color: QColor, annotation_object: UAnnotationBox, scene: UAnnotationScene):
+    def add_list_item(self, name, class_id, color: QColor, annotation_object: UAnnotationBox, scene: UAnnotationGraphicsView):
         annotation_widget = UListAnnotationItem(name, class_id, color, annotation_object, scene)
         item = QListWidgetItem(self)
         item.setSizeHint(annotation_widget.sizeHint())
@@ -73,7 +73,7 @@ class UListAnnotationWidget(QListWidget):
             widget.select_scene_object()
 
 class UListAnnotationItem(QWidget):
-    def __init__(self, name, obj_id, color: QColor, annotation_object: UAnnotationBox, scene: UAnnotationScene):
+    def __init__(self, name, obj_id, color: QColor, annotation_object: UAnnotationBox, scene: UAnnotationGraphicsView):
         super().__init__()
 
         self.annotation_object = annotation_object  # Ссылка на объект на сцене

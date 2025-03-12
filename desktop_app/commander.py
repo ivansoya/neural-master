@@ -2,7 +2,24 @@ from PyQt5.QtCore import Qt, QObject, QEvent, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 
-from utility import EWorkMode, EAnnotationStatus
+from utility import EWorkMode, EAnnotationStatus, FAnnotationData
+
+
+class UAnnotationSignalHolder(QWidget):
+    added_new_annotation = pyqtSignal(int, FAnnotationData)
+    deleted_annotation = pyqtSignal(int, int)
+    updated_annotation = pyqtSignal(int, int, FAnnotationData)
+
+    # Первый статус - изначальный, второй - новый
+    changed_annotation_status = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
+
+    selected_thumbnail = pyqtSignal(int, str, list)
+
+    def __init__(self):
+        super().__init__()
+
+    def emit_global_changed_annotation_status(self, prev: EAnnotationStatus, current: EAnnotationStatus):
+        self.changed_annotation_status.emit(prev, current)
 
 class UGlobalSignalHolder(QObject):
     ctrl_pressed = pyqtSignal(int)
@@ -16,8 +33,6 @@ class UGlobalSignalHolder(QObject):
     updated_annotation = pyqtSignal(int, int, str, QColor)
     deleted_annotation = pyqtSignal(int)
 
-    # Первый статус - изначальный, второй - новый
-    changed_annotation_status = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
     added_new_class = pyqtSignal()
 
     change_work_mode = pyqtSignal(int)
@@ -122,6 +137,3 @@ class UGlobalSignalHolder(QObject):
         elif self.current_key == Qt.Key_N:
             self.drop_pressed.emit(self.current_key)
             self.arrows_pressed.emit(Qt.Key_Right)
-
-    def emit_global_changed_annotation_status(self, prev: EAnnotationStatus, current: EAnnotationStatus):
-        self.changed_annotation_status.emit(prev, current)

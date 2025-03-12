@@ -11,7 +11,7 @@ from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QTransform, QFont, QFont
     QPainterPath
 from PyQt5.QtCore import Qt, QRectF, QPointF, QSizeF, pyqtSignal
 
-from utility import FAnnotationData
+from utility import FAnnotationData, FDetectAnnotationData
 from utility import EWorkMode, FAnnotationClasses
 from commander import UGlobalSignalHolder
 
@@ -332,6 +332,23 @@ class UAnnotationGraphicsView(QGraphicsView):
 
         self.scale_factor = 1.0
 
+        self.annotate_start_point: Optional[QPointF] = None
+        self.current_rect: Optional[UAnnotationBox] = None
+        self.annotate_class: Optional[tuple[int, str, QColor]] = None
+        self.work_mode = EWorkMode.DragMode
+
+        self.current_image: Optional[QGraphicsPixmapItem] = None
+
+        self.boxes_on_scene: list[UAnnotationBox] = list()
+
+        self.setSceneRect(QRectF(0, 0, 32000, 32000))  # Устанавливаем размер сцены (ширина, высота)
+
+        if self.commander is not None:
+            self.commander.change_work_mode.connect(self.set_work_mode)
+            self.commander.changed_class_annotate.connect(self.set_annotate_class)
+
+            self.commander.added_new_class.connect(self.add_class)
+
     def enable_drag_mode(self, key: int):
         if key == Qt.Key_Control:
             self.setDragMode(QGraphicsView.ScrollHandDrag)
@@ -347,32 +364,6 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.setTransform(QTransform().scale(self.scale_factor, self.scale_factor))
         self.view_scale_changed.emit(self.scale_factor)
 
-
-class UAnnotationScene(QGraphicsScene):
-    def __init__(self, commander: UGlobalSignalHolder = None, view: UAnnotationGraphicsView = None, parent = None):
-        super().__init__(parent)
-        self.annotate_start_point : Optional[QPointF] = None
-        self.current_rect : Optional[UAnnotationBox] = None
-        self.annotate_class : Optional[int] = None
-        self.work_mode = EWorkMode.DragMode
-
-        self.commander = commander
-        self.view = view
-
-        self.image : Optional[QGraphicsPixmapItem] = None
-
-        self.boxes_on_scene : list[UAnnotationBox] = list()
-        self.available_classes: Optional[FAnnotationClasses] = None
-
-        self.setSceneRect(QRectF(0, 0, 32000, 32000))  # Устанавливаем размер сцены (ширина, высота)
-
-        if self.commander is not None:
-            self.commander.change_work_mode.connect(self.set_work_mode)
-            self.commander.changed_class_annotate.connect(self.set_annotate_class)
-
-            self.commander.added_new_class.connect(self.add_class)
-
-
     def add_annotation_box(self, x, y, width, height, class_data: tuple[int, str, QColor], do_emit: bool = True):
         ann_box = UAnnotationBox(
             x,
@@ -381,7 +372,7 @@ class UAnnotationScene(QGraphicsScene):
             height,
             class_data,
             self.view.scale_factor if self.view else 1.0,
-            self.image
+            self.current_image
         )
 
         if self.work_mode.value == EWorkMode.DragMode.value:
@@ -431,7 +422,7 @@ class UAnnotationScene(QGraphicsScene):
         print("Удален бокс под номером", delete_index)
 
     def set_image_item(self, image):
-        self.image = image
+        self.current_image = image
 
     def set_work_mode(self, mode: int):
         self.work_mode = EWorkMode(mode)
@@ -455,14 +446,15 @@ class UAnnotationScene(QGraphicsScene):
         if selected is None:
             return
         selected.update_annotate_class(self.annotate_class)
-        data = FAnnotationData(
+        data = FDetectAnnotationData(
             selected.x(),
             selected.y(),
             selected.width(),
             selected.height(),
             selected.class_id,
-            res_w=self.image.boundingRect().width(),
-            res_h=self.image.boundingRect().height()
+            QColor(Qt.gray),
+            res_w=self.current_image.boundingRect().width(),
+            res_h=self.current_image.boundingRect().height()
         )
         if self.commander is not None:
             ann_index = self.boxes_on_scene.index(selected)
@@ -504,11 +496,11 @@ class UAnnotationScene(QGraphicsScene):
         if self.work_mode.value == EWorkMode.DragMode.value:
             pass
         elif self.work_mode.value == EWorkMode.AnnotateMode.value:
-            if self.image is None or self.annotate_class is None:
+            if self.current_image is None or self.annotate_class is None:
                 return super().mousePressEvent(event)
             if self.current_rect is None and self.annotate_start_point is None:
                 cursor_pos = event.scenePos()
-                self.annotate_start_point = self.image.mapFromScene(cursor_pos)
+                self.annotate_start_point = self.current_image.mapFromScene(cursor_pos)
                 self.current_rect = self.add_annotation_box(
                     self.annotate_start_point.x(),
                     self.annotate_start_point.y(),
@@ -529,7 +521,7 @@ class UAnnotationScene(QGraphicsScene):
         elif self.work_mode.value == EWorkMode.AnnotateMode.value:
             if self.current_rect is None or self.annotate_start_point is None:
                 return super().mouseMoveEvent(event)
-            current_cursor_pos = self.image.mapFromScene(event.scenePos())
+            current_cursor_pos = self.current_image.mapFromScene(event.scenePos())
             rect = QRectF(self.annotate_start_point, current_cursor_pos).normalized()
             self.current_rect.setRect(rect)
         super().mouseMoveEvent(event)
@@ -547,8 +539,8 @@ class UAnnotationScene(QGraphicsScene):
                         selected.width(),
                         selected.height(),
                         selected.class_id,
-                        res_w=self.image.boundingRect().width(),
-                        res_h=self.image.boundingRect().height()
+                        res_w=self.current_image.boundingRect().width(),
+                        res_h=self.current_image.boundingRect().height()
                     )
                 self.commander.updated_annotation.emit(
                     index,
@@ -557,7 +549,7 @@ class UAnnotationScene(QGraphicsScene):
                 print("Изменение бокса с номером", index, "и данными:" + str(data))
                 pass
         elif self.work_mode.value == EWorkMode.AnnotateMode.value:
-            if self.image is None or self.annotate_class is None:
+            if self.current_image is None or self.annotate_class is None:
                 pass
             elif self.current_rect is not None and self.annotate_start_point is not None:
                 if self.current_rect.get_square() < 25:
@@ -571,8 +563,8 @@ class UAnnotationScene(QGraphicsScene):
                         self.current_rect.width(),
                         self.current_rect.height(),
                         self.current_rect.class_id,
-                        res_w=self.image.boundingRect().width(),
-                        res_h=self.image.boundingRect().height()
+                        res_w=self.current_image.boundingRect().width(),
+                        res_h=self.current_image.boundingRect().height()
                     )
                     self.current_rect.setSelected(True)
                     self.current_rect = None
@@ -585,7 +577,8 @@ class UAnnotationScene(QGraphicsScene):
 
         super().mouseReleaseEvent(event)
 
-    def contextMenuEvent(self, event):
+
+"""    def contextMenuEvent(self, event):
         if len(self.available_classes) == 0 or self.commander is None:
             return
 
@@ -601,4 +594,4 @@ class UAnnotationScene(QGraphicsScene):
             )
             menu.addAction(action)
 
-        menu.exec_(event.screenPos())
+        menu.exec_(event.screenPos())"""

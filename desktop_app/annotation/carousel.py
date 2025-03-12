@@ -1,15 +1,14 @@
 from typing import Optional
 
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QUrl, QThreadPool, QRunnable, QRectF, QThread
-from PyQt5.QtGui import QPixmap, QPen, QImage, QMouseEvent, QColor, QBrush, QTransform
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRectF, QThread, QRect
+from PyQt5.QtGui import QPixmap, QPen, QColor, QBrush
 from PyQt5.QtWidgets import (
-    QApplication, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
-    QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QLabel
+    QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
+    QWidget, QVBoxLayout
 )
 
-from commander import UGlobalSignalHolder
+from commander import UAnnotationSignalHolder
 from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses
-from annotable import UAnnotationBox
 
 class ImageLoaderThread(QThread):
     image_loaded = pyqtSignal(QPixmap)
@@ -21,35 +20,34 @@ class ImageLoaderThread(QThread):
         self.image_path = image_path
 
     def run(self):
-        pixmap = QPixmap(self.image_path).scaled(self.width, self.height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        #pixmap.scaled(self.width, self.height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.image_loaded.emit(pixmap)
+        try:
+            pixmap = QPixmap(self.image_path).scaled(self.width, self.height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.image_loaded.emit(pixmap)
+        except Exception:
+            self.image_loaded.emit(None)
+            return
 
 class UAnnotationThumbnail(QGraphicsPixmapItem):
-    def __init__(self,
-                 image_path: str,
-                 height,
-                 scale: float,
-                 classes: FAnnotationClasses = None
-                 ):
+    def __init__(
+            self,
+            width: int,
+            height: int,
+            image_path: str,
+            dataset: str | None,
+            annotation_data: list[FAnnotationData]
+    ):
         super().__init__()
 
         self.setFlag(QGraphicsPixmapItem.ItemIsSelectable)
 
-        try:
-            pixmap = QPixmap(image_path)
-            self.scale = height / pixmap.height() * scale
-            self._height: int = int(pixmap.height() * self.scale)
-            self._width: int = int(pixmap.width() * self.scale)
-        except Exception:
-            self.scale = scale
-            self._height = int(height * self.scale)
-            self._width = int(height * self.scale)
-
         self.setPixmap(QPixmap())
         self.uploaded = False
 
-        self.classes = classes
+        self.data = annotation_data
+        self.dataset = dataset
+
+        self._width = width
+        self._height = height
 
         self.emitter = UPixmapSignalEmitter()
 
@@ -62,6 +60,9 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
         self.annotation_data_list : list[FAnnotationData] = list()
         self.update()
+
+    def get_annotation_data(self):
+        return self.annotation_data_list
 
     def add_annotation(self, data: FAnnotationData):
         self.annotation_data_list.append(data)
@@ -94,6 +95,10 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
     def _set_pixmap(self, pixmap: QPixmap):
         self.setPixmap(pixmap)
+        self.setOffset(
+            (self.width() - pixmap.width()) / 2,
+            (self.height() - pixmap.height()) / 2
+        )
         self.update()
         self.uploaded = True
 
@@ -132,10 +137,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             painter.drawRect(self.boundingRect())
 
         for ann_data in self.annotation_data_list:
-            if 0 <= ann_data.ClassID < len(self.classes):
-                color = self.classes.get_class(ann_data.ClassID).Color
-            else:
-                color = FAnnotationClasses.get_save_color(ann_data.ClassID)
+            color = ann_data.get_color()
             pen = QPen(color)
             pen.setWidth(self.annotation_width)
             painter.setPen(pen)
@@ -144,20 +146,20 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             background.setAlpha(50)
             painter.setBrush(background)
 
-            rect = QRectF(
-                ann_data.X * self.scale,
-                ann_data.Y * self.scale,
-                ann_data.Width * self.scale,
-                ann_data.Height * self.scale
+            res_w, res_h = ann_data.get_resolution()
+            scale = res_w / float(ann_data.Resolution_w)
+            rect = ann_data.get_rect_to_draw()
+            scaled_rect = QRect(
+                int(rect.x() * scale),
+                int(rect.y() * scale),
+                int(rect.width() * scale),
+                int(rect.height() * scale),
             )
 
-            painter.drawRect(rect)
+            painter.drawRect(scaled_rect)
 
     def boundingRect(self):
-        if self.pixmap().isNull():
-            return QRectF(0, 0, self._width, self._height)
-        else:
-            return super().boundingRect()
+        return QRectF(0, 0, self._width, self._height)
 
     def get_annotated_status(self):
         return self.annotation_status
@@ -200,14 +202,47 @@ class UPixmapSignalEmitter(QObject):
     def emit_signal(self, thumbnail: UAnnotationThumbnail):
         self.clicked.emit(thumbnail)
 
-class UHorizontalScrollView(QGraphicsView):
+class UThumbnailCarousel(QGraphicsView):
     view_changed = pyqtSignal(QRectF)
+
+    def __init__(
+            self,
+            parent = None,
+    ):
+        super().__init__(parent)
+
+        self.main_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
+
+        self.commander: Optional[UAnnotationSignalHolder] = None
+        self.available_classes: Optional[FAnnotationClasses] = None
+        self.thumbnails : list [UAnnotationThumbnail] = []
+        self.current_selected : Optional[UAnnotationThumbnail] = None
+
+        self.annotated_thumbnails_indexes: list[int] = list()
+
+        self.scene = QGraphicsScene()
+        self.setScene(self.scene)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+
+        #self.main_layout.addWidget(self.view)
+
+        self.y_position = 0
+        self.thumbnail_spacing = 10
+        self.x_position = self.thumbnail_spacing
+
+        self.scale_not_selected = 0.75
+
+        self.view_changed.connect(self.display_images)
+        self.last_displayed_images: list[UAnnotationThumbnail] = list()
 
     def get_view_bound_box(self):
         return QRectF(
             self.mapToScene(self.viewport().rect().topLeft()).x() - 400,
             self.mapToScene(self.viewport().rect().topLeft()).y(),
-            self.viewport().rect().width() + 600,
+            self.viewport().rect().width() + 800,
             self.viewport().rect().height()
         )
 
@@ -225,48 +260,14 @@ class UHorizontalScrollView(QGraphicsView):
     def keyPressEvent(self, event):
         pass
 
-class UThumbnailCarousel(QWidget):
-    signal_thumbnail_select = pyqtSignal(UAnnotationThumbnail)
-
-    def __init__(
-            self,
-            parent = None,
-    ):
-        super().__init__(parent)
-
-        self.main_layout = QVBoxLayout()
-        self.setLayout(self.main_layout)
-
-        self.commander: Optional[UGlobalSignalHolder] = None
-        self.available_classes: Optional[FAnnotationClasses] = None
-        self.thumbnails : list [UAnnotationThumbnail] = []
-        self.current_selected : Optional[UAnnotationThumbnail] = None
-
-        self.annotated_thumbnails_indexes: list[int] = list()
-
-        self.scene = QGraphicsScene()
-        self.view = UHorizontalScrollView(self.scene)
-        self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.view.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-
-        self.main_layout.addWidget(self.view)
-
-        self.x_position = 0
-        self.y_position = 0
-        self.thumbnail_spacing = 20
-
-        self.scale_not_selected = 0.75
-
-        self.view.view_changed.connect(self.display_images)
-        self.last_displayed_images: list[UAnnotationThumbnail] = list()
-
-    def set_commander(self, commander: UGlobalSignalHolder):
+    def set_commander(self, commander: UAnnotationSignalHolder):
         if commander is None:
             return
         self.commander = commander
 
-        self.commander.added_new_class.connect(self.add_class)
+        self.commander.added_new_annotation.connect(self.handle_signal_on_added_annotation)
+        self.commander.deleted_annotation.connect(self.handle_signal_on_delete_annotation)
+        self.commander.updated_annotation.connect(self.handle_signal_on_update_annotation)
 
     def set_available_classes(self, classes: FAnnotationClasses):
         self.available_classes = classes
@@ -304,15 +305,7 @@ class UThumbnailCarousel(QWidget):
             else:
                 self.select_thumbnail(self.thumbnails[index - 1])
 
-        print("Index:", self.current_selected.get_index(), "Len:", len(self.thumbnails))
-
-    def add_thumbnail(self, image_path : str):
-        thumbnail = UAnnotationThumbnail(
-            image_path,
-            self.height(),
-            self.scale_not_selected,
-            self.available_classes
-        )
+    def add_thumbnail(self, thumbnail: UAnnotationThumbnail):
         thumbnail.setTransformationMode(Qt.SmoothTransformation)
 
         thumbnail.emitter.clicked.connect(self.on_thumbnail_clicked)
@@ -360,37 +353,25 @@ class UThumbnailCarousel(QWidget):
             return
         self.select_thumbnail(thumbnail)
 
-    def handle_signal_on_update_annotation(self, index: int, data: FAnnotationData):
-        if self.current_selected is None:
+    def handle_signal_on_update_annotation(self, index_thumb: int, index_annotation: int, data: FAnnotationData):
+        if not 0 <= index_thumb < len(self.thumbnails):
             return
-        self.current_selected.update_annotation(index, data)
+        self.thumbnails[index_thumb].update_annotation(index_annotation, data)
 
-    def handle_signal_on_delete_annotation(self, index: int):
-        if self.current_selected is None:
+    def handle_signal_on_delete_annotation(self, index_thumb: int, index_annotation: int):
+        if not 0 <= index_thumb < len(self.thumbnails):
             return
-        self.current_selected.delete_annotation(index)
+        self.thumbnails[index_thumb].delete_annotation(index_annotation)
         if self.current_selected.annotation_status is False:
             self.annotated_thumbnails_indexes.remove(self.thumbnails.index(self.current_selected))
 
-    def handle_signal_on_added_annotation(self, annotation_box: UAnnotationBox):
-        if self.current_selected is None:
+    def handle_signal_on_added_annotation(self, index_thumb: int, annotation_data: FAnnotationData):
+        if not 0 <= index_thumb < len(self.thumbnails):
             return
-        self.current_selected.add_annotation(
-            FAnnotationData(
-                annotation_box.x(),
-                annotation_box.y(),
-                annotation_box.width(),
-                annotation_box.height(),
-                annotation_box.class_id,
-                annotation_box.resolution_width(),
-                annotation_box.resolution_height()
-            )
-        )
-        print(f"Добавлен бокс с разрешением: {annotation_box.resolution_width()}x{annotation_box.resolution_height()}")
-        if self.current_selected.annotation_status is True:
-            index = self.thumbnails.index(self.current_selected)
-            if index not in self.annotated_thumbnails_indexes:
-                self.annotated_thumbnails_indexes.append(index)
+        self.thumbnails[index_thumb].add_annotation(annotation_data)
+        if self.thumbnails[index_thumb].annotation_status is True:
+            if index_thumb not in self.annotated_thumbnails_indexes:
+                self.annotated_thumbnails_indexes.append(index_thumb)
                 self.annotated_thumbnails_indexes.sort()
 
     def set_thumbnail_dropped(self, key: int):
@@ -403,9 +384,19 @@ class UThumbnailCarousel(QWidget):
         self.current_selected = thumbnail
         self.scene.clearSelection()
         self.current_selected.setSelected(True)
-        self.view.centerOn(self.current_selected.sceneBoundingRect().center())
-        self.signal_thumbnail_select.emit(self.current_selected)
+        self.centerOn(self.current_selected.sceneBoundingRect().center())
+        self.commander.selected_thumbnail.emit(
+            thumbnail.get_index(),
+            thumbnail.get_image_path(),
+            thumbnail.get_annotation_data()
+        )
 
     def update(self):
         super().update()
-        self.view.update()
+        self.scene.setSceneRect(
+            0,
+            0,
+            self.thumbnail_spacing + len(self.thumbnails) * (200 + self.thumbnail_spacing),
+            self.scene.height()
+        )
+        self.viewport().update()

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1388</width>
-    <height>855</height>
+    <height>885</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -94,7 +94,7 @@ QPushButton:hover {
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
+        <enum>Qt::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -124,7 +124,7 @@ QPushButton:hover {
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="main_layout_3">
+    <layout class="QVBoxLayout" name="display_layout">
      <property name="leftMargin">
       <number>0</number>
      </property>
@@ -180,17 +180,14 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer_4">
+           <spacer name="verticalSpacer">
             <property name="orientation">
-             <enum>Qt::Orientation::Vertical</enum>
-            </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Policy::Expanding</enum>
+             <enum>Qt::Vertical</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
               <width>20</width>
-              <height>60</height>
+              <height>40</height>
              </size>
             </property>
            </spacer>
@@ -203,10 +200,10 @@ QPushButton:hover {
              </font>
             </property>
             <property name="text">
-             <string>Режим</string>
+             <string>Режимы разметки</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignCenter</set>
+             <set>Qt::AlignCenter</set>
             </property>
            </widget>
           </item>
@@ -236,7 +233,7 @@ QPushButton:hover {
              </font>
             </property>
             <property name="layoutDirection">
-             <enum>Qt::LayoutDirection::LeftToRight</enum>
+             <enum>Qt::LeftToRight</enum>
             </property>
             <property name="text">
              <string>1: Перемещение</string>
@@ -285,9 +282,6 @@ QPushButton:hover {
               <property name="text">
                <string>Текущий:</string>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
              </widget>
             </item>
             <item>
@@ -300,17 +294,14 @@ QPushButton:hover {
               <property name="text">
                <string>1</string>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
              </widget>
             </item>
            </layout>
           </item>
           <item>
-           <spacer name="verticalSpacer_5">
+           <spacer name="verticalSpacer_2">
             <property name="orientation">
-             <enum>Qt::Orientation::Vertical</enum>
+             <enum>Qt::Vertical</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -324,26 +315,7 @@ QPushButton:hover {
         </widget>
        </item>
        <item>
-        <widget class="UAnnotationGraphicsView" name="annotate_view">
-         <property name="minimumSize">
-          <size>
-           <width>480</width>
-           <height>480</height>
-          </size>
-         </property>
-         <property name="mouseTracking">
-          <bool>true</bool>
-         </property>
-         <property name="tabletTracking">
-          <bool>true</bool>
-         </property>
-         <property name="dragMode">
-          <enum>QGraphicsView::DragMode::NoDrag</enum>
-         </property>
-         <property name="viewportUpdateMode">
-          <enum>QGraphicsView::ViewportUpdateMode::FullViewportUpdate</enum>
-         </property>
-        </widget>
+        <widget class="UAnnotationGraphicsView" name="annotation_scene"/>
        </item>
        <item>
         <widget class="QWidget" name="verticalWidget_4" native="true">
@@ -398,10 +370,10 @@ QPushButton:hover {
              <string>Статистика</string>
             </property>
             <property name="textFormat">
-             <enum>Qt::TextFormat::AutoText</enum>
+             <enum>Qt::PlainText</enum>
             </property>
             <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignCenter</set>
+             <set>Qt::AlignCenter</set>
             </property>
            </widget>
           </item>
@@ -416,7 +388,7 @@ QPushButton:hover {
              <string>Разметки на сцене</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignCenter</set>
+             <set>Qt::AlignCenter</set>
             </property>
            </widget>
           </item>
@@ -487,7 +459,7 @@ QPushButton:hover {
                  <string>0</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -502,7 +474,7 @@ QPushButton:hover {
                  <string>0</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -517,7 +489,7 @@ QPushButton:hover {
                  <string>0</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -532,7 +504,7 @@ QPushButton:hover {
                  <string>0</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -560,9 +532,9 @@ QPushButton:hover {
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer_6">
+           <spacer name="verticalSpacer_3">
             <property name="orientation">
-             <enum>Qt::Orientation::Vertical</enum>
+             <enum>Qt::Vertical</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -594,27 +566,12 @@ QWidget &gt; QPushButton:hover {
       </layout>
      </item>
      <item>
-      <widget class="UThumbnailCarousel" name="thumbnail_carousel" native="true">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>200</height>
-        </size>
-       </property>
+      <widget class="UThumbnailCarousel" name="thumbnail_carousel">
        <property name="maximumSize">
         <size>
          <width>16777215</width>
          <height>200</height>
         </size>
-       </property>
-       <property name="mouseTracking">
-        <bool>true</bool>
-       </property>
-       <property name="acceptDrops">
-        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -649,20 +606,19 @@ QWidget &gt; QPushButton:hover {
  </widget>
  <customwidgets>
   <customwidget>
-   <class>UAnnotationGraphicsView</class>
-   <extends>QGraphicsView</extends>
-   <header location="global">annotable</header>
-  </customwidget>
-  <customwidget>
-   <class>UThumbnailCarousel</class>
-   <extends>QWidget</extends>
-   <header location="global">carousel</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>UListAnnotationWidget</class>
    <extends>QListWidget</extends>
    <header location="global">custom_widgets</header>
+  </customwidget>
+  <customwidget>
+   <class>UAnnotationGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">annotation.annotable</header>
+  </customwidget>
+  <customwidget>
+   <class>UThumbnailCarousel</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">annotation.carousel</header>
   </customwidget>
  </customwidgets>
  <resources/>

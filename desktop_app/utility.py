@@ -5,7 +5,7 @@ import yaml
 import configparser
 from enum import Enum
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPointF, QPoint, QRect
 from PyQt5.QtGui import QColor
 
 import random
@@ -127,14 +127,40 @@ class FAnnotationClasses:
         return QColor.fromHsv(hue, saturation, value)
 
 class FAnnotationData:
-    def __init__(self, x, y, width, height, class_id, res_w = 1920, res_h = 1400):
+    def __init__(self, class_id, color: QColor, res_w = 1920, res_h = 1400):
+        self.ClassID = class_id
+        self.color = color
+        self.Resolution_w = res_w
+        self.Resolution_h = res_h
+
+    def __str__(self):
+        return f"Объект аннотации не инициализирован!"
+
+    def get_data(self):
+        pass
+
+    def get_rect_to_draw(self):
+        return QRect()
+
+    def get_polygon_to_draw(self):
+        pass
+
+    def get_color(self):
+        return self.color
+
+    def get_id(self):
+        return self.ClassID
+
+    def get_resolution(self):
+        return self.Resolution_w, self.Resolution_h
+
+class FDetectAnnotationData(FAnnotationData):
+    def __init__(self, x, y, width, height, class_id: int, color: QColor, res_w = 1920, res_h = 1400):
+        super().__init__(class_id, color, res_w, res_h)
         self.X = x
         self.Y = y
         self.Width = width
         self.Height = height
-        self.ClassID = class_id
-        self.Resolution_w = res_w
-        self.Resolution_h = res_h
 
     def __str__(self):
         if self.X < 0: self.X = 0
@@ -146,6 +172,14 @@ class FAnnotationData:
                 f"{(self.Y + self.Height / 2) / float(self.Resolution_h)} "
                 f"{self.Width / float(self.Resolution_w)} "
                 f"{self.Height / float(self.Resolution_h)}")
+
+    def get_data(self):
+        return self.X, self.Y, self.Width, self.Height
+
+    def get_rect_to_draw(self):
+        top_left = QPoint(int(self.X), int(self.Y))
+        bottom_right = QPoint(int(self.X + self.Width), int(self.Y + self.Height))
+        return QRect(top_left, bottom_right)
 
 class FAnnotationItem:
     def __init__(self, ann_list: list[FAnnotationData], image_path: str):

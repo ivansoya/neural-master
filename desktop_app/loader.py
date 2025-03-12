@@ -9,7 +9,8 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
 from debugpy.launcher.debuggee import process
 
 from project import UTrainProject, DATASETS, RESERVED
-from utility import FAnnotationItem, FAnnotationData
+from utility import FAnnotationItem, FAnnotationData, FDetectAnnotationData
+
 
 class UOverlayLoader(QWidget):
     def __init__(self, parent):
@@ -220,9 +221,9 @@ class UThreadDatasetLoadAnnotations(QThread):
                     y = max(0, min(int(float(values[2]) * height_res), height_res))
                     width = int(float(values[3]) * width_res)
                     height = int(float(values[4]) * height_res)
-
+                    color = self.project.classes.get_color(id_class)
                     ann_list.append(
-                        FAnnotationData(x, y, width, height, id_class, width_res, height_res)
+                        FDetectAnnotationData(x, y, width, height, id_class, color, width_res, height_res)
                     )
                 ann_item = FAnnotationItem(ann_list, image_path)
             if ann_item:
