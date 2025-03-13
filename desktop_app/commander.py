@@ -13,7 +13,13 @@ class UAnnotationSignalHolder(QWidget):
     # Первый статус - изначальный, второй - новый
     changed_annotation_status = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
 
-    selected_thumbnail = pyqtSignal(int, str, list)
+    selected_thumbnail = pyqtSignal(tuple)
+
+    change_work_mode = pyqtSignal(int)
+    changed_class_annotate = pyqtSignal(int)
+
+    increase_annotated_counter = pyqtSignal()
+    decrease_annotated_counter = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -29,19 +35,10 @@ class UGlobalSignalHolder(QObject):
     drop_pressed = pyqtSignal(int)
     delete_pressed = pyqtSignal(int)
 
-    added_new_annotation = pyqtSignal(object)
-    updated_annotation = pyqtSignal(int, int, str, QColor)
-    deleted_annotation = pyqtSignal(int)
-
     added_new_class = pyqtSignal()
 
-    change_work_mode = pyqtSignal(int)
-    changed_class_annotate = pyqtSignal(int)
-
     command_key_pressed = pyqtSignal(int)
-
-    increase_annotated_counter = pyqtSignal()
-    decrease_annotated_counter = pyqtSignal()
+    number_key_pressed = pyqtSignal(int)
 
     project_load_complete = pyqtSignal()
 
@@ -79,12 +76,8 @@ class UGlobalSignalHolder(QObject):
                     self.freq_timer.stop()
                 return True
 
-            if event.key() == Qt.Key_1:
-                self.change_work_mode.emit(EWorkMode.DragMode.value)
-                return True
-
-            if event.key() == Qt.Key_2:
-                self.change_work_mode.emit(EWorkMode.AnnotateMode.value)
+            if  Qt.Key_0 <= event.key() <= Qt.Key_9:
+                self.number_key_pressed.emit(event.key())
                 return True
 
             if event.key() == Qt.Key_Space:

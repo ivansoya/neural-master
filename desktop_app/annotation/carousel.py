@@ -215,7 +215,6 @@ class UThumbnailCarousel(QGraphicsView):
         self.setLayout(self.main_layout)
 
         self.commander: Optional[UAnnotationSignalHolder] = None
-        self.available_classes: Optional[FAnnotationClasses] = None
         self.thumbnails : list [UAnnotationThumbnail] = []
         self.current_selected : Optional[UAnnotationThumbnail] = None
 
@@ -269,9 +268,6 @@ class UThumbnailCarousel(QGraphicsView):
         self.commander.deleted_annotation.connect(self.handle_signal_on_delete_annotation)
         self.commander.updated_annotation.connect(self.handle_signal_on_update_annotation)
 
-    def set_available_classes(self, classes: FAnnotationClasses):
-        self.available_classes = classes
-
     def clear_thumbnails(self):
         self.thumbnails.clear()
         self.current_selected = None
@@ -287,7 +283,7 @@ class UThumbnailCarousel(QGraphicsView):
                 # код для ошибки
                 return
             else:
-                self.current_selected = self.thumbnails[0]
+                self.select_thumbnail(self.thumbnails[0])
 
         index = self.current_selected.get_index()
         if index < 0 or index >= len(self.thumbnails):
@@ -386,9 +382,11 @@ class UThumbnailCarousel(QGraphicsView):
         self.current_selected.setSelected(True)
         self.centerOn(self.current_selected.sceneBoundingRect().center())
         self.commander.selected_thumbnail.emit(
-            thumbnail.get_index(),
-            thumbnail.get_image_path(),
-            thumbnail.get_annotation_data()
+            (
+                thumbnail.get_index(),
+                thumbnail.get_image_path(),
+                thumbnail.get_annotation_data()
+            )
         )
 
     def update(self):

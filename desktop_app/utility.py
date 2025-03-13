@@ -24,6 +24,7 @@ GColorList = [
 class EWorkMode(Enum):
     DragMode = 1
     AnnotateMode = 2
+    ForceDragMode = 3
 
 class EAnnotationStatus(Enum):
     NoAnnotation = 1
@@ -127,8 +128,9 @@ class FAnnotationClasses:
         return QColor.fromHsv(hue, saturation, value)
 
 class FAnnotationData:
-    def __init__(self, class_id, color: QColor, res_w = 1920, res_h = 1400):
+    def __init__(self, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
         self.ClassID = class_id
+        self.class_name = class_name
         self.color = color
         self.Resolution_w = res_w
         self.Resolution_h = res_h
@@ -148,6 +150,9 @@ class FAnnotationData:
     def get_color(self):
         return self.color
 
+    def get_class_name(self):
+        return self.class_name
+
     def get_id(self):
         return self.ClassID
 
@@ -155,8 +160,8 @@ class FAnnotationData:
         return self.Resolution_w, self.Resolution_h
 
 class FDetectAnnotationData(FAnnotationData):
-    def __init__(self, x, y, width, height, class_id: int, color: QColor, res_w = 1920, res_h = 1400):
-        super().__init__(class_id, color, res_w, res_h)
+    def __init__(self, x, y, width, height, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
+        super().__init__(class_id, class_name, color, res_w, res_h)
         self.X = x
         self.Y = y
         self.Width = width

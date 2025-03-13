@@ -20,6 +20,9 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         super().__init__()
         self.setupUi(self)
 
+        self.toggle_round_images.setVisible(False)
+        self.thumbnail_carousel.setVisible(False)
+
         self.image_paths = []
         self.image_on_scene = None
         self.image_matrix = None
@@ -32,8 +35,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander = commander
         self.project = project
 
+        # Обработчик событий для сцены разметки
         self.annotate_commander = UAnnotationSignalHolder()
         self.thumbnail_carousel.set_commander(self.annotate_commander)
+        self.annotation_scene.set_commander(self.annotate_commander)
 
         # Инициализация потоков
         self.overlay: Optional[UOverlayLoader] = None
@@ -42,25 +47,30 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.current_dropped_count: int = 0
         self.current_not_annotated_count: int = 0
 
-        #self.commander.ctrl_pressed.connect(self.annotate_view.enable_drag_mode)
-        #self.commander.ctrl_released.connect(self.annotate_view.disable_drag_mode)
-        #self.commander.delete_pressed.connect(self.annotate_scene.delete_on_press_key)
-        #self.commander.drop_pressed.connect(self.annotate_scene.clean_all_annotations)
+        self.commander.project_load_complete.connect(self.handle_on_load_project)
 
-        self.toggle_round_images.setVisible(False)
-        self.thumbnail_carousel.setVisible(False)
+        # Сигналы событий при нажатии на клавиши
+        self.commander.ctrl_pressed.connect(self.annotation_scene.handle_drag_start_event)
+        self.commander.ctrl_released.connect(self.annotation_scene.handle_drag_end_event)
+        self.commander.delete_pressed.connect(self.annotation_scene.delete_on_press_key)
+        self.commander.drop_pressed.connect(self.annotation_scene.clean_all_annotations)
+        self.commander.number_key_pressed.connect(self.handle_clicked_number_key)
 
         self.commander.arrows_pressed.connect(self.thumbnail_carousel.select_thumbnail_by_arrow)
         self.commander.drop_pressed.connect(self.thumbnail_carousel.set_thumbnail_dropped)
 
         self.load_images_button.clicked.connect(self.load_images)
 
-        self.commander.change_work_mode.connect(self.set_label_work_mode)
+        # Привязка смены класса со сценой
+        self.list_class_selector.class_selected.connect(self.annotation_scene.set_annotate_class)
+
+        # Обработка события изменения режима работы
+        self.annotate_commander.change_work_mode.connect(self.set_label_work_mode)
         self.select_dragmode_button.clicked.connect(
-            lambda checked=False, mode=EWorkMode.DragMode.value: self.commander.change_work_mode.emit(mode)
+            lambda checked=False, mode=EWorkMode.DragMode.value: self.annotate_commander.change_work_mode.emit(mode)
         )
         self.select_annotatemode_button.clicked.connect(
-            lambda checked=False, mode=EWorkMode.AnnotateMode.value: self.commander.change_work_mode.emit(mode)
+            lambda checked=False, mode=EWorkMode.AnnotateMode.value: self.annotate_commander.change_work_mode.emit(mode)
         )
 
         #self.commander.changed_class_annotate.connect(self.on_change_index_combobox)
@@ -77,16 +87,19 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         # Изменение label для отображения количества размеченных и неразмеченных изображений
         #self.commander.changed_annotation_status.connect(self.handle_changed_annotation_status)
 
-        #self.button_create_dataset.clicked.connect(self.show_dialog_create_dataset)
-
-        # Добавление нового класса
-        #self.button_add_class.clicked.connect(self.on_clicked_add_class)
-        #self.commander.added_new_class.connect(self.on_get_new_class)
-
         # Инициализация переходов по страницам
         self.button_to_datasets_settings.clicked.connect(lambda: self.go_to_another_page(1))
         self.button_to_statistics.clicked.connect(lambda: self.go_to_another_page(3))
 
+    def handle_on_load_project(self):
+        if self.project is None:
+            return
+        for class_id in self.project.classes.get_all_ids():
+            self.list_class_selector.add_class(
+                class_id,
+                self.project.classes.get_name(class_id),
+                self.project.classes.get_color(class_id)
+            )
 
     def load_images(self):
         file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Images", "",
@@ -229,13 +242,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def set_label_work_mode(self, mode: int):
         self.selected_label.setText(str(mode))
 
-    def handle_changed_class_combobox_index(self, index):
-        self.commander.changed_class_annotate.emit(index)
-
-    def on_change_index_combobox(self, index):
-        if self.class_combobox.currentIndex() != index:
-            self.class_combobox.setCurrentIndex(index)
-
     def toggle_roulette_visibility(self):
         if self.thumbnail_carousel.isVisible():
             self.thumbnail_carousel.setVisible(False)
@@ -275,6 +281,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def handle_changed_annotation_status(self, prev: EAnnotationStatus, current: EAnnotationStatus):
         self.update_labels_by_status(prev, False)
         self.update_labels_by_status(current, True)
+
+    def handle_clicked_number_key(self, key_number: int):
+        if key_number == int(Qt.Key_1):
+            self.annotate_commander.change_work_mode.emit(EWorkMode.DragMode.value)
+        elif key_number == int(Qt.Key_2):
+            self.annotate_commander.change_work_mode.emit(EWorkMode.AnnotateMode.value)
 
     def update_labels_by_status(self, status: EAnnotationStatus, to_increase: bool):
         value = 1 if to_increase is True else -1
