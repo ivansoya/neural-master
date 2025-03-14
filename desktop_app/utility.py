@@ -194,6 +194,9 @@ class FAnnotationItem:
     def get_item_data(self):
         return self.annotation_list, self.image_path
 
+    def get_image_path(self):
+        return self.image_path
+
 
 class FDatasetInfo:
     config_name = "config.cfg"

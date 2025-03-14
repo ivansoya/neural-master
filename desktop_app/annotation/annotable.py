@@ -241,7 +241,7 @@ class UAnnotationBox(QGraphicsRectItem):
             return super().shape()
 
     def paint(self, painter, option, widget=None):
-        #super().paint(painter, option, widget)
+
         if self.isSelected():
             # Удаление фона
             self.setBrush(QBrush(Qt.transparent))
@@ -276,6 +276,8 @@ class UAnnotationBox(QGraphicsRectItem):
                 painter.setFont(font)
                 painter.setPen(font_color)
                 painter.drawText(text_background_rect, Qt.AlignCenter, text)
+
+                self.scene().update()
 
         else:
             painter.setBrush(QBrush(self.background_color))
@@ -418,7 +420,7 @@ class UAnnotationGraphicsView(QGraphicsView):
 
         for item in self._get_current_thumb_annotation_data():
             data = item.get_data()
-            if isinstance(data, FDetectAnnotationData):
+            if isinstance(item, FDetectAnnotationData):
                 x, y, width, height = data
                 ann_box = UAnnotationBox(
                     x,
@@ -508,7 +510,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         delete_index = self.boxes_on_scene.index(box)
         self.commander.deleted_annotation.emit(self._get_current_thumb_index(), delete_index)
         self.boxes_on_scene.remove(box)
-        self.removeItem(box)
+        self.annotate_scene.removeItem(box)
         if QApplication.overrideCursor():
             QApplication.restoreOverrideCursor()
         if len(self.boxes_on_scene) == 0:

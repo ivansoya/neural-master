@@ -6,9 +6,11 @@ from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QWidget, QVBoxLayout
 )
+from tests.test_python import image
 
 from commander import UAnnotationSignalHolder
-from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses
+from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses, FAnnotationItem
+
 
 class ImageLoaderThread(QThread):
     image_loaded = pyqtSignal(QPixmap)
@@ -146,8 +148,8 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             background.setAlpha(50)
             painter.setBrush(background)
 
-            res_w, res_h = ann_data.get_resolution()
-            scale = res_w / float(ann_data.Resolution_w)
+            res_w, _ = ann_data.get_resolution()
+            scale = float(self.width()) / res_w
             rect = ann_data.get_rect_to_draw()
             scaled_rect = QRect(
                 int(rect.x() * scale),
@@ -191,6 +193,9 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
     def get_image_path(self):
         return self.image_path
+
+    def get_dataset(self):
+        return self.dataset
 
 class UPixmapSignalEmitter(QObject):
     clicked = pyqtSignal(UAnnotationThumbnail)
@@ -388,6 +393,24 @@ class UThumbnailCarousel(QGraphicsView):
                 thumbnail.get_annotation_data()
             )
         )
+
+    def get_annotations(self):
+        ann_dict: [str, list[FAnnotationItem]] = dict()
+        list_item: [list[FAnnotationItem]] = list()
+        for index in self.annotated_thumbnails_indexes:
+            data_t = self.thumbnails[index].get_annotation_data()
+            image_path = self.thumbnails[index].get_image_path()
+            dataset = self.thumbnails[index].get_dataset()
+            ann_item = FAnnotationItem(data_t, image_path)
+
+            if dataset is None:
+                list_item.append(ann_item)
+            else:
+                if not dataset in ann_dict:
+                    ann_dict[dataset] = list()
+                ann_dict[dataset].append(ann_item)
+
+        return ann_dict, list_item
 
     def update(self):
         super().update()

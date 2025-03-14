@@ -5,7 +5,6 @@ from PyQt5.QtCore import Qt
 
 from annotation.annotable import UAnnotationBox, UAnnotationGraphicsView
 
-
 class UHorizontalScrollArea(QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)

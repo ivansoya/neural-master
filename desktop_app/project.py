@@ -2,6 +2,8 @@ import configparser
 import os.path
 import shutil
 
+from PyQt5.QtCore import QThread
+
 from supporting.error_text import UErrorsText
 from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem
 
@@ -16,6 +18,29 @@ NAME = "name"
 
 LABELS = "labels"
 IMAGES = "images"
+
+class UMergeAnnotationThread(QThread):
+    def __init__(self, project: "UTrainProject", source_dict: dict[str, list[FAnnotationItem]], type_d: str = DATASETS):
+        super().__init__()
+
+        self.project = project
+        self.source_dict = source_dict
+        self.type_d = type_d
+        if type_d == DATASETS:
+            self.target_dict = self.project.get_current_annotations()
+        else:
+            self.target_dict = self.project.get_reserved_annotations()
+
+    def run(self):
+        for dataset, ann_list in self.source_dict.items():
+            if not dataset in self.target_dict:
+                self.target_dict[dataset] = list()
+                self.project.add_dataset(dataset, self.type_d)
+            image_path_list = [a_t.get_image_path() for a_t in ann_list]
+            for annotation in ann_list:
+                if annotation.get_image_path() in image_path_list:
+                    image_path_list.remove(annotation.get_image_path())
+
 
 class UTrainProject:
     def __init__(self):

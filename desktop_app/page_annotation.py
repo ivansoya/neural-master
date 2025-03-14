@@ -2,7 +2,7 @@ from typing import Optional
 
 import cv2
 import os
-from PyQt5.QtWidgets import QFileDialog, QWidget, QGraphicsPixmapItem, QStackedWidget, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QWidget, QGraphicsPixmapItem, QStackedWidget, QMessageBox, QDialog
 from PyQt5.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, QTimer
 
@@ -10,9 +10,22 @@ from dataset import UDatasetDialog
 from design.annotation_page import Ui_annotataion_page
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
 from annotation.carousel import UAnnotationThumbnail
+from design.diag_create_dataset import Ui_diag_create_dataset
 from loader import UOverlayLoader
 from project import UTrainProject
 from utility import EWorkMode, EAnnotationStatus, FDatasetInfo, UMessageBox
+
+class UTextInputDialog(QDialog, Ui_diag_create_dataset):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+
+        # Подключаем кнопку к обработчику
+        self.button_ok.clicked.connect(self.accept)
+
+    def get_text(self):
+        """Возвращает текст, введенный в поле ввода"""
+        return self.lineedit_dataset_name.text()
 
 
 class UPageAnnotation(QWidget, Ui_annotataion_page):
@@ -60,6 +73,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander.drop_pressed.connect(self.thumbnail_carousel.set_thumbnail_dropped)
 
         self.load_images_button.clicked.connect(self.load_images)
+
+        self.button_create_dataset.clicked.connect(self.handle_clicked_create_dataset)
 
         # Привязка смены класса со сценой
         self.list_class_selector.class_selected.connect(self.annotation_scene.set_annotate_class)
@@ -127,6 +142,20 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.load_thumbnails()
 
             self.thumbnail_carousel.update()
+
+    def handle_clicked_create_dataset(self):
+        dict_dataset, list_annotations = self.thumbnail_carousel.get_annotations()
+
+        if len(list_annotations) == 0:
+            return
+        dialog = UTextInputDialog()
+        if dialog.exec_():
+            dataset_name = dialog.get_text()
+            if not dataset_name in self.project.datasets:
+                self.project.get_current_annotations()[dataset_name] = list_annotations
+            else:
+
+        pass
 
     def load_thumbnails(self):
         if self.overlay:
