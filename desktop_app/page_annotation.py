@@ -12,7 +12,7 @@ from commander import UGlobalSignalHolder, UAnnotationSignalHolder
 from annotation.carousel import UAnnotationThumbnail
 from design.diag_create_dataset import Ui_diag_create_dataset
 from loader import UOverlayLoader
-from project import UTrainProject
+from project import UTrainProject, UMergeAnnotationThread, DATASETS
 from utility import EWorkMode, EAnnotationStatus, FDatasetInfo, UMessageBox
 
 class UTextInputDialog(QDialog, Ui_diag_create_dataset):
@@ -55,6 +55,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         # Инициализация потоков
         self.overlay: Optional[UOverlayLoader] = None
+        self.merge_thread: Optional[UMergeAnnotationThread] = None
 
         self.current_annotated_count: int = 0
         self.current_dropped_count: int = 0
@@ -72,9 +73,9 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander.arrows_pressed.connect(self.thumbnail_carousel.select_thumbnail_by_arrow)
         self.commander.drop_pressed.connect(self.thumbnail_carousel.set_thumbnail_dropped)
 
+        # Обработка событий при нажатии на кнопки страницы
         self.load_images_button.clicked.connect(self.load_images)
-
-        self.button_create_dataset.clicked.connect(self.handle_clicked_create_dataset)
+        self.button_add_to_project.clicked.connect(self.handle_clicked_add_to_project)
 
         # Привязка смены класса со сценой
         self.list_class_selector.class_selected.connect(self.annotation_scene.set_annotate_class)
@@ -143,19 +144,38 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
             self.thumbnail_carousel.update()
 
-    def handle_clicked_create_dataset(self):
+    def handle_clicked_add_to_project(self):
+        if self.overlay or (self.merge_thread and self.merge_thread.isRunning()):
+            return
         dict_dataset, list_annotations = self.thumbnail_carousel.get_annotations()
 
-        if len(list_annotations) == 0:
+        if len(list_annotations) == 0 and len(dict_dataset) == 0:
             return
         dialog = UTextInputDialog()
+        self.commander.set_block(True)
         if dialog.exec_():
-            dataset_name = dialog.get_text()
-            if not dataset_name in self.project.datasets:
-                self.project.get_current_annotations()[dataset_name] = list_annotations
+            dataset_name = dialog.lineedit_dataset_name.text()
+            if dataset_name not in dict_dataset:
+                dict_dataset[dataset_name] = list_annotations
             else:
+                dict_dataset[dataset_name] += list_annotations
 
-        pass
+            self.overlay = UOverlayLoader(self.display_scene)
+            self.merge_thread = UMergeAnnotationThread(self.project, dict_dataset, DATASETS)
+
+            self.merge_thread.signal_on_loaded_image.connect(self.overlay.update_progress)
+            self.merge_thread.signal_on_ended.connect(self.handle_on_ended_adding_dataset)
+
+            self.merge_thread.start()
+
+        self.commander.set_block(False)
+
+    def handle_on_ended_adding_dataset(self, dataset_name: str):
+        UMessageBox.show_error("Добавлены аннотации в проект!", "Успех!", int(QMessageBox.Ok))
+        self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+        self.project.save()
+        self.commander.project_updated_datasets.emit()
+        return
 
     def load_thumbnails(self):
         if self.overlay:

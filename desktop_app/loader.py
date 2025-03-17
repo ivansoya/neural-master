@@ -6,7 +6,6 @@ import imageio.v3 as iio
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer, QRectF
 from PyQt5.QtGui import QPainter, QColor, QPixmap
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
-from debugpy.launcher.debuggee import process
 
 from project import UTrainProject, DATASETS, RESERVED
 from utility import FAnnotationItem, FAnnotationData, FDetectAnnotationData
@@ -224,7 +223,17 @@ class UThreadDatasetLoadAnnotations(QThread):
                     color = self.project.classes.get_color(id_class)
                     class_name = self.project.classes.get_name(id_class)
                     ann_list.append(
-                        FDetectAnnotationData(x, y, width, height, id_class, class_name, color, width_res, height_res)
+                        FDetectAnnotationData(
+                            int(x - width // 2),
+                            int(y - height // 2),
+                            width,
+                            height,
+                            id_class,
+                            class_name,
+                            color,
+                            width_res,
+                            height_res
+                        )
                     )
                 ann_item = FAnnotationItem(ann_list, image_path)
             if ann_item:

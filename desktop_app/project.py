@@ -2,7 +2,7 @@ import configparser
 import os.path
 import shutil
 
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal
 
 from supporting.error_text import UErrorsText
 from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem
@@ -20,6 +20,10 @@ LABELS = "labels"
 IMAGES = "images"
 
 class UMergeAnnotationThread(QThread):
+    # Название файла, текущий файл, общее количество файлов
+    signal_on_loaded_image = pyqtSignal(str, int, int)
+    signal_on_ended = pyqtSignal(str)
+
     def __init__(self, project: "UTrainProject", source_dict: dict[str, list[FAnnotationItem]], type_d: str = DATASETS):
         super().__init__()
 
@@ -32,15 +36,22 @@ class UMergeAnnotationThread(QThread):
             self.target_dict = self.project.get_reserved_annotations()
 
     def run(self):
+        total = sum(len(ann_list) for ann_list in self.source_dict.values())
+        current = 1
         for dataset, ann_list in self.source_dict.items():
             if not dataset in self.target_dict:
                 self.target_dict[dataset] = list()
                 self.project.add_dataset(dataset, self.type_d)
-            image_path_list = [a_t.get_image_path() for a_t in ann_list]
+                self.project.create_dataset_dir(dataset, self.type_d)
             for annotation in ann_list:
-                if annotation.get_image_path() in image_path_list:
-                    image_path_list.remove(annotation.get_image_path())
-
+                try:
+                    self.project.save_annotation_to_project(annotation, dataset, self.type_d)
+                    current += 1
+                    self.signal_on_loaded_image.emit(annotation.get_image_path(), current, total)
+                except Exception as error:
+                    print(str(error))
+                    continue
+        self.signal_on_ended.emit("Завершено!")
 
 class UTrainProject:
     def __init__(self):
@@ -249,13 +260,12 @@ class UTrainProject:
     def get_reserved_annotations(self):
         return self.reserved_annotations
 
-    def get_dataset_path(self, dataset_name: str):
-        if dataset_name in self.datasets:
-            return os.path.join(self.name, DATASETS, dataset_name).replace('\\', '/')
-
-    def get_reserved_path(self, reserved_name: str):
-        if reserved_name in self.reserved:
-            return os.path.join(self.name, RESERVED, reserved_name).replace('\\', '/')
+    def get_dataset_path(self, dataset_name: str, dataset_type: str):
+        dataset = self.datasets if dataset_type == DATASETS else self.reserved
+        if dataset_name in dataset:
+            return os.path.join(self.path, dataset_type, dataset_name).replace('\\', '/')
+        else:
+            return None
 
     def get_all_dataset_paths(self, type_dataset: str = DATASETS):
         dict_ref = self._get_ref_to_list(type_dataset)
@@ -296,3 +306,42 @@ class UTrainProject:
             self.current_annotations[dataset_name] = list()
         for reserved_name in self.reserved:
             self.reserved_annotations[reserved_name] = list()
+
+    def save_annotation_to_project(
+            self,
+            annotation_item: FAnnotationItem,
+            dataset: str,
+            dataset_type: str = DATASETS
+    ):
+        if not os.path.exists(annotation_item.get_image_path()):
+            return
+        image_name = os.path.basename(annotation_item.get_image_path())
+        image_dir = self._get_dir_path(dataset, dataset_type, IMAGES)
+        label_dir = self._get_dir_path(dataset, dataset_type, LABELS)
+
+        target_image_path = os.path.join(image_dir, image_name).replace('\\', '/')
+        target_label_path = os.path.join(label_dir, os.path.splitext(image_name)[0] + ".txt").replace('\\', '/')
+
+        # Копирование изображения
+        shutil.copy2(annotation_item.get_image_path(), target_image_path)
+        # Запись аннотаций в файл
+        ann_data, _ = annotation_item.get_item_data()
+        with open(target_label_path, "w") as save_file:
+            ann_lines = [str(ann_line) + '\n' for ann_line in ann_data]
+            save_file.writelines(ann_lines)
+        # Изменение аннотаций и запись их в память проекта
+        new_ann_item = FAnnotationItem(ann_data, target_image_path)
+        error = self.add_annotation(dataset, new_ann_item, dataset_type)
+        print(error)
+
+    def create_dataset_dir(self, dataset_name: str, dataset_type: str = DATASETS):
+        dataset = self.get_dataset_path(dataset_name, dataset_type)
+        if dataset is None: return
+        dataset_images = os.path.join(dataset, IMAGES).replace('\\', '/')
+        labels_images = os.path.join(dataset, LABELS).replace('\\', '/')
+        os.makedirs(dataset_images, exist_ok=True)
+        os.makedirs(labels_images, exist_ok=True)
+
+    def _get_dir_path(self, dataset: str, dataset_type: str = DATASETS, path_type: str = IMAGES):
+        dataset = self.get_dataset_path(dataset, dataset_type)
+        if dataset is not None: return os.path.join(dataset, path_type).replace('\\', '/')

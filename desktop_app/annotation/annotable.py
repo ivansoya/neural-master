@@ -178,15 +178,15 @@ class UAnnotationBox(QGraphicsRectItem):
     def get_annotation_data(self):
         try:
             return FDetectAnnotationData(
-                self.x(),
-                self.y(),
-                self.width(),
-                self.height(),
-                self.class_id,
+                int(self.x()),
+                int(self.y()),
+                int(self.width()),
+                int(self.height()),
+                int(self.class_id),
                 self.class_name,
                 QColor(self.color),
-                self.parentItem().boundingRect().width(),
-                self.parentItem().boundingRect().height()
+                int(self.parentItem().boundingRect().width()),
+                int(self.parentItem().boundingRect().height())
             )
         except Exception as error:
             print(str(error))

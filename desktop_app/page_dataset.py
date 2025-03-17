@@ -74,6 +74,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.button_to_annotation_scene.clicked.connect(lambda: self.go_to_another_page(2))
         self.button_to_statistics.clicked.connect(lambda: self.go_to_another_page(3))
         self.button_add_dataset.clicked.connect(self.add_dataset)
+        self.button_refresh.clicked.connect(self.update_dataset_page)
 
         self.list_datasets.signal_on_item_clicked.connect(self.start_thread_display_at_gallery)
         self.list_reserved.signal_on_item_clicked.connect(self.start_thread_display_at_gallery)
@@ -91,15 +92,14 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         # Привязка к событиям
         if self.commander:
-            self.commander.project_load_complete.connect(self.initiate_after_project_load)
+            self.commander.project_load_complete.connect(self.update_dataset_page)
+            self.commander.project_updated_datasets.connect(self.update_dataset_page)
 
-    def initiate_after_project_load(self):
+    def update_dataset_page(self):
         self.create_list_dataset()
         self.create_list_reserved()
-
-        for class_id, class_t in self.project.classes.get_items():
-            self.scroll_classes.add_filter(class_t.Color, class_id, class_t.Name)
-            self.filter_dict[class_id] = True
+        self.fill_filter_list()
+        self.view_gallery.update_grid(self.filter_dict)
 
     def on_changed_filter(self, class_id: int, selected: bool):
         if class_id in self.filter_dict:
@@ -331,6 +331,23 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 )
             except Exception as error:
                 return str(error)
+
+    def fill_filter_list(self):
+        widget = self.scroll_classes.widget()
+        if widget is None:
+            return
+        layout = widget.layout()
+        if layout is None:
+            return
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        for class_id, class_t in self.project.classes.get_items():
+            self.scroll_classes.add_filter(class_t.Color, class_id, class_t.Name)
+            self.filter_dict[class_id] = True
+
 
     def make_error_with_copy(self, error_str: str):
         UMessageBox.show_error(error_str)

@@ -21,6 +21,7 @@ class UPageClasses(QWidget, Ui_classes_page_design):
 
         if self.commander:
             self.commander.project_load_complete.connect(self.update_chart_statistics)
+            self.commander.project_updated_datasets.connect(self.update_chart_statistics)
 
     def go_to_another_page(self, page_index: int):
         if isinstance(self.parent(), QStackedWidget):

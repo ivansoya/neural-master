@@ -44,8 +44,8 @@ class UThreadImageLoader(QThread):
                 pen.setWidth(int(self.line_width * (pixmap.width() // self.size)))
                 painter.setPen(pen)
                 painter.drawRect(
-                    int(max(0, x - width // 2)),
-                    int(max(0, y - height // 2)),
+                    int(max(0, x)),
+                    int(max(0, y)),
                     width,
                     height
                 )

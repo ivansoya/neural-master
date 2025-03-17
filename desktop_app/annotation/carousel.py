@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QWidget, QVBoxLayout
 )
-from tests.test_python import image
 
 from commander import UAnnotationSignalHolder
 from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses, FAnnotationItem
@@ -370,10 +369,9 @@ class UThumbnailCarousel(QGraphicsView):
         if not 0 <= index_thumb < len(self.thumbnails):
             return
         self.thumbnails[index_thumb].add_annotation(annotation_data)
-        if self.thumbnails[index_thumb].annotation_status is True:
-            if index_thumb not in self.annotated_thumbnails_indexes:
+        if self.thumbnails[index_thumb].annotation_status.value == EAnnotationStatus.Annotated.value:
+            if not index_thumb in self.annotated_thumbnails_indexes:
                 self.annotated_thumbnails_indexes.append(index_thumb)
-                self.annotated_thumbnails_indexes.sort()
 
     def set_thumbnail_dropped(self, key: int):
         self.current_selected.set_annotated_status(EAnnotationStatus.MarkedDrop)
