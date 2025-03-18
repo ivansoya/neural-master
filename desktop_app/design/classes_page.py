@@ -33,61 +33,6 @@ class Ui_classes_page_design(object):
 "}")
         self.page_main_layout = QtWidgets.QVBoxLayout(classes_page_design)
         self.page_main_layout.setObjectName("page_main_layout")
-        self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_7.setSpacing(0)
-        self.horizontalLayout_7.setObjectName("horizontalLayout_7")
-        self.button_to_datasets_settings = QtWidgets.QPushButton(classes_page_design)
-        self.button_to_datasets_settings.setMouseTracking(True)
-        self.button_to_datasets_settings.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid #7a7b7d;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_to_datasets_settings.setObjectName("button_to_datasets_settings")
-        self.horizontalLayout_7.addWidget(self.button_to_datasets_settings)
-        self.button_to_annotation_scene = QtWidgets.QPushButton(classes_page_design)
-        self.button_to_annotation_scene.setMouseTracking(True)
-        self.button_to_annotation_scene.setTabletTracking(False)
-        self.button_to_annotation_scene.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid gray;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_to_annotation_scene.setObjectName("button_to_annotation_scene")
-        self.horizontalLayout_7.addWidget(self.button_to_annotation_scene)
-        self.button_to_statistics = QtWidgets.QPushButton(classes_page_design)
-        self.button_to_statistics.setMouseTracking(True)
-        self.button_to_statistics.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid gray;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_to_statistics.setObjectName("button_to_statistics")
-        self.horizontalLayout_7.addWidget(self.button_to_statistics)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_7.addItem(spacerItem)
-        self.button_clear_dataset = QtWidgets.QPushButton(classes_page_design)
-        self.button_clear_dataset.setMouseTracking(True)
-        self.button_clear_dataset.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid gray;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_clear_dataset.setObjectName("button_clear_dataset")
-        self.horizontalLayout_7.addWidget(self.button_clear_dataset)
-        self.page_main_layout.addLayout(self.horizontalLayout_7)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.chart_classes = UWidgetChart(classes_page_design)
@@ -115,10 +60,6 @@ class Ui_classes_page_design(object):
     def retranslateUi(self, classes_page_design):
         _translate = QtCore.QCoreApplication.translate
         classes_page_design.setWindowTitle(_translate("classes_page_design", "Форма для аннотации"))
-        self.button_to_datasets_settings.setText(_translate("classes_page_design", "Окно организации датасета"))
-        self.button_to_annotation_scene.setText(_translate("classes_page_design", "Окно разметки"))
-        self.button_to_statistics.setText(_translate("classes_page_design", "Окно статистики"))
-        self.button_clear_dataset.setText(_translate("classes_page_design", "Закрыть проект"))
         self.button_show_all.setText(_translate("classes_page_design", "Вывести все"))
 from class_chart import UWidgetChart
 

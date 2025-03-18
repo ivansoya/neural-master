@@ -44,6 +44,70 @@ class Ui_TrainApp(object):
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.centralwidget)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.nav_bar = QtWidgets.QWidget(self.centralwidget)
+        self.nav_bar.setObjectName("nav_bar")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.nav_bar)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setSpacing(0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.button_to_datasets_settings = QtWidgets.QPushButton(self.nav_bar)
+        self.button_to_datasets_settings.setStyleSheet("QPushButton {\n"
+"padding: 5px 20px;\n"
+"border: 1px solid #7a7b7d;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    border: 1px solid #0048ff;\n"
+"}")
+        self.button_to_datasets_settings.setObjectName("button_to_datasets_settings")
+        self.horizontalLayout.addWidget(self.button_to_datasets_settings)
+        self.button_to_annotation_scene = QtWidgets.QPushButton(self.nav_bar)
+        self.button_to_annotation_scene.setStyleSheet("QPushButton {\n"
+"padding: 5px 20px;\n"
+"border: 1px solid #7a7b7d;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    border: 1px solid #0048ff;\n"
+"}")
+        self.button_to_annotation_scene.setObjectName("button_to_annotation_scene")
+        self.horizontalLayout.addWidget(self.button_to_annotation_scene)
+        self.button_to_statistics = QtWidgets.QPushButton(self.nav_bar)
+        self.button_to_statistics.setStyleSheet("QPushButton {\n"
+"padding: 5px 20px;\n"
+"border: 1px solid #7a7b7d;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    border: 1px solid #0048ff;\n"
+"}")
+        self.button_to_statistics.setObjectName("button_to_statistics")
+        self.horizontalLayout.addWidget(self.button_to_statistics)
+        self.button_to_model = QtWidgets.QPushButton(self.nav_bar)
+        self.button_to_model.setStyleSheet("QPushButton {\n"
+"padding: 5px 20px;\n"
+"border: 1px solid #7a7b7d;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    border: 1px solid #0048ff;\n"
+"}")
+        self.button_to_model.setObjectName("button_to_model")
+        self.horizontalLayout.addWidget(self.button_to_model)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem)
+        self.button_close_project = QtWidgets.QPushButton(self.nav_bar)
+        self.button_close_project.setStyleSheet("QPushButton {\n"
+"padding: 5px 20px;\n"
+"border: 1px solid #7a7b7d;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"    border: 1px solid #0048ff;\n"
+"}")
+        self.button_close_project.setObjectName("button_close_project")
+        self.horizontalLayout.addWidget(self.button_close_project)
+        self.verticalLayout_2.addWidget(self.nav_bar)
         self.stacked_page_loader = QtWidgets.QStackedWidget(self.centralwidget)
         self.stacked_page_loader.setObjectName("stacked_page_loader")
         self.verticalLayout_2.addWidget(self.stacked_page_loader)
@@ -62,6 +126,11 @@ class Ui_TrainApp(object):
     def retranslateUi(self, TrainApp):
         _translate = QtCore.QCoreApplication.translate
         TrainApp.setWindowTitle(_translate("TrainApp", "Train App"))
+        self.button_to_datasets_settings.setText(_translate("TrainApp", "Окно организации датасета"))
+        self.button_to_annotation_scene.setText(_translate("TrainApp", "Окно разметки"))
+        self.button_to_statistics.setText(_translate("TrainApp", "Окно статистики"))
+        self.button_to_model.setText(_translate("TrainApp", "Окно модели"))
+        self.button_close_project.setText(_translate("TrainApp", "Закрыть проект"))
 
 
 if __name__ == "__main__":

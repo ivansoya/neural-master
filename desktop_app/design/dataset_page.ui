@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1388</width>
-    <height>867</height>
+    <height>861</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,109 +32,6 @@ QPushButton:pressed {
 }</string>
   </property>
   <layout class="QVBoxLayout" name="page_main_layout">
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_7">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QPushButton" name="button_to_datasets_settings">
-       <property name="mouseTracking">
-        <bool>true</bool>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton {
-padding: 5px 20px;
-border: 1px solid #7a7b7d;
-}
-
-QPushButton:hover {
-	border: 1px solid #0048ff;
-}</string>
-       </property>
-       <property name="text">
-        <string>Окно организации датасета</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="button_to_annotation_scene">
-       <property name="mouseTracking">
-        <bool>true</bool>
-       </property>
-       <property name="tabletTracking">
-        <bool>false</bool>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton {
-padding: 5px 20px;
-border: 1px solid gray;
-}
-
-QPushButton:hover {
-	border: 1px solid #0048ff;
-}</string>
-       </property>
-       <property name="text">
-        <string>Окно разметки</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="button_to_statistics">
-       <property name="mouseTracking">
-        <bool>true</bool>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton {
-padding: 5px 20px;
-border: 1px solid gray;
-}
-
-QPushButton:hover {
-	border: 1px solid #0048ff;
-}</string>
-       </property>
-       <property name="text">
-        <string>Окно статистики</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="button_clear_dataset">
-       <property name="mouseTracking">
-        <bool>true</bool>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton {
-padding: 5px 20px;
-border: 1px solid gray;
-}
-
-QPushButton:hover {
-	border: 1px solid #0048ff;
-}</string>
-       </property>
-       <property name="text">
-        <string>Закрыть проект</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
    <item>
     <widget class="QWidget" name="dataset_display" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout">

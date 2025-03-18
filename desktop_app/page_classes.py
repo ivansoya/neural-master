@@ -15,17 +15,9 @@ class UPageClasses(QWidget, Ui_classes_page_design):
         self.commander = commander
         self.project = project
 
-        self.button_to_datasets_settings.clicked.connect(lambda: self.go_to_another_page(1))
-        self.button_to_annotation_scene.clicked.connect(lambda: self.go_to_another_page(2))
-        self.button_to_statistics.clicked.connect(lambda: self.go_to_another_page(3))
-
         if self.commander:
             self.commander.project_load_complete.connect(self.update_chart_statistics)
             self.commander.project_updated_datasets.connect(self.update_chart_statistics)
-
-    def go_to_another_page(self, page_index: int):
-        if isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(page_index)
 
     def update_chart_statistics(self):
         dict_classes = self.project.get_current_annotations()

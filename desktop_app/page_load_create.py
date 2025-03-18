@@ -73,8 +73,6 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
         self.commander.project_load_complete.emit()
         UMessageBox.show_error("Датасеты загружены!", "Успех", int(QMessageBox.Ok))
-        # Перейти на страницу с датасетами
-        self.go_to_another_page(1)
 
     def create_project(self):
         self.commander.set_block(True)
@@ -86,7 +84,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
 
     def unlock_commander(self):
         self.commander.set_block(False)
-
+        self.commander.project_load_complete.emit()
 
 class QDialogCreateProject(QDialog, Ui_window_create_project):
     on_end = pyqtSignal()
@@ -183,8 +181,8 @@ class QDialogCreateProject(QDialog, Ui_window_create_project):
         )
 
     def close(self):
-        super().close()
         self.on_end.emit()
+        super().close()
 
     @staticmethod
     def show_error(text_error: str):

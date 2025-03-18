@@ -1,9 +1,11 @@
 import configparser
 import os.path
 import shutil
+from typing import Optional
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
+from neural_model import ULocalYOLO, UBaseNeuralNet
 from supporting.error_text import UErrorsText
 from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem
 
@@ -74,6 +76,14 @@ class UTrainProject:
         self.current_annotations: dict[str, list[FAnnotationItem]] = dict()
         self.reserved_annotations: dict[str, list[FAnnotationItem]] = dict()
 
+        # Поток обработки нейросети
+        self.model_thread: Optional[UBaseNeuralNet] = None
+
+    def load_local_yolo(self, path: str):
+        try:
+            self.model_thread = ULocalYOLO(path)
+        except Exception as error:
+            return str(error)
 
     def create(self, path: str, name:str, classes:list[str], counter:int = 0):
         try:
@@ -153,6 +163,15 @@ class UTrainProject:
 
         except Exception as error:
             return str(error)
+
+    def remove_dataset_from_project(self, dataset_name: str, type_dataset: str = DATASETS):
+        dataset_list = self._get_ref_to_list(type_dataset)
+        if dataset_name not in dataset_list:
+            return f"Не существует датасета {dataset_name} в проекте!"
+
+        self.remove_dataset(dataset_name, type_dataset)
+        self.remove_all_annotations_from_dataset(dataset_name, type_dataset)
+        self.remove_project_folder(dataset_name, type_dataset)
 
     def remove_project_folder(self, dataset_name: str, type_dataset: str = DATASETS):
         path_to_dataset = os.path.join(self.path, type_dataset, dataset_name).replace('\\', '/')

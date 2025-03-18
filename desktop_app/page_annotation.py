@@ -103,10 +103,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         # Изменение label для отображения количества размеченных и неразмеченных изображений
         #self.commander.changed_annotation_status.connect(self.handle_changed_annotation_status)
 
-        # Инициализация переходов по страницам
-        self.button_to_datasets_settings.clicked.connect(lambda: self.go_to_another_page(1))
-        self.button_to_statistics.clicked.connect(lambda: self.go_to_another_page(3))
-
     def handle_on_load_project(self):
         if self.project is None:
             return
@@ -348,10 +344,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         elif status.value == EAnnotationStatus.MarkedDrop.value:
             self.current_dropped_count += value
             self.label_count_dropped.setText(str(self.current_dropped_count))
-
-    def go_to_another_page(self, page_index: int):
-        if isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(page_index)
 
     """    def contextMenuEvent(self, event):
             if len(self.available_classes) == 0 or self.commander is None:

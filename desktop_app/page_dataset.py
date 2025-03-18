@@ -71,8 +71,6 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.thread_display: Optional[UThreadDisplayDataset] = None
 
         # Привязка к кнопкам
-        self.button_to_annotation_scene.clicked.connect(lambda: self.go_to_another_page(2))
-        self.button_to_statistics.clicked.connect(lambda: self.go_to_another_page(3))
         self.button_add_dataset.clicked.connect(self.add_dataset)
         self.button_refresh.clicked.connect(self.update_dataset_page)
 
@@ -231,6 +229,30 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.close_overlay()
 
+    def remove_dataset(self, widget_list: UListDataset, dataset_list: list[str], dataset_type: str):
+        widget = UListDataset.get_item_widget(widget_list)
+        if not widget or (widget.name not in dataset_list):
+            UMessageBox.show_error("Датасет не выбран!")
+            return
+
+        message_confirm = QMessageBox()
+        message_confirm.setIcon(QMessageBox.Warning)
+        message_confirm.setWindowTitle("Подтвердите безвозвратное удаление!")
+        message_confirm.setText(f"Вы действительно хотите удалить {widget.name}?")
+        message_confirm.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        message_confirm.button(QMessageBox.Yes).setText("Подтвердить")
+        message_confirm.button(QMessageBox.No).setText("Отменить")
+
+        result = message_confirm.exec_()
+        if result == QMessageBox.Yes:
+            self.project.remove_dataset_from_project(widget.name, dataset_type)
+            self.view_gallery.clear_scene()
+            self.project.save()
+            UMessageBox.show_error(f"Датасет {widget.name} удален из проекта!", "Успех", int(QMessageBox.Ok))
+            self.commander.project_updated_datasets.emit()
+        else:
+            return
+
     def move_selected_dataset(
             self,
             widget_list: UListDataset,
@@ -242,7 +264,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
             return
 
         dataset_item = UListDataset.get_item_widget(widget_list)
-        if not dataset_item or (not dataset_item.name in dataset_list):
+        if not dataset_item or (dataset_item.name not in dataset_list):
             return
         path_to_dataset_source = os.path.join(self.project.path, source_type, dataset_item.name).replace('\\', '/')
 
@@ -270,8 +292,8 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.project.remove_project_folder(dataset_name, source_type)
 
-        self.create_list_reserved()
-        self.create_list_dataset()
+        self.commander.project_updated_datasets.emit()
+
 
     def on_item_current_dataset_selected(self):
         self.button_move_dataset_to_reserved.setText("Резервировать датасет")
@@ -279,6 +301,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.button_move_dataset_to_reserved.clicked.connect(
             lambda : self.move_selected_dataset(self.list_datasets, self.project.get_datasets(), DATASETS, RESERVED)
+        )
+        self.button_delete_dataset.clicked.connect(
+            lambda: self.remove_dataset(self.list_datasets, self.project.get_datasets(), DATASETS)
         )
 
         self.list_reserved.clearSelection()
@@ -289,6 +314,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.button_move_dataset_to_reserved.clicked.connect(
             lambda: self.move_selected_dataset(self.list_reserved, self.project.get_reserved(), RESERVED, DATASETS)
+        )
+        self.button_delete_dataset.clicked.connect(
+            lambda: self.remove_dataset(self.list_reserved, self.project.get_reserved(), RESERVED)
         )
 
         self.list_datasets.clearSelection()

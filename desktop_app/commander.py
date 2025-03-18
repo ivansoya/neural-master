@@ -21,6 +21,11 @@ class UAnnotationSignalHolder(QWidget):
     increase_annotated_counter = pyqtSignal()
     decrease_annotated_counter = pyqtSignal()
 
+    # Сигнал о том, что миниатюра размечается
+    added_to_inference_queue = pyqtSignal(int)
+    # Сигнал о том, что миниатюра получила результаты
+    obtained_results_from_model = pyqtSignal(int, list)
+
     def __init__(self):
         super().__init__()
 
@@ -42,6 +47,9 @@ class UGlobalSignalHolder(QObject):
 
     project_load_complete = pyqtSignal()
     project_updated_datasets = pyqtSignal()
+
+    model_loaded = pyqtSignal()
+    model_unloaded = pyqtSignal()
 
     def __init__(self):
         super().__init__()

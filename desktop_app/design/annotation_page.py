@@ -33,57 +33,6 @@ class Ui_annotataion_page(object):
 "}")
         self.page_main_layout = QtWidgets.QVBoxLayout(annotataion_page)
         self.page_main_layout.setObjectName("page_main_layout")
-        self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_7.setSpacing(0)
-        self.horizontalLayout_7.setObjectName("horizontalLayout_7")
-        self.button_to_datasets_settings = QtWidgets.QPushButton(annotataion_page)
-        self.button_to_datasets_settings.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid #7a7b7d;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_to_datasets_settings.setObjectName("button_to_datasets_settings")
-        self.horizontalLayout_7.addWidget(self.button_to_datasets_settings)
-        self.button_to_annotation_scene = QtWidgets.QPushButton(annotataion_page)
-        self.button_to_annotation_scene.setTabletTracking(False)
-        self.button_to_annotation_scene.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid gray;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_to_annotation_scene.setObjectName("button_to_annotation_scene")
-        self.horizontalLayout_7.addWidget(self.button_to_annotation_scene)
-        self.button_to_statistics = QtWidgets.QPushButton(annotataion_page)
-        self.button_to_statistics.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid gray;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_to_statistics.setObjectName("button_to_statistics")
-        self.horizontalLayout_7.addWidget(self.button_to_statistics)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_7.addItem(spacerItem)
-        self.button_clear_dataset = QtWidgets.QPushButton(annotataion_page)
-        self.button_clear_dataset.setStyleSheet("QPushButton {\n"
-"padding: 5px 20px;\n"
-"border: 1px solid gray;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    border: 1px solid #0048ff;\n"
-"}")
-        self.button_clear_dataset.setObjectName("button_clear_dataset")
-        self.horizontalLayout_7.addWidget(self.button_clear_dataset)
-        self.page_main_layout.addLayout(self.horizontalLayout_7)
         self.display_scene = QtWidgets.QWidget(annotataion_page)
         self.display_scene.setObjectName("display_scene")
         self.display_layout = QtWidgets.QVBoxLayout(self.display_scene)
@@ -156,8 +105,8 @@ class Ui_annotataion_page(object):
         self.selected_label.setObjectName("selected_label")
         self.horizontalLayout_5.addWidget(self.selected_label)
         self.verticalLayout_6.addLayout(self.horizontalLayout_5)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_6.addItem(spacerItem1)
+        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_6.addItem(spacerItem)
         self.horizontalLayout_2.addWidget(self.verticalWidget_3)
         self.annotation_scene = UAnnotationGraphicsView(self.display_scene)
         self.annotation_scene.setObjectName("annotation_scene")
@@ -256,8 +205,8 @@ class Ui_annotataion_page(object):
         self.list_widget_annotated_on_scene.setUniformItemSizes(False)
         self.list_widget_annotated_on_scene.setObjectName("list_widget_annotated_on_scene")
         self.verticalLayout_2.addWidget(self.list_widget_annotated_on_scene)
-        spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem2)
+        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_2.addItem(spacerItem1)
         self.button_add_to_project = QtWidgets.QPushButton(self.verticalWidget_4)
         self.button_add_to_project.setStyleSheet("QWidget > QPushButton {\n"
 "    background-color: rgb(88, 239, 255);\n"
@@ -292,10 +241,6 @@ class Ui_annotataion_page(object):
     def retranslateUi(self, annotataion_page):
         _translate = QtCore.QCoreApplication.translate
         annotataion_page.setWindowTitle(_translate("annotataion_page", "Форма для аннотации"))
-        self.button_to_datasets_settings.setText(_translate("annotataion_page", "Окно организации датасета"))
-        self.button_to_annotation_scene.setText(_translate("annotataion_page", "Окно разметки"))
-        self.button_to_statistics.setText(_translate("annotataion_page", "Окно статистики"))
-        self.button_clear_dataset.setText(_translate("annotataion_page", "Закрыть проект "))
         self.load_images_button.setText(_translate("annotataion_page", "Загрузить картинки"))
         self.auto_annotate_checkbox.setText(_translate("annotataion_page", "Авторазметка"))
         self.label_6.setText(_translate("annotataion_page", "Режимы разметки"))
