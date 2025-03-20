@@ -13,7 +13,8 @@ from annotation.carousel import UAnnotationThumbnail
 from design.diag_create_dataset import Ui_diag_create_dataset
 from loader import UOverlayLoader
 from project import UTrainProject, UMergeAnnotationThread, DATASETS
-from utility import EWorkMode, EAnnotationStatus, FDatasetInfo, UMessageBox
+from utility import EWorkMode, EAnnotationStatus, FDatasetInfo, UMessageBox, FAnnotationData
+
 
 class UTextInputDialog(QDialog, Ui_diag_create_dataset):
     def __init__(self, parent=None):
@@ -40,7 +41,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.image_on_scene = None
         self.image_matrix = None
 
-        self.model_yolo = None
         self.dataset_info: Optional[FDatasetInfo] = None
 
         self.class_list_item_model = QStandardItemModel()
@@ -89,6 +89,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             lambda checked=False, mode=EWorkMode.AnnotateMode.value: self.annotate_commander.change_work_mode.emit(mode)
         )
 
+        # Обработка событий, связанных с работой модели
+        self.commander.command_key_pressed.connect(self.handle_command_pressed)
+        self.commander.model_loaded.connect(self.handle_on_load_model)
+
         #self.commander.changed_class_annotate.connect(self.on_change_index_combobox)
         #self.class_combobox.currentIndexChanged.connect(self.handle_changed_class_combobox_index)
 
@@ -112,6 +116,17 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 self.project.classes.get_name(class_id),
                 self.project.classes.get_color(class_id)
             )
+
+    def handle_command_pressed(self, key: int):
+        if key == int(Qt.Key_Space):
+            self._annotate_image()
+            pass
+
+    def handle_on_load_model(self):
+        self.auto_annotate_checkbox.setEnabled(True)
+        if self.project.model_thread:
+            self.project.model_thread.signal_on_added.connect(self.handle_on_annotate_added)
+            self.project.model_thread.signal_on_result.connect(self.handle_on_annotation_result)
 
     def load_images(self):
         file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Images", "",
@@ -173,6 +188,32 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander.project_updated_datasets.emit()
         return
 
+    def handle_on_annotate_added(self, index: int):
+        if 0 <= index < len(self.thumbnail_carousel.thumbnails):
+            self.thumbnail_carousel.thumbnails[index].clear_annotations()
+            self.thumbnail_carousel.thumbnails[index].set_annotated_status(EAnnotationStatus.PerformingAnnotation)
+
+    def handle_on_annotation_result(self, index: int, annotations: list[FAnnotationData]):
+        if 0 <= index < len(self.thumbnail_carousel.thumbnails):
+            if len(annotations) == 0:
+                self.thumbnail_carousel.thumbnails[index].set_annotated_status(EAnnotationStatus.MarkedDrop)
+                return
+            id_thumb, *_ = self.annotation_scene.current_display_thumbnail
+            if id_thumb == index:
+                for annotation in annotations:
+                    x, y, width, height = annotation.get_data()
+                    ###### НУЖНО МЕНЯТЬ ФУНКЦИЮ!
+                    self.annotation_scene.add_annotation_box(
+                        x, y, width, height, (
+                            annotation.get_id(),
+                            annotation.get_class_name(),
+                            annotation.get_color()
+                        )
+                    )
+                return
+            for data in annotations:
+                self.thumbnail_carousel.thumbnails[index].add_annotation(data)
+
     def load_thumbnails(self):
         if self.overlay:
             UMessageBox.show_error("Не удалось выполнить загрузку изображений!")
@@ -201,88 +242,11 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         UMessageBox.show_error("Изображения загружены!", "Успех", int(QMessageBox.Ok))
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
 
-    """def display_image(self, thumbnail: UAnnotationThumbnail):
-        self.annotate_scene.clear()
-        try:
-            self.image_matrix = cv2.imread(thumbnail.get_image_path())
-        except Exception as e:
-            self.image_matrix = None
-            print(f"Ошибка: {str(e)}")
-        if self.image_matrix is not None:
-            try:
-                image_t = cv2.cvtColor(self.image_matrix, cv2.COLOR_BGR2RGB)
-                height, width, channel = image_t.shape
-                bytes_per_line = 3 * width
-                qimg = QImage(image_t.data, width, height, bytes_per_line, QImage.Format_RGB888)
-                pixmap = QPixmap.fromImage(qimg)
-            except Exception as e:
-                pixmap = QPixmap()
-                print(f"Ошибка: {str(e)}")
-
-            self.image_on_scene = QGraphicsPixmapItem(pixmap)
-            self.annotate_scene.addItem(self.image_on_scene)
-            self.annotate_scene.current_image = self.image_on_scene
-            self.image_on_scene.setPos(16000 - self.image_on_scene.boundingRect().width() // 2,
-                                       16000 - self.image_on_scene.boundingRect().height() // 2)
-
-            if (self.auto_annotate_checkbox.isChecked() and
-                thumbnail.annotation_status.value == EAnnotationStatus.NoAnnotation.value):
-                self.auto_annotate()
-            elif thumbnail.annotation_status.value == EAnnotationStatus.Annotated.value:
-                class_indexes = [index for index in range(self.class_combobox.count())]
-                for ann_data in thumbnail.annotation_data_list:
-                    if ann_data.ClassID not in class_indexes:
-                        continue
-                    self.annotate_scene.add_annotation_box(
-                        ann_data.X,
-                        ann_data.Y,
-                        ann_data.Width,
-                        ann_data.Height,
-                        self.class_combobox.itemData(ann_data.ClassID),
-                        False
-                    )
-            elif thumbnail.annotation_status.value == EAnnotationStatus.MarkedDrop.value:
-                pass
-
-            print("Количество боксов на сцене: ", len(self.annotate_scene.boxes_on_scene))
-
-        else:
-            self.image_on_scene = QGraphicsPixmapItem(QPixmap())"""
-
-    """def auto_annotate(self):
-        if self.image_matrix is None or self.model_yolo is None:
-            return
-        if self.thumbnail_carousel.current_selected.annotation_status.value == EAnnotationStatus.Annotated.value:
-            return
-
-        result = self.model_yolo.predict(self.image_matrix, imgsz=(640, 640))[0]
-
-        conf_list = result.boxes.conf.cpu().tolist()
-        boxes = result.boxes.xyxy.cpu().tolist()
-        d_classes = result.boxes.cls.cpu().tolist()
-
-        for box, d_class, conf in zip(boxes, d_classes, conf_list):
-            label_conf = round(conf, 1)
-            print(int(d_class), *box, label_conf)
-
-            self.annotate_scene.add_annotation_box(
-                box[0],
-                box[1],
-                box[2] - box[0],
-                box[3] - box[1],
-                self.class_combobox.itemData(int(d_class))
-            )"""
-
     def on_get_new_class(self, class_data: str):
         item_t = QStandardItem(str(class_data))
         item_t.setData(class_data, Qt.UserRole)
         self.class_list_item_model.appendRow(item_t)
         self.class_combobox.update()
-
-    def annotate_on_button_pressed(self, key: int):
-        if key == Qt.Key_Space:
-            #self.auto_annotate()
-            pass
 
     def set_label_work_mode(self, mode: int):
         self.selected_label.setText(str(mode))
@@ -345,6 +309,13 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.current_dropped_count += value
             self.label_count_dropped.setText(str(self.current_dropped_count))
 
+    def _annotate_image(self):
+        thumb_id, matrix = self.annotation_scene.get_selectable_matrix()
+        if thumb_id is None or matrix is None:
+            return
+        if self.project.model_thread and self.project.model_thread.is_running():
+            self.project.model_thread.add_to_queue(thumb_id, matrix)
+
     """    def contextMenuEvent(self, event):
             if len(self.available_classes) == 0 or self.commander is None:
                 return
@@ -362,33 +333,3 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 menu.addAction(action)
 
             menu.exec_(event.screenPos())"""
-
-    """def load_model(self):
-        model_file, _ = QFileDialog.getOpenFileName(self, "Выбрать модель", "",
-                                                     "CNN Files (*.pt *.onnx)")
-        if model_file:
-            self.model_yolo = YOLO(model_file)
-
-            # Инициализация ComboBox
-            class_names = self.model_yolo.names
-
-            self.class_list_item_model.clear()
-            self.annotate_scene.available_classes.clear()
-            self.thumbnail_carousel.available_classes.clear()
-            for i in range(0, len(class_names)):
-                self.annotate_scene.add_class(class_names[i])
-                self.thumbnail_carousel.add_class(class_names[i])
-                item_t = QStandardItem(str(class_names[i]))
-                item_t.setData(class_names[i], Qt.UserRole)
-                self.class_list_item_model.appendRow(item_t)
-
-
-            self.current_model_label.setText(os.path.basename(self.model_yolo.model_name))
-
-            self.class_combobox.setModel(self.class_list_item_model)
-
-            self.class_combobox.setEnabled(True)
-            self.button_add_class.setEnabled(True)
-            self.auto_annotate_checkbox.setEnabled(True)
-
-        return"""

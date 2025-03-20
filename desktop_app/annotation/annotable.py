@@ -2,6 +2,7 @@ from typing import Optional
 import math
 
 import cv2
+import numpy as np
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem,
     QGraphicsPixmapItem, QMenu, QAction,
@@ -371,6 +372,21 @@ class UAnnotationGraphicsView(QGraphicsView):
 
         self.commander: Optional[UAnnotationSignalHolder] = None
         self.saved_work_mode = EWorkMode.DragMode
+
+    def get_selectable_matrix(self):
+        if self.current_display_thumbnail is None:
+            return None, None
+        else:
+            t_id, *_ = self.current_display_thumbnail
+
+            image = self.current_image.pixmap().toImage()
+            image = image.convertToFormat(QImage.Format_RGB888)
+            width, height = image.width(), image.height()
+            buffer = image.bits()
+            buffer.setsize(height * width * 3)
+            matrix = np.array(buffer, dtype=np.uint8).reshape((height, width, 3))
+
+            return t_id, matrix
 
     def set_commander(self, commander: UAnnotationSignalHolder):
         if commander:

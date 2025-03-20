@@ -3,18 +3,23 @@ import threading
 from typing import Union, Optional
 
 import numpy as np
+from PyQt5.QtGui import QColor
 from ultralytics import YOLO
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
+from utility import FAnnotationClasses, FDetectAnnotationData
+
 
 class UBaseNeuralNet(QThread):
-    signal_on_result = pyqtSignal(int, tuple)
+    signal_on_result = pyqtSignal(int, list)
+    signal_on_added = pyqtSignal(int)
     signal_on_queue_empty = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, classes: FAnnotationClasses):
         super().__init__()
         self.model = None
+        self.classes = classes
         self.image_queue: Queue[tuple[int, np.ndarray]] = Queue()
 
         self.running = False
@@ -27,6 +32,7 @@ class UBaseNeuralNet(QThread):
         self.image_queue.put(
             (index, image)
         )
+        self.signal_on_added.emit(index)
         self.queue_event.set()
 
     def run(self):
@@ -48,6 +54,9 @@ class UBaseNeuralNet(QThread):
         """ Метод инференса (реализуется в наследниках) """
         raise NotImplementedError
 
+    def is_running(self) -> bool:
+        return True if self.model else False
+
     def stop(self):
         """ Остановка потока """
         self.running = False
@@ -56,9 +65,9 @@ class UBaseNeuralNet(QThread):
         self.wait()
 
 
-class ULocalYOLO(UBaseNeuralNet):
-    def __init__(self, model_path):
-        super().__init__()
+class ULocalDetectYOLO(UBaseNeuralNet):
+    def __init__(self, model_path, classes: FAnnotationClasses):
+        super().__init__(classes)
         self.load_model(model_path)
 
     def load_model(self, model_path: str):
@@ -66,11 +75,29 @@ class ULocalYOLO(UBaseNeuralNet):
 
     def process_image(self, image: np.ndarray):
         results = self.model(image)[0]  # Первый кадр
-        detections = []
+        detections: list[FDetectAnnotationData] = list()
 
         for box in results.boxes:
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            x, y, width, height = box.xywh[0].tolist()
             class_id = int(box.cls)
-            detections.append((class_id, int(x1), int(y1), int(x2 - x1), int(y2 - y1)))
+            conf = box.conf
+
+            res_w, res_h = image.shape[:2]
+            class_name = self.classes.get_name(class_id)
+            class_color = self.classes.get_color(class_id)
+            detect_data = FDetectAnnotationData(
+                int(x),
+                int(y),
+                int(width),
+                int(height),
+                class_id,
+                "Unresolved" if class_name is None else class_name,
+                QColor("#606060") if class_color is None else class_color,
+                int(res_w),
+                int(res_h)
+            )
+            detections.append(detect_data)
+
+        print(f"{self.model.model_name} разметила изображение и получила следующие результаты: {[str(detect) for detect in detections]}")
 
         return detections if detections else None

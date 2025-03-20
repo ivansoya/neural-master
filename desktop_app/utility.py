@@ -30,6 +30,7 @@ class EAnnotationStatus(Enum):
     NoAnnotation = 1
     Annotated = 2
     MarkedDrop = 3
+    PerformingAnnotation = 4
 
 class EDatasetType(Enum):
     YamlYOLO = 1

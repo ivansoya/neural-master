@@ -71,6 +71,11 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             self.set_annotated_status(EAnnotationStatus.Annotated)
         self.update()
 
+    def clear_annotations(self):
+        self.annotation_data_list.clear()
+        self.set_annotated_status(EAnnotationStatus.NoAnnotation)
+        self.update()
+
     def delete_annotation(self, index: int):
         if index < 0 or index >= len(self.annotation_data_list):
             return
