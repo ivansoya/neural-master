@@ -119,14 +119,17 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     def handle_command_pressed(self, key: int):
         if key == int(Qt.Key_Space):
+            self.annotation_scene.clean_all_annotations(0)
             self._annotate_image()
             pass
 
     def handle_on_load_model(self):
         self.auto_annotate_checkbox.setEnabled(True)
         if self.project.model_thread:
-            self.project.model_thread.signal_on_added.connect(self.handle_on_annotate_added)
-            self.project.model_thread.signal_on_result.connect(self.handle_on_annotation_result)
+            self.project.model_thread.signal_on_added.connect(self.annotation_scene.handle_image_move_to_model)
+            self.project.model_thread.signal_on_added.connect(self.thumbnail_carousel.handle_on_adding_thumb_to_model)
+            self.project.model_thread.signal_on_result.connect(self.annotation_scene.handle_get_result_from_model)
+            self.project.model_thread.signal_on_result.connect(self.thumbnail_carousel.handle_on_getting_result_from_model)
 
     def load_images(self):
         file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Images", "",
@@ -187,32 +190,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.project.save()
         self.commander.project_updated_datasets.emit()
         return
-
-    def handle_on_annotate_added(self, index: int):
-        if 0 <= index < len(self.thumbnail_carousel.thumbnails):
-            self.thumbnail_carousel.thumbnails[index].clear_annotations()
-            self.thumbnail_carousel.thumbnails[index].set_annotated_status(EAnnotationStatus.PerformingAnnotation)
-
-    def handle_on_annotation_result(self, index: int, annotations: list[FAnnotationData]):
-        if 0 <= index < len(self.thumbnail_carousel.thumbnails):
-            if len(annotations) == 0:
-                self.thumbnail_carousel.thumbnails[index].set_annotated_status(EAnnotationStatus.MarkedDrop)
-                return
-            id_thumb, *_ = self.annotation_scene.current_display_thumbnail
-            if id_thumb == index:
-                for annotation in annotations:
-                    x, y, width, height = annotation.get_data()
-                    ###### НУЖНО МЕНЯТЬ ФУНКЦИЮ!
-                    self.annotation_scene.add_annotation_box(
-                        x, y, width, height, (
-                            annotation.get_id(),
-                            annotation.get_class_name(),
-                            annotation.get_color()
-                        )
-                    )
-                return
-            for data in annotations:
-                self.thumbnail_carousel.thumbnails[index].add_annotation(data)
 
     def load_thumbnails(self):
         if self.overlay:

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRectF, QThread, QRect
-from PyQt5.QtGui import QPixmap, QPen, QColor, QBrush
+from PyQt5.QtGui import QPixmap, QPen, QColor, QBrush, QFont
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QWidget, QVBoxLayout
@@ -120,28 +120,6 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             painter.setBrush(QBrush(QColor(192, 192, 192)))
             painter.drawRect(self.boundingRect())
 
-        if self.isSelected():
-            pen = QPen(Qt.blue)
-            pen.setWidth(self.board_width)
-            pen.setStyle(Qt.SolidLine)
-            painter.setPen(pen)
-            if self.annotation_status.value == EAnnotationStatus.MarkedDrop.value:
-                painter.setBrush(QColor(255, 0, 0, 50))
-            painter.drawRect(self.boundingRect())
-        elif self.annotation_status.value == EAnnotationStatus.Annotated.value:
-            pen = QPen(Qt.green)
-            pen.setWidth(self.board_width)
-            pen.setStyle(Qt.SolidLine)
-            painter.setPen(pen)
-            painter.drawRect(self.boundingRect())
-        elif self.annotation_status.value == EAnnotationStatus.MarkedDrop.value:
-            pen = QPen(Qt.red)
-            pen.setWidth(self.board_width)
-            pen.setStyle(Qt.SolidLine)
-            painter.setPen(pen)
-            painter.setBrush(QColor(255, 0, 0, 50))
-            painter.drawRect(self.boundingRect())
-
         for ann_data in self.annotation_data_list:
             color = ann_data.get_color()
             pen = QPen(color)
@@ -163,6 +141,42 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             )
 
             painter.drawRect(scaled_rect)
+
+        if self.isSelected():
+            pen = QPen(Qt.blue)
+            pen.setWidth(self.board_width)
+            pen.setStyle(Qt.SolidLine)
+            painter.setPen(pen)
+            if self.annotation_status.value == EAnnotationStatus.MarkedDrop.value:
+                painter.setBrush(QColor(255, 0, 0, 50))
+            painter.drawRect(self.boundingRect())
+        elif self.annotation_status.value == EAnnotationStatus.PerformingAnnotation.value:
+            pen = QPen(Qt.gray)
+            pen.setWidth(self.board_width)
+            pen.setStyle(Qt.SolidLine)
+            painter.setPen(pen)
+            painter.setFont(QFont("Arial", 12, QFont.Bold))
+            painter.setBrush(QColor(0, 0, 0, 50))
+            painter.drawRect(self.boundingRect())
+            painter.setPen(Qt.white)
+            text = "Разметка..."
+            text_rect = painter.fontMetrics().boundingRect(text)
+            text_x = (self.width() - text_rect.width()) // 2
+            text_y = (self.height() - text_rect.height()) // 2
+            painter.drawText(int(text_x), int(text_y), text)
+        elif self.annotation_status.value == EAnnotationStatus.Annotated.value:
+            pen = QPen(Qt.green)
+            pen.setWidth(self.board_width)
+            pen.setStyle(Qt.SolidLine)
+            painter.setPen(pen)
+            painter.drawRect(self.boundingRect())
+        elif self.annotation_status.value == EAnnotationStatus.MarkedDrop.value:
+            pen = QPen(Qt.red)
+            pen.setWidth(self.board_width)
+            pen.setStyle(Qt.SolidLine)
+            painter.setPen(pen)
+            painter.setBrush(QColor(255, 0, 0, 50))
+            painter.drawRect(self.boundingRect())
 
     def boundingRect(self):
         return QRectF(0, 0, self._width, self._height)
@@ -378,6 +392,18 @@ class UThumbnailCarousel(QGraphicsView):
             if not index_thumb in self.annotated_thumbnails_indexes:
                 self.annotated_thumbnails_indexes.append(index_thumb)
 
+    def handle_on_adding_thumb_to_model(self, index: int):
+        if 0 <= index <= len(self.thumbnails):
+            self.thumbnails[index].set_annotated_status(EAnnotationStatus.PerformingAnnotation)
+
+    def handle_on_getting_result_from_model(self, index: int, ann_list: list[FAnnotationData]):
+        if 0 <= index <= len(self.thumbnails):
+            self.thumbnails[index].clear_annotations()
+            if len(ann_list) > 0:
+                self.thumbnails[index].set_annotated_status(EAnnotationStatus.Annotated)
+                for annotation in ann_list:
+                    self.thumbnails[index].add_annotation(annotation)
+
     def set_thumbnail_dropped(self, key: int):
         self.current_selected.set_annotated_status(EAnnotationStatus.MarkedDrop)
 
@@ -394,7 +420,8 @@ class UThumbnailCarousel(QGraphicsView):
                 thumbnail.get_index(),
                 thumbnail.get_image_path(),
                 thumbnail.get_annotation_data()
-            )
+            ),
+            thumbnail.get_annotated_status().value
         )
 
     def get_annotations(self):

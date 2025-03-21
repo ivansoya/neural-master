@@ -82,12 +82,12 @@ class ULocalDetectYOLO(UBaseNeuralNet):
             class_id = int(box.cls)
             conf = box.conf
 
-            res_w, res_h = image.shape[:2]
+            res_h, res_w = image.shape[:2]
             class_name = self.classes.get_name(class_id)
             class_color = self.classes.get_color(class_id)
             detect_data = FDetectAnnotationData(
-                int(x),
-                int(y),
+                int(x - width /2),
+                int(y - height / 2),
                 int(width),
                 int(height),
                 class_id,
@@ -97,7 +97,5 @@ class ULocalDetectYOLO(UBaseNeuralNet):
                 int(res_h)
             )
             detections.append(detect_data)
-
-        print(f"{self.model.model_name} разметила изображение и получила следующие результаты: {[str(detect) for detect in detections]}")
 
         return detections if detections else None

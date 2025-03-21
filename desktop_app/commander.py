@@ -13,7 +13,7 @@ class UAnnotationSignalHolder(QWidget):
     # Первый статус - изначальный, второй - новый
     changed_annotation_status = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
 
-    selected_thumbnail = pyqtSignal(tuple)
+    selected_thumbnail = pyqtSignal(tuple, int)
 
     change_work_mode = pyqtSignal(int)
     changed_class_annotate = pyqtSignal(int)
