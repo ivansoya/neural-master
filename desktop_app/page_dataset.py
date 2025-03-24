@@ -2,9 +2,10 @@ import os.path
 import shutil
 from typing import Optional
 
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtCore import QThread, pyqtSignal, Qt, QCoreApplication
 from PyQt5.QtGui import QPixmap, QColor
-from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem
+from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem, \
+    QApplication
 from select import select
 
 from commander import UGlobalSignalHolder
@@ -17,7 +18,7 @@ from utility import UMessageBox, FAnnotationItem, FAnnotationClasses
 
 
 class UThreadDisplayDataset(QThread):
-    signal_on_image_loaded = pyqtSignal(object)
+    signal_on_image_loaded = pyqtSignal(str, str, list)
     signal_on_progress_changed = pyqtSignal(str, int, int)
     signal_on_ended = pyqtSignal()
     signal_on_error = pyqtSignal(str)
@@ -41,14 +42,13 @@ class UThreadDisplayDataset(QThread):
         for dataset, annotation_data in self.annotations.items():
             for index in range(len(annotation_data)):
                 data, image_path = self.annotations[dataset][index].get_item_data()
-                annotation_list = list()
+                annotation_list: list[tuple[int, int, int, int, int, QColor]] = list()
                 for annotation in data:
                     color = self.classes.get_color(annotation.ClassID) or QColor(Qt.gray)
                     annotation_list.append(
                         (annotation.ClassID, annotation.X, annotation.Y, annotation.Width, annotation.Height, color)
                     )
-                image_temp: UAnnotationImage = UAnnotationImage(image_path, dataset, annotation_list, self.show_dict ,self.size)
-                self.signal_on_image_loaded.emit(image_temp)
+                self.signal_on_image_loaded.emit(image_path, dataset, annotation_list)
                 indicator += 1
                 self.signal_on_progress_changed.emit(image_path, indicator, self.ann_len)
         self.signal_on_ended.emit()
@@ -137,13 +137,21 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.thread_display.run()
 
-    def display_image_at_gallery(self, gallery_item):
-        if isinstance(gallery_item, UAnnotationImage):
-            self.view_gallery.add_item(gallery_item)
+    def display_image_at_gallery(self,
+                                 image_path: str,
+                                 dataset_type: str,
+                                 ann_data: list[tuple[int, int, int, int, int, QColor]]
+                                 ):
+        ann_image = UAnnotationImage(image_path, dataset_type, ann_data, self.filter_dict, self.view_gallery.get_cell_size())
+        self.view_gallery.add_item(ann_image)
+
 
     def on_ended_thread_display(self):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
         self.view_gallery.update_visibility(force=True)
+        if self.thread_display:
+            self.thread_display.deleteLater()  # Явное удаление потока
+            self.thread_display = None
 
     def on_error_thread_display(self, error_msg: str):
         UMessageBox.show_error(error_msg)

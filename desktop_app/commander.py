@@ -1,9 +1,17 @@
+from enum import Enum
+
 from PyQt5.QtCore import Qt, QObject, QEvent, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 
 from utility import EWorkMode, EAnnotationStatus, FAnnotationData
 
+class ECommanderStatus(Enum):
+    LoadProject = 1
+    DatasetView = 2
+    Annotation = 3
+    Statistics = 4
+    LoadModel = 5
 
 class UAnnotationSignalHolder(QWidget):
     added_new_annotation = pyqtSignal(int, FAnnotationData)
@@ -54,6 +62,8 @@ class UGlobalSignalHolder(QObject):
     def __init__(self):
         super().__init__()
 
+        self.status: ECommanderStatus = ECommanderStatus.LoadModel
+
         # Частотный таймер, который отправляет событие о нажатии кнопки, при ее удержании
         self.freq_timer = QTimer(self)
         self.freq_timer.setInterval(100)
@@ -72,57 +82,62 @@ class UGlobalSignalHolder(QObject):
         if event.type() == QEvent.KeyPress:
             if self.is_blocked is True:
                 return super().eventFilter(obj, event)
-            if event.key() == Qt.Key_Control:
-                self.ctrl_pressed.emit(event.key())
-                return True
 
-            if (event.key() == Qt.Key_Left or event.key() == Qt.Key_Right or
-                event.key() == Qt.Key_A or event.key() == Qt.Key_D):
-                self.current_key = event.key()
-                self.arrows_pressed.emit(event.key())
-                self.delay_timer.start()
-                if self.freq_timer.isActive():
-                    self.freq_timer.stop()
-                return True
+            # Реализация обработки клавиш, в случае, если выбрана страница с разметкой
+            if self.status.value == ECommanderStatus.Annotation.value:
+                if event.key() == Qt.Key_Control:
+                    self.ctrl_pressed.emit(event.key())
+                    return True
 
-            if  Qt.Key_0 <= event.key() <= Qt.Key_9:
-                self.number_key_pressed.emit(event.key())
-                return True
+                if (event.key() == Qt.Key_Left or event.key() == Qt.Key_Right or
+                    event.key() == Qt.Key_A or event.key() == Qt.Key_D):
+                    self.current_key = event.key()
+                    self.arrows_pressed.emit(event.key())
+                    self.delay_timer.start()
+                    if self.freq_timer.isActive():
+                        self.freq_timer.stop()
+                    return True
 
-            if event.key() == Qt.Key_Space:
-                self.command_key_pressed.emit(Qt.Key_Space)
-                return True
+                if  Qt.Key_0 <= event.key() <= Qt.Key_9:
+                    self.number_key_pressed.emit(event.key())
+                    return True
 
-            if event.key() == Qt.Key_N:
-                self.drop_pressed.emit(event.key())
-                self.arrows_pressed.emit(Qt.Key_Right)
-                self.delay_timer.start()
-                if self.freq_timer.isActive():
-                    self.freq_timer.stop()
-                return True
+                if event.key() == Qt.Key_Space:
+                    self.command_key_pressed.emit(Qt.Key_Space)
+                    return True
 
-            if event.key() == Qt.Key_Delete:
-                self.delete_pressed.emit(event.key())
-                return True
+                if event.key() == Qt.Key_N:
+                    self.drop_pressed.emit(event.key())
+                    self.arrows_pressed.emit(Qt.Key_Right)
+                    self.delay_timer.start()
+                    if self.freq_timer.isActive():
+                        self.freq_timer.stop()
+                    return True
+
+                if event.key() == Qt.Key_Delete:
+                    self.delete_pressed.emit(event.key())
+                    return True
 
         elif event.type() == QEvent.KeyRelease:
             if self.is_blocked is True:
                 return super().eventFilter(obj, event)
-            if event.key() == Qt.Key_Control:
-                self.ctrl_released.emit(event.key())
-                return True
 
-            if (event.key() == Qt.Key_Left or event.key() == Qt.Key_Right or
-                event.key() == Qt.Key_A or event.key() == Qt.Key_D):
-                self.freq_timer.stop()
-                self.delay_timer.stop()
-                self.current_key = -1
-                return True
+            if self.status.value == ECommanderStatus.Annotation.value:
+                if event.key() == Qt.Key_Control:
+                    self.ctrl_released.emit(event.key())
+                    return True
 
-            if event.key() == Qt.Key_N:
-                self.freq_timer.stop()
-                self.delay_timer.stop()
-                return True
+                if (event.key() == Qt.Key_Left or event.key() == Qt.Key_Right or
+                    event.key() == Qt.Key_A or event.key() == Qt.Key_D):
+                    self.freq_timer.stop()
+                    self.delay_timer.stop()
+                    self.current_key = -1
+                    return True
+
+                if event.key() == Qt.Key_N:
+                    self.freq_timer.stop()
+                    self.delay_timer.stop()
+                    return True
 
         return super().eventFilter(obj, event)
 
@@ -131,6 +146,12 @@ class UGlobalSignalHolder(QObject):
 
     def set_block(self, block: float):
         self.is_blocked = block
+
+    def set_status(self, status: ECommanderStatus):
+        self.status = status
+
+    def get_status(self):
+        return self.status
 
     def on_freq(self):
         if (self.current_key == Qt.Key_Left or self.current_key == Qt.Key_Right or

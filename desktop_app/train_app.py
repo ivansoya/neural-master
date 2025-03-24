@@ -2,7 +2,7 @@ import sys
 
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from design.train_app import Ui_TrainApp
-from commander import UGlobalSignalHolder
+from commander import UGlobalSignalHolder, ECommanderStatus
 from page_annotation import UPageAnnotation
 from page_classes import UPageClasses
 from page_dataset import UPageDataset
@@ -34,23 +34,24 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
         self.stacked_page_loader.setCurrentIndex(0)
 
-        self.button_to_datasets_settings.clicked.connect(lambda: self.change_page(1))
-        self.button_to_annotation_scene.clicked.connect(lambda: self.change_page(2))
-        self.button_to_statistics.clicked.connect(lambda: self.change_page(3))
-        self.button_to_model.clicked.connect(lambda: self.change_page(4))
+        self.button_to_datasets_settings.clicked.connect(lambda: self.change_page(1, ECommanderStatus.DatasetView))
+        self.button_to_annotation_scene.clicked.connect(lambda: self.change_page(2, ECommanderStatus.Annotation))
+        self.button_to_statistics.clicked.connect(lambda: self.change_page(3, ECommanderStatus.Statistics))
+        self.button_to_model.clicked.connect(lambda: self.change_page(4, ECommanderStatus.LoadModel))
 
         self.nav_bar.setVisible(False)
         self.nav_bar.setEnabled(False)
 
         self.global_signal_holder.project_load_complete.connect(self.handle_on_load_project)
 
-    def change_page(self, page_index: int):
+    def change_page(self, page_index: int, status: ECommanderStatus):
         self.stacked_page_loader.setCurrentIndex(page_index)
+        self.global_signal_holder.set_status(status)
 
     def handle_on_load_project(self):
         self.nav_bar.setVisible(True)
         self.nav_bar.setEnabled(True)
-        self.change_page(1)
+        self.change_page(1, ECommanderStatus.DatasetView)
 
 def main():
     app = QApplication(sys.argv)

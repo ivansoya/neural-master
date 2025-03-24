@@ -133,7 +133,7 @@ class QDialogCreateProject(QDialog, Ui_window_create_project):
         self.close()
 
     def choose_file_path(self):
-        folder_path = QFileDialog.getExistingDirectory(self, "Выберите папку для создания проекта!")
+        folder_path = QFileDialog.getExistingDirectory(None, "Выберите папку для создания проекта!")
         if folder_path:
             self.project_path = folder_path.replace('\\', '/')
         else:
@@ -141,7 +141,7 @@ class QDialogCreateProject(QDialog, Ui_window_create_project):
 
     def choose_classes(self):
         file_classes, _ = QFileDialog.getOpenFileName(
-            self, "Выберите файл со списком классов", "*.txt", "Все файлы (*)")
+            None, "Выберите файл со списком классов", "*.txt", "Все файлы (*)")
         if not file_classes or not os.path.isfile(file_classes):
             QDialogCreateProject.show_error("Файл с классами недействительный!")
             return

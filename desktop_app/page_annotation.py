@@ -132,7 +132,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.project.model_thread.signal_on_result.connect(self.thumbnail_carousel.handle_on_getting_result_from_model)
 
     def load_images(self):
-        file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Images", "",
+        file_paths, _ = QFileDialog.getOpenFileNames(None, "Select Images", "",
                                                      "Image Files (*.png *.jpg *.jpeg *.bmp)")
         if file_paths:
             # Отображение карусели
@@ -291,6 +291,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if thumb_id is None or matrix is None:
             return
         if self.project.model_thread and self.project.model_thread.is_running():
+            print(f"Изображение с инедексом {thumb_id} отправлено на обработку!")
             self.project.model_thread.add_to_queue(thumb_id, matrix)
 
     """    def contextMenuEvent(self, event):

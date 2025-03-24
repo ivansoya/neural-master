@@ -241,7 +241,7 @@ class UTrainProject:
     def add_annotation(self, dataset:str, ann_item:FAnnotationItem, type_dataset: str = DATASETS):
         ref_dataset_dict = self._get_ref_to_list(type_dataset)
         ref_annotations_dict = self._get_ref_to_annotation_dict(type_dataset)
-        if not ref_dataset_dict or not ref_annotations_dict:
+        if ref_dataset_dict is None or ref_annotations_dict is None:
             return UErrorsText.not_existing_type_dataset("UTrainProject.add_annotation", type_dataset)
 
         if dataset in ref_dataset_dict:
