@@ -112,7 +112,6 @@ class UAnnotationBox(QGraphicsRectItem):
             self.draw_scale = 1.0
         else:
             self.draw_scale = 1.0 / scale
-        print(self.draw_scale)
 
     def get_resize_handles(self):
         rect = self.rect()
@@ -371,6 +370,8 @@ class UAnnotationGraphicsView(QGraphicsView):
 
         self.setSceneRect(QRectF(0, 0, 32000, 32000))  # Устанавливаем размер сцены (ширина, высота)
 
+        self.overlay: Optional[UAnnotationOverlayWidget] = None
+
         self.commander: Optional[UAnnotationSignalHolder] = None
         self.saved_work_mode = EWorkMode.DragMode
 
@@ -429,6 +430,11 @@ class UAnnotationGraphicsView(QGraphicsView):
 
         self._display_all_annotation()
         self.is_model_annotating = True if thumb_status == EAnnotationStatus.PerformingAnnotation.value else False
+        if self.is_model_annotating and self.overlay is None:
+            self.overlay = UAnnotationOverlayWidget(self)
+            self.raise_()
+        elif not self.is_model_annotating and self.overlay:
+            self.overlay = UAnnotationOverlayWidget.delete_overlay(self.overlay)
         self.update()
 
         print("Количество боксов на сцене: ", len(self.boxes_on_scene))
@@ -447,7 +453,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                     width,
                     height,
                     (item.get_id(), item.get_class_name(), item.get_color()),
-                    1.0 / self.scale_factor,
+                    self.scale_factor,
                     self.current_image
                 )
                 self.view_scale_changed.connect(ann_box.set_draw_scale)
@@ -483,14 +489,18 @@ class UAnnotationGraphicsView(QGraphicsView):
         current_index = self._get_current_thumb_index()
         if index == current_index:
             self.is_model_annotating = True
+            if self.overlay is None:
+                self.overlay = UAnnotationOverlayWidget(self)
+                self.overlay.raise_()
 
     def handle_get_result_from_model(self, index: int, ann_list: list[FAnnotationData]):
         current_index = self._get_current_thumb_index()
         if index == current_index:
+            self.clean_all_annotations(0)
             for annotation in ann_list:
                 self.add_annotation_by_data(annotation)
             self.is_model_annotating = False
-            self.update()
+            self.overlay = UAnnotationOverlayWidget.delete_overlay(self.overlay)
 
     def wheelEvent(self, event):
         # Получаем текущее значение масштаба
@@ -506,7 +516,7 @@ class UAnnotationGraphicsView(QGraphicsView):
             width,
             height,
             class_data,
-            1.0 / self.scale_factor,
+            self.scale_factor,
             self.current_image
         )
 
@@ -544,6 +554,14 @@ class UAnnotationGraphicsView(QGraphicsView):
             return
 
         self._emit_commander_on_add(data)
+
+    def center_on_selected(self):
+        if not self.current_image:
+            return
+        self.fitInView(self.current_image.sceneBoundingRect(), Qt.KeepAspectRatio)
+
+        self.scale_factor = self.transform().m11()
+        self.view_scale_changed.emit(self.scale_factor)
 
     def delete_on_press_key(self, key: int):
         if key == Qt.Key_Delete:
@@ -623,7 +641,11 @@ class UAnnotationGraphicsView(QGraphicsView):
         super().clear()
 
     def mousePressEvent(self, event):
+        if self.is_model_annotating and self.work_mode.value != EWorkMode.ForceDragMode.value:
+            return
         if self.work_mode.value == EWorkMode.DragMode.value:
+            pass
+        elif self.work_mode.value == EWorkMode.ForceDragMode.value:
             pass
         elif self.work_mode.value == EWorkMode.AnnotateMode.value:
             if self.current_image is None or self.annotate_class is None:
@@ -646,7 +668,11 @@ class UAnnotationGraphicsView(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if self.is_model_annotating and self.work_mode.value != EWorkMode.ForceDragMode.value:
+            return
         if self.work_mode.value == EWorkMode.DragMode.value:
+            pass
+        elif self.work_mode.value == EWorkMode.ForceDragMode.value:
             pass
         elif self.work_mode.value == EWorkMode.AnnotateMode.value:
             if self.current_rect is None or self.annotate_start_point is None:
@@ -659,6 +685,10 @@ class UAnnotationGraphicsView(QGraphicsView):
     def mouseReleaseEvent(self, event):
         if self.current_display_thumbnail is None:
             return super().mouseReleaseEvent(event)
+        if self.is_model_annotating:
+            if self.current_rect:
+                self.delete_annotation_box(self.current_rect)
+                return
         if self.work_mode.value == EWorkMode.DragMode.value:
             selected = self.get_selected_annotation_box()
             if selected is None:
@@ -702,24 +732,10 @@ class UAnnotationGraphicsView(QGraphicsView):
         *_, data = self.current_display_thumbnail
         return data
 
-    def paintEvent(self, event):
-        if self.is_model_annotating is True:
-            painter = QPainter(self.viewport())
-
-            painter.fillRect(self.viewport().rect(), QColor(150, 150, 150))
-
-            painter.setPen(Qt.white)
-            painter.setFont(QFont("Arial", 16, QFont.Bold))
-
-            text = "Происходит авторазметка"
-            text_rect = painter.fontMetrics().boundingRect(text)
-            text_x = (self.viewport().width() - text_rect.width()) // 2
-            text_y = (self.viewport().height() - text_rect.height()) // 2
-
-            painter.drawText(text_x, text_y, text)
-            painter.end()
-
-        super().paintEvent(event)
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.overlay:
+            self.overlay.setGeometry(self.rect())
 
 """    def contextMenuEvent(self, event):
         if len(self.available_classes) == 0 or self.commander is None:
@@ -783,3 +799,36 @@ class UClassSelectorList(QListWidget):
         class_id, name, color = item.data(Qt.UserRole)
         self.class_selected.emit(class_id, name, color)
 
+
+class UAnnotationOverlayWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.label = QLabel("Идет разметка", self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setFont(QFont("Arial", 24, QFont.Bold))
+        self.label.setStyleSheet("color: white;")
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.label)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        self.setGeometry(self.parent().rect())
+        self.show()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 150))
+
+    def resizeEvent(self, event):
+        self.label.setFixedSize(self.size())  # Делаем текст на весь экран
+
+    @staticmethod
+    def delete_overlay(overlay: 'UAnnotationOverlayWidget'):
+        if overlay:
+            overlay.hide()
+            overlay.deleteLater()
+            return None
+        return overlay

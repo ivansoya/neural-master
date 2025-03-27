@@ -1,3 +1,5 @@
+import json
+import os
 from queue import Queue
 import threading
 import socket
@@ -16,7 +18,6 @@ from utility import FAnnotationClasses, FDetectAnnotationData
 class UBaseNeuralNet(QThread):
     signal_on_result = pyqtSignal(int, list)
     signal_on_added = pyqtSignal(int)
-    signal_on_queue_empty = pyqtSignal()
 
     def __init__(self, classes: FAnnotationClasses):
         super().__init__()
@@ -46,13 +47,11 @@ class UBaseNeuralNet(QThread):
             while not self.image_queue.empty():
                 index, image = self.image_queue.get()
                 result = self.process_image(image)
-                if result:
-                    self.signal_on_result.emit(index, result)  # Отправляем результаты
+                self.signal_on_result.emit(index, result)  # Отправляем результаты
 
-            self.signal_on_queue_empty.emit()  # Очередь опустела
             self.queue_event.clear()  # Блокируем поток до следующего добавления
 
-    def process_image(self, image: np.ndarray):
+    def process_image(self, image: np.ndarray) -> list[FDetectAnnotationData]:
         """ Метод инференса (реализуется в наследниках) """
         raise NotImplementedError
 
@@ -100,7 +99,7 @@ class ULocalDetectYOLO(UBaseNeuralNet):
             )
             detections.append(detect_data)
 
-        return detections if detections else None
+        return detections if detections else []
 
 
 class URemoteNeuralNet(UBaseNeuralNet):
@@ -111,10 +110,12 @@ class URemoteNeuralNet(UBaseNeuralNet):
         self.sock = None
 
     def is_running(self) -> bool:
-        return True if self.sock else False
+        return self.connect_to_server()
 
     def connect_to_server(self):
         """ Подключение к серверу """
+        if self.sock is not None:
+            return True
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.server_ip, self.server_port))
@@ -132,57 +133,72 @@ class URemoteNeuralNet(UBaseNeuralNet):
         """ Отправка изображения на сервер и получение результата """
         if self.sock is None:
             if not self.connect_to_server():
-                return None
+                return []
 
         try:
-            # Кодирование изображения в байты
-            _, img_encoded = cv2.imencode('.jpg', image)
-            data = pickle.dumps(img_encoded)
-            size = len(data)
+            self.sock.settimeout(5)
+            _, data = cv2.imencode('.jpg', image)
+            self.sock.sendall(
+                len(data).to_bytes(4, 'big') +
+                data.tobytes()
+            )
+            print(f"Отправлено изображение размером {len(data)}")
 
-            # Отправка размера и данных
-            self.sock.sendall(size.to_bytes(4, 'big') + data)
+            json_size = int.from_bytes(self.sock.recv(4), 'big')
+            json_data_bytes = b""
+            while len(json_data_bytes) < json_size:
+                packet = self.sock.recv(json_size - len(json_data_bytes))
+                if not packet:
+                    print("Ошибка: соединение разорвано!")
+                    return []
+                json_data_bytes += packet
 
-            # Получение ответа
-            response_size = int.from_bytes(self.sock.recv(4), 'big')
-            response_data = b''
-            while len(response_data) < response_size:
-                response_data += self.sock.recv(4096)
-
-            # Десериализация ответа
-            result = self._process_detection_results(pickle.loads(response_data))
+            result = self._process_detection_results(json_data_bytes.decode("utf-8"))
             print(f"Получен ответ от сервера: {result}")
             return result
 
+        except socket.timeout:
+            print("Превышен интервал ожидания 5 секунд!")
+            return []
         except Exception as e:
             print(f"Ошибка при отправке/получении данных: {e}")
-            self.sock = None
-            return None
+            if self.sock:
+                self.sock.close()
+                self.sock = None
+            return []
 
-    def _process_detection_results(self, results: list[tuple]):
-        detections: list[FDetectAnnotationData] = list()
+    def _process_detection_results(self, response: str):
+        annotation_data: list[FDetectAnnotationData] = list()
+        json_data = json.loads(response)
+        if json_data:
+            detections = json_data.get("detections", [])
+            error_code = json_data.get("error_code", -1)
 
-        for annotation in results:
-            class_id, x, y, width, height, res_w, res_h = annotation
-
-            class_color = self.classes.get_color(class_id)
-            class_name = self.classes.get_name(class_id)
-
-            ann_data = FDetectAnnotationData(
-                int(x - width / 2),
-                int(y - height / 2),
-                int(width),
-                int(height),
-                class_id,
-                "Unresolved" if class_name is None else class_name,
-                QColor("#606060") if class_color is None else class_color,
-                int(res_w),
-                int(res_h)
-            )
-            detections.append(ann_data)
-
-        return detections
-
+            if error_code < 0:
+                return []
+            try:
+                for i, object_d in enumerate(detections):
+                    class_id = object_d['class_id']
+                    class_color = self.classes.get_color(class_id)
+                    class_name = self.classes.get_name(class_id)
+                    ann_data = FDetectAnnotationData(
+                        int(object_d['x'] - object_d['width'] / 2),
+                        int(object_d['y'] - object_d['height'] / 2),
+                        int(object_d['width']),
+                        int(object_d['height']),
+                        class_id,
+                        "Unresolved" if class_name is None else class_name,
+                        QColor("#606060") if class_color is None else class_color,
+                        int(object_d['resolution_w']),
+                        int(object_d['resolution_h'])
+                    )
+                    annotation_data.append(ann_data)
+                return annotation_data
+            except Exception as error:
+                print(str(error))
+                return []
+        else:
+            return []
 
     def stop(self):
         """ Остановка потока и закрытие соединения """

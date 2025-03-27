@@ -3,7 +3,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from design.train_app import Ui_TrainApp
 from commander import UGlobalSignalHolder, ECommanderStatus
-from page_annotation import UPageAnnotation
+from annotation.page_annotation import UPageAnnotation
 from page_classes import UPageClasses
 from page_dataset import UPageDataset
 from page_load_create import UPageLoader

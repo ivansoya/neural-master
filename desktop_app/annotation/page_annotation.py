@@ -80,6 +80,9 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         # Привязка смены класса со сценой
         self.list_class_selector.class_selected.connect(self.annotation_scene.set_annotate_class)
 
+        # Обработка автоаннотации
+        self.annotate_commander.selected_thumbnail.connect(self.auto_annotate)
+
         # Обработка события изменения режима работы
         self.annotate_commander.change_work_mode.connect(self.set_label_work_mode)
         self.select_dragmode_button.clicked.connect(
@@ -116,6 +119,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 self.project.classes.get_name(class_id),
                 self.project.classes.get_color(class_id)
             )
+
+    def auto_annotate(self, thumb_tuple: tuple, status: int):
+        if self.project.model_thread and self.project.model_thread.is_running():
+            if self.auto_annotate_checkbox.isChecked():
+                if status == EAnnotationStatus.NoAnnotation:
+                    self._annotate_image()
 
     def handle_command_pressed(self, key: int):
         if key == int(Qt.Key_Space):
@@ -218,6 +227,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         UMessageBox.show_error("Изображения загружены!", "Успех", int(QMessageBox.Ok))
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
+        self.annotation_scene.center_on_selected()
 
     def on_get_new_class(self, class_data: str):
         item_t = QStandardItem(str(class_data))

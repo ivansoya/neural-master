@@ -147,28 +147,20 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             pen.setWidth(self.board_width)
             pen.setStyle(Qt.SolidLine)
             painter.setPen(pen)
-            if self.annotation_status.value == EAnnotationStatus.MarkedDrop.value:
-                painter.setBrush(QColor(255, 0, 0, 50))
+            painter.setBrush(Qt.transparent)
             painter.drawRect(self.boundingRect())
         elif self.annotation_status.value == EAnnotationStatus.PerformingAnnotation.value:
             pen = QPen(Qt.gray)
             pen.setWidth(self.board_width)
             pen.setStyle(Qt.SolidLine)
             painter.setPen(pen)
-            painter.setFont(QFont("Arial", 12, QFont.Bold))
-            painter.setBrush(QColor(0, 0, 0, 50))
             painter.drawRect(self.boundingRect())
-            painter.setPen(Qt.white)
-            text = "Разметка..."
-            text_rect = painter.fontMetrics().boundingRect(text)
-            text_x = (self.width() - text_rect.width()) // 2
-            text_y = (self.height() - text_rect.height()) // 2
-            painter.drawText(int(text_x), int(text_y), text)
         elif self.annotation_status.value == EAnnotationStatus.Annotated.value:
             pen = QPen(Qt.green)
             pen.setWidth(self.board_width)
             pen.setStyle(Qt.SolidLine)
             painter.setPen(pen)
+            painter.setBrush(QColor(0, 255, 0, 50))
             painter.drawRect(self.boundingRect())
         elif self.annotation_status.value == EAnnotationStatus.MarkedDrop.value:
             pen = QPen(Qt.red)
@@ -177,6 +169,19 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             painter.setPen(pen)
             painter.setBrush(QColor(255, 0, 0, 50))
             painter.drawRect(self.boundingRect())
+
+        if self.annotation_status.value == EAnnotationStatus.PerformingAnnotation.value:
+            painter.setPen(Qt.black)
+            painter.setBrush(QColor(0, 0, 0, 50))
+            painter.drawRect(self.boundingRect())
+
+            painter.setPen(Qt.white)
+            painter.setFont(QFont("Arial", 12))
+            text = "Разметка..."
+            text_rect = painter.fontMetrics().boundingRect(text)
+            text_x = (self.width() - text_rect.width()) // 2
+            text_y = (self.height() - text_rect.height()) // 2
+            painter.drawText(int(text_x), int(text_y), text)
 
     def boundingRect(self):
         return QRectF(0, 0, self._width, self._height)

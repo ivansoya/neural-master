@@ -34,18 +34,12 @@ class UPageModel(QWidget, Ui_page_model):
             port = int(self.line_port.text())
             if not (ip_address or port):
                 UMessageBox.show_error("Введите корректные значения!")
-            self.project.model_thread = URemoteNeuralNet(
-                self.project.classes,
-                ip_address,
-                port
-            )
-            if self.project.model_thread.connect_to_server():
-                self.commander.model_loaded.emit()
-            else:
-                UMessageBox.show_error("Не удалось подключиться по указанному адресу!")
+            error = self.project.load_remote_yolo(ip_address, port)
+            if error:
+                UMessageBox.show_error(error)
+            self.commander.model_loaded.emit()
         except Exception as error:
             UMessageBox.show_error(str(error))
-        pass
 
     def handle_on_load_model(self):
         self.label_status.setText("Загружена!")

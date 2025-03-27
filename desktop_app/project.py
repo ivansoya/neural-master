@@ -5,7 +5,7 @@ from typing import Optional
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from neural_model import ULocalDetectYOLO, UBaseNeuralNet
+from neural_model import ULocalDetectYOLO, UBaseNeuralNet, URemoteNeuralNet
 from supporting.error_text import UErrorsText
 from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem
 
@@ -82,6 +82,14 @@ class UTrainProject:
     def load_local_yolo(self, path: str):
         try:
             self.model_thread = ULocalDetectYOLO(path, self.classes)
+            self.model_thread.start()
+        except Exception as error:
+            return str(error)
+
+    def load_remote_yolo(self, ip_address: str, port: int):
+        try:
+            self.model_thread = URemoteNeuralNet(self.classes, ip_address, port)
+            self.model_thread.connect_to_server()
             self.model_thread.start()
         except Exception as error:
             return str(error)
