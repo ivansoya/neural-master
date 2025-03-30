@@ -81,7 +81,7 @@ QPushButton:pressed {
   <customwidget>
    <class>UWidgetChart</class>
    <extends>QWidget</extends>
-   <header location="global">class_chart</header>
+   <header location="global">stats.class_chart</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

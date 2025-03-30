@@ -10,9 +10,9 @@ from select import select
 
 from commander import UGlobalSignalHolder
 from design.dataset_page import Ui_page_dataset
-from image_gallery import UAnnotationImage
-from list_datasets import UItemDataset, UListDataset
-from loader import UOverlayLoader, UThreadDatasetLoadAnnotations, UThreadDatasetCopy
+from dataset.image_gallery import UAnnotationImage
+from dataset.list_datasets import UItemDataset, UListDataset
+from dataset.loader import UOverlayLoader, UThreadDatasetLoadAnnotations, UThreadDatasetCopy
 from project import UTrainProject, RESERVED, DATASETS
 from utility import UMessageBox, FAnnotationItem, FAnnotationClasses
 

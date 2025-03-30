@@ -61,7 +61,7 @@ class Ui_classes_page_design(object):
         _translate = QtCore.QCoreApplication.translate
         classes_page_design.setWindowTitle(_translate("classes_page_design", "Форма для аннотации"))
         self.button_show_all.setText(_translate("classes_page_design", "Вывести все"))
-from class_chart import UWidgetChart
+from stats.class_chart import UWidgetChart
 
 
 if __name__ == "__main__":

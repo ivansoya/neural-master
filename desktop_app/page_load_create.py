@@ -1,10 +1,10 @@
 import os.path
 from typing import Optional
 
-from PyQt5.QtCore import pyqtSignal, QThread
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QFileDialog, QDialog, QMessageBox
 
-from loader import UThreadDatasetLoadAnnotations, UOverlayLoader
+from dataset.loader import UThreadDatasetLoadAnnotations, UOverlayLoader
 from commander import UGlobalSignalHolder
 from design.page_save_load import Ui_page_load_dataset
 from design.window_create_project import Ui_window_create_project

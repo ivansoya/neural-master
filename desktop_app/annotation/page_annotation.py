@@ -6,12 +6,12 @@ from PyQt5.QtWidgets import QFileDialog, QWidget, QGraphicsPixmapItem, QStackedW
 from PyQt5.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, QTimer
 
-from dataset import UDatasetDialog
+from dataset.dataset import UDatasetDialog
 from design.annotation_page import Ui_annotataion_page
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
 from annotation.carousel import UAnnotationThumbnail
 from design.diag_create_dataset import Ui_diag_create_dataset
-from loader import UOverlayLoader
+from dataset.loader import UOverlayLoader
 from project import UTrainProject, UMergeAnnotationThread, DATASETS
 from utility import EWorkMode, EAnnotationStatus, FDatasetInfo, UMessageBox, FAnnotationData
 
@@ -123,7 +123,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def auto_annotate(self, thumb_tuple: tuple, status: int):
         if self.project.model_thread and self.project.model_thread.is_running():
             if self.auto_annotate_checkbox.isChecked():
-                if status == EAnnotationStatus.NoAnnotation:
+                if status == EAnnotationStatus.NoAnnotation.value:
                     self._annotate_image()
 
     def handle_command_pressed(self, key: int):

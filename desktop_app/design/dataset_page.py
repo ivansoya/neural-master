@@ -185,6 +185,19 @@ class Ui_page_dataset(object):
         self.verticalLayout.addWidget(self.button_delete_dataset)
         spacerItem5 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem5)
+        self.button_export = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.button_export.setFont(font)
+        self.button_export.setStyleSheet("QWidget > QPushButton {\n"
+"    background-color: rgb(88, 239, 255);\n"
+"}\n"
+"\n"
+"QWidget > QPushButton:hover {\n"
+"    background-color: white;\n"
+"}")
+        self.button_export.setObjectName("button_export")
+        self.verticalLayout.addWidget(self.button_export)
         self.horizontalLayout.addWidget(self.verticalWidget1)
         self.page_main_layout.addWidget(self.dataset_display)
 
@@ -208,9 +221,10 @@ class Ui_page_dataset(object):
         self.button_move_selected_to_reserved.setText(_translate("page_dataset", "Резервировать выбранное"))
         self.button_move_dataset_to_reserved.setText(_translate("page_dataset", "Резервировать датасет"))
         self.button_delete_dataset.setText(_translate("page_dataset", "Удалить выбранный датасет"))
-from image_gallery import UImageGallery
-from list_datasets import UListDataset
-from scroll_filter import UScrollFilter
+        self.button_export.setText(_translate("page_dataset", "Экспорт"))
+from dataset.image_gallery import UImageGallery
+from dataset.list_datasets import UListDataset
+from dataset.scroll_filter import UScrollFilter
 
 
 if __name__ == "__main__":

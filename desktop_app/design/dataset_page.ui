@@ -418,6 +418,27 @@ QPushButton:pressed {
            </property>
           </spacer>
          </item>
+         <item>
+          <widget class="QPushButton" name="button_export">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QWidget &gt; QPushButton {
+	background-color: rgb(88, 239, 255);
+}
+
+QWidget &gt; QPushButton:hover {
+	background-color: white;
+}</string>
+           </property>
+           <property name="text">
+            <string>Экспорт</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
@@ -428,20 +449,20 @@ QPushButton:pressed {
  </widget>
  <customwidgets>
   <customwidget>
+   <class>UScrollFilter</class>
+   <extends>QScrollArea</extends>
+   <header location="global">dataset.scroll_filter</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
    <class>UListDataset</class>
    <extends>QListWidget</extends>
-   <header location="global">list_datasets</header>
+   <header location="global">dataset.list_datasets</header>
   </customwidget>
   <customwidget>
    <class>UImageGallery</class>
    <extends>QGraphicsView</extends>
-   <header location="global">image_gallery</header>
-  </customwidget>
-  <customwidget>
-   <class>UScrollFilter</class>
-   <extends>QScrollArea</extends>
-   <header location="global">scroll_filter.h</header>
-   <container>1</container>
+   <header location="global">dataset.image_gallery</header>
   </customwidget>
  </customwidgets>
  <resources/>

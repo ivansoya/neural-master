@@ -4,8 +4,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from design.train_app import Ui_TrainApp
 from commander import UGlobalSignalHolder, ECommanderStatus
 from annotation.page_annotation import UPageAnnotation
-from page_classes import UPageClasses
-from page_dataset import UPageDataset
+from stats.page_classes import UPageClasses
+from dataset.page_dataset import UPageDataset
 from page_load_create import UPageLoader
 from page_model import UPageModel
 from project import UTrainProject

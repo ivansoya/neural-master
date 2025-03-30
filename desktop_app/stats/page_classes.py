@@ -1,7 +1,7 @@
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QStackedWidget
+from PyQt5.QtWidgets import QWidget
 
-from class_chart import FCountColor
+from stats.class_chart import FCountColor
 from commander import UGlobalSignalHolder
 from design.classes_page import Ui_classes_page_design
 from project import UTrainProject
