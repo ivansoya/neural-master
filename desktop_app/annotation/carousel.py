@@ -386,8 +386,9 @@ class UThumbnailCarousel(QGraphicsView):
         if not 0 <= index_thumb < len(self.thumbnails):
             return
         self.thumbnails[index_thumb].delete_annotation(index_annotation)
-        if self.current_selected.annotation_status is False:
-            self.annotated_thumbnails_indexes.remove(self.thumbnails.index(self.current_selected))
+        if not self.current_selected.annotation_status.value == EAnnotationStatus.Annotated.value:
+            if index_thumb in self.annotated_thumbnails_indexes:
+                self.annotated_thumbnails_indexes.remove(index_thumb)
 
     def handle_signal_on_added_annotation(self, index_thumb: int, annotation_data: FAnnotationData):
         if not 0 <= index_thumb < len(self.thumbnails):
@@ -408,9 +409,19 @@ class UThumbnailCarousel(QGraphicsView):
                 self.thumbnails[index].set_annotated_status(EAnnotationStatus.Annotated)
                 for annotation in ann_list:
                     self.thumbnails[index].add_annotation(annotation)
+                if index not in self.annotated_thumbnails_indexes:
+                    self.annotated_thumbnails_indexes.append(index)
+            else:
+                if index in self.annotated_thumbnails_indexes:
+                    self.annotated_thumbnails_indexes.remove(index)
+                self.thumbnails[index].set_annotated_status(EAnnotationStatus.MarkedDrop)
 
     def set_thumbnail_dropped(self, key: int):
-        self.current_selected.set_annotated_status(EAnnotationStatus.MarkedDrop)
+        if self.current_selected:
+            index = self.current_selected.get_index()
+            if index in self.annotated_thumbnails_indexes:
+                self.annotated_thumbnails_indexes.remove(index)
+            self.current_selected.set_annotated_status(EAnnotationStatus.MarkedDrop)
 
     def select_thumbnail(self, thumbnail: UAnnotationThumbnail):
         if thumbnail is None:
@@ -433,6 +444,8 @@ class UThumbnailCarousel(QGraphicsView):
         ann_dict: [str, list[FAnnotationItem]] = dict()
         list_item: [list[FAnnotationItem]] = list()
         for index in self.annotated_thumbnails_indexes:
+            if not self.thumbnails[index].get_annotated_status().value == EAnnotationStatus.Annotated.value:
+                continue
             data_t = self.thumbnails[index].get_annotation_data()
             image_path = self.thumbnails[index].get_image_path()
             dataset = self.thumbnails[index].get_dataset()
