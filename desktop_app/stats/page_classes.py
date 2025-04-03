@@ -1,5 +1,6 @@
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QAbstractItemView
 
 from stats.class_chart import FCountColor
 from commander import UGlobalSignalHolder
@@ -15,9 +16,21 @@ class UPageClasses(QWidget, Ui_classes_page_design):
         self.commander = commander
         self.project = project
 
+        self.list_classes.setSelectionMode(QAbstractItemView.NoSelection)
+
         if self.commander:
             self.commander.project_load_complete.connect(self.update_chart_statistics)
+            self.commander.project_load_complete.connect(self.update_classes)
             self.commander.project_updated_datasets.connect(self.update_chart_statistics)
+
+    def update_classes(self):
+        self.list_classes.clear()
+        for class_id in self.project.classes.get_all_ids():
+            self.list_classes.add_class(
+                class_id,
+                self.project.classes.get_name(class_id),
+                self.project.classes.get_color(class_id)
+            )
 
     def update_chart_statistics(self):
         dict_classes = self.project.get_current_annotations()
@@ -25,6 +38,13 @@ class UPageClasses(QWidget, Ui_classes_page_design):
         if len(dict_classes) == 0:
             return
 
+        for key, value in self.project.classes.get_items():
+            class_name = self.project.classes.get_name(key) or str(key)
+            if class_name not in count_classes:
+                count_classes[class_name] = FCountColor(
+                    0,
+                    self.project.classes.get_color(key) or QColor("LightGrey")
+                )
         for key, value in dict_classes.items():
             for item in value:
                 data, path = item.get_item_data()
@@ -37,4 +57,5 @@ class UPageClasses(QWidget, Ui_classes_page_design):
                         )
                     count_classes[class_name].increment_count()
 
+        #count_classes = dict(sorted(count_classes.items()))
         self.chart_classes.draw_chart(count_classes)

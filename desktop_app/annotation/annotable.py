@@ -462,7 +462,6 @@ class UAnnotationGraphicsView(QGraphicsView):
             else:
                 continue
 
-
     def _clear_display_image(self):
         self.display_matrix = None
         self.current_display_thumbnail = None

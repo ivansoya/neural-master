@@ -42,7 +42,15 @@ class UWidgetChart(QWidget):
 
         self.canvas.ax.bar(class_names, counts, color=colors)
 
-        self.canvas.ax.set_title("Количество используемых классов")
-        self.canvas.ax.set_ylabel("Количество")
+        self.canvas.ax.set_title("Названия классов")
+        self.canvas.ax.set_ylabel("Количество объектов классов")
+
+        self.canvas.ax.set_xticks(range(len(class_names)))
+        self.canvas.ax.set_xticklabels(class_names, rotation=90)
+
+        widget_height = self.height() * 0.75
+        self.canvas.ax.set_ylim(0, max(counts) * 1.2 if counts else 1)
+
+        self.canvas.fig.subplots_adjust(bottom=0.2)
 
         self.canvas.draw()
