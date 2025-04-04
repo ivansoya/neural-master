@@ -96,6 +96,9 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander.command_key_pressed.connect(self.handle_command_pressed)
         self.commander.model_loaded.connect(self.handle_on_load_model)
 
+        #Обработка событий при изменении классов
+        self.commander.classes_updated.connect(self.handle_on_updated_classes)
+
         #self.commander.changed_class_annotate.connect(self.on_change_index_combobox)
         #self.class_combobox.currentIndexChanged.connect(self.handle_changed_class_combobox_index)
 
@@ -113,12 +116,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def handle_on_load_project(self):
         if self.project is None:
             return
-        for class_id in self.project.classes.get_all_ids():
-            self.list_class_selector.add_class(
-                class_id,
-                self.project.classes.get_name(class_id),
-                self.project.classes.get_color(class_id)
-            )
+        self._load_classes()
+
+    def handle_on_updated_classes(self):
+        self._load_classes()
 
     def auto_annotate(self, thumb_tuple: tuple, status: int):
         if self.project.model_thread and self.project.model_thread.is_running():
@@ -303,6 +304,15 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if self.project.model_thread and self.project.model_thread.is_running():
             print(f"Изображение с инедексом {thumb_id} отправлено на обработку!")
             self.project.model_thread.add_to_queue(thumb_id, matrix)
+
+    def _load_classes(self):
+        self.list_class_selector.clear()
+        for class_id in self.project.classes.get_all_ids():
+            self.list_class_selector.add_class(
+                class_id,
+                self.project.classes.get_name(class_id),
+                self.project.classes.get_color(class_id)
+            )
 
     """    def contextMenuEvent(self, event):
             if len(self.available_classes) == 0 or self.commander is None:

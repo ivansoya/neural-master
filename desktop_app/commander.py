@@ -48,7 +48,7 @@ class UGlobalSignalHolder(QObject):
     drop_pressed = pyqtSignal(int)
     delete_pressed = pyqtSignal(int)
 
-    added_new_class = pyqtSignal()
+    classes_updated = pyqtSignal()
 
     command_key_pressed = pyqtSignal(int)
     number_key_pressed = pyqtSignal(int)

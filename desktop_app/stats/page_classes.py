@@ -1,11 +1,12 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QAbstractItemView
+from PyQt5.QtWidgets import QWidget, QAbstractItemView, QMessageBox
 
 from stats.class_chart import FCountColor
 from commander import UGlobalSignalHolder
 from design.classes_page import Ui_classes_page_design
 from project import UTrainProject
+from utility import UMessageBox
 
 
 class UPageClasses(QWidget, Ui_classes_page_design):
@@ -18,10 +19,26 @@ class UPageClasses(QWidget, Ui_classes_page_design):
 
         self.list_classes.setSelectionMode(QAbstractItemView.NoSelection)
 
+        self.button_add_class.clicked.connect(self.add_class_to_project)
+
         if self.commander:
             self.commander.project_load_complete.connect(self.update_chart_statistics)
             self.commander.project_load_complete.connect(self.update_classes)
             self.commander.project_updated_datasets.connect(self.update_chart_statistics)
+
+    def add_class_to_project(self):
+        class_name = self.lineedit_enter_class.text()
+        if class_name and len(class_name) >= 3:
+            error = self.project.classes.add_class_by_name(class_name)
+            if error:
+                UMessageBox.show_error(error)
+                return
+            else:
+                self.commander.classes_updated.emit()
+                self.update_classes()
+                self.update_chart_statistics()
+                self.project.save()
+                UMessageBox.show_error(f"Добавлен новый класс {class_name} в проект!", "ОК", int(QMessageBox.Ok))
 
     def update_classes(self):
         self.list_classes.clear()
