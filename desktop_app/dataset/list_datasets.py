@@ -23,7 +23,7 @@ class UItemDataset(QWidget, Ui_widget_dataset_item):
         return self.annotations
 
 class UListDataset(QListWidget):
-    signal_on_item_clicked = pyqtSignal(dict)
+    signal_on_item_clicked = pyqtSignal(str, dict)
 
     def __init__(self, parent = None):
         super().__init__(parent)
@@ -38,7 +38,7 @@ class UListDataset(QListWidget):
     def on_item_clicked(self, item: QListWidgetItem):
         widget = self.itemWidget(item)
         if isinstance(widget, UItemDataset):
-            self.signal_on_item_clicked.emit(widget.get_annotations())
+            self.signal_on_item_clicked.emit(widget.get_dataset_name(), widget.get_annotations())
 
     @staticmethod
     def get_item_widget(list_widget: 'UListDataset'):

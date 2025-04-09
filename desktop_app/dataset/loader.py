@@ -235,7 +235,7 @@ class UThreadDatasetLoadAnnotations(QThread):
                             height_res
                         )
                     )
-                ann_item = FAnnotationItem(ann_list, image_path)
+                ann_item = FAnnotationItem(ann_list, image_path, dataset)
             if ann_item:
                 error = self.project.add_annotation(dataset, ann_item, type_dataset)
                 if error:

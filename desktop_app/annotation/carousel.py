@@ -449,7 +449,7 @@ class UThumbnailCarousel(QGraphicsView):
             data_t = self.thumbnails[index].get_annotation_data()
             image_path = self.thumbnails[index].get_image_path()
             dataset = self.thumbnails[index].get_dataset()
-            ann_item = FAnnotationItem(data_t, image_path)
+            ann_item = FAnnotationItem(data_t, image_path, dataset)
 
             if dataset is None:
                 list_item.append(ann_item)

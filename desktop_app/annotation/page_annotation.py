@@ -4,16 +4,15 @@ import cv2
 import os
 from PyQt5.QtWidgets import QFileDialog, QWidget, QGraphicsPixmapItem, QStackedWidget, QMessageBox, QDialog
 from PyQt5.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSlot
 
-from dataset.dataset import UDatasetDialog
 from design.annotation_page import Ui_annotataion_page
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
 from annotation.carousel import UAnnotationThumbnail
 from design.diag_create_dataset import Ui_diag_create_dataset
 from dataset.loader import UOverlayLoader
 from project import UTrainProject, UMergeAnnotationThread, DATASETS
-from utility import EWorkMode, EAnnotationStatus, FDatasetInfo, UMessageBox, FAnnotationData
+from utility import EWorkMode, EAnnotationStatus, UMessageBox, FAnnotationData, FAnnotationItem
 
 
 class UTextInputDialog(QDialog, Ui_diag_create_dataset):
@@ -40,8 +39,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.image_paths = []
         self.image_on_scene = None
         self.image_matrix = None
-
-        self.dataset_info: Optional[FDatasetInfo] = None
 
         self.class_list_item_model = QStandardItemModel()
 
@@ -73,8 +70,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander.arrows_pressed.connect(self.thumbnail_carousel.select_thumbnail_by_arrow)
         self.commander.drop_pressed.connect(self.thumbnail_carousel.set_thumbnail_dropped)
 
+        self.commander.loaded_images_to_annotate.connect(self.handle_on_annotation_data_get)
+
         # Обработка событий при нажатии на кнопки страницы
-        self.load_images_button.clicked.connect(self.load_images)
+        self.load_images_button.clicked.connect(self.handle_on_button_load_clicked)
         self.button_add_to_project.clicked.connect(self.handle_clicked_add_to_project)
 
         # Привязка смены класса со сценой
@@ -141,32 +140,43 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.project.model_thread.signal_on_result.connect(self.annotation_scene.handle_get_result_from_model)
             self.project.model_thread.signal_on_result.connect(self.thumbnail_carousel.handle_on_getting_result_from_model)
 
-    def load_images(self):
+    @pyqtSlot(list)
+    def handle_on_annotation_data_get(self, annotation_data_list: list[FAnnotationItem]):
+        self.load_images(annotation_data_list)
+
+    @pyqtSlot()
+    def handle_on_button_load_clicked(self):
         file_paths, _ = QFileDialog.getOpenFileNames(None, "Select Images", "",
                                                      "Image Files (*.png *.jpg *.jpeg *.bmp)")
         if file_paths:
-            # Отображение карусели
-            self.thumbnail_carousel.setVisible(True)
-            self.toggle_round_images.setEnabled(True)
-            self.toggle_round_images.setVisible(True)
+            self.load_images(file_paths)
+        else:
+            UMessageBox.show_error("Нет файлов!")
 
-            self.image_paths = file_paths
+    def load_images(self, files: list[str] | list[FAnnotationItem]):
+        if files is None:
+            UMessageBox.show_error("Ошибка в загрузке изображений!")
+            return
+        # Отображение карусели
+        self.thumbnail_carousel.setVisible(True)
+        self.toggle_round_images.setEnabled(True)
+        self.toggle_round_images.setVisible(True)
 
-            # Очистка старого контента
-            self.thumbnail_carousel.clear_thumbnails()
+        # Очистка старого контента
+        self.thumbnail_carousel.clear_thumbnails()
 
-            # Обновление значений
-            self.current_annotated_count = 0
-            self.current_dropped_count = 0
-            self.current_not_annotated_count = 0
+        # Обновление значений
+        self.current_annotated_count = 0
+        self.current_dropped_count = 0
+        self.current_not_annotated_count = 0
 
-            self.label_count_annotated.setText(str(self.current_annotated_count))
-            self.label_count_not_annotated.setText(str(self.current_not_annotated_count))
-            self.label_count_dropped.setText(str(self.current_dropped_count))
+        self.label_count_annotated.setText(str(self.current_annotated_count))
+        self.label_count_not_annotated.setText(str(self.current_not_annotated_count))
+        self.label_count_dropped.setText(str(self.current_dropped_count))
 
-            self.load_thumbnails()
+        self.load_thumbnails(files)
 
-            self.thumbnail_carousel.update()
+        self.thumbnail_carousel.update()
 
     def handle_clicked_add_to_project(self):
         if self.overlay or (self.merge_thread and self.merge_thread.isRunning()):
@@ -201,30 +211,45 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander.project_updated_datasets.emit()
         return
 
-    def load_thumbnails(self):
+    def load_thumbnails(self, files: list[str] | list[FAnnotationItem]):
         if self.overlay:
             UMessageBox.show_error("Не удалось выполнить загрузку изображений!")
             return
 
         self.overlay = UOverlayLoader(self)
 
-        if not self.image_paths or len(self.image_paths) == 0:
-            UMessageBox.show_error("Не удалось выполнить загрузку изображений!")
+        if len(files) == 0:
+            UMessageBox.show_error("В списке нет изображений!")
             self.overlay = UOverlayLoader.delete_overlay(self.overlay)
             return
 
-        for index in range(len(self.image_paths)):
-            thumb = UAnnotationThumbnail(
-                200,
-                175,
-                self.image_paths[index],
-                None,
-                []
-            )
+        for index in range(len(files)):
+            file = files[index]
+            if isinstance(file, str):
+                thumb = UAnnotationThumbnail(
+                    200,
+                    175,
+                    files[index],
+                    None,
+                    []
+                )
+            else:
+                ann_data_list = file.get_item_data()
+                thumb = UAnnotationThumbnail(
+                    200,
+                    175,
+                    file.get_image_path(),
+                    file.get_dataset_name(),
+                    ann_data_list
+                )
             thumb = self.thumbnail_carousel.add_thumbnail(thumb)
             self.update_labels_by_status(thumb.annotation_status, True)
             self.label_count_images.setText(str(len(self.thumbnail_carousel.thumbnails)))
-            self.overlay.update_progress(self.image_paths[index], index + 1, len(self.image_paths))
+            self.overlay.update_progress(
+                file.get_image_path() if isinstance(file, FAnnotationItem) else file,
+                index + 1,
+                len(files)
+            )
 
         UMessageBox.show_error("Изображения загружены!", "Успех", int(QMessageBox.Ok))
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
@@ -253,27 +278,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         else:
             self.current_annotated_count -= 1
         return self.current_annotated_count
-
-    def show_dialog_create_dataset(self):
-        if len(self.annotate_scene.available_classes) <= 0 or len(self.thumbnail_carousel.thumbnails) <= 0:
-            return
-        if self.dataset_info is None:
-            dialog = UDatasetDialog(
-                self.annotate_scene.available_classes,
-                self.thumbnail_carousel.thumbnails
-            )
-            dialog.exec_()
-        else:
-            dialog = UDatasetDialog(
-                self.annotate_scene.available_classes,
-                self.thumbnail_carousel.thumbnails,
-                self.dataset_info
-            )
-            dialog.label_dataset_path.setText(self.dataset_info.datafile_path)
-            dialog.button_choose_path_dataset.setEnabled(False)
-            dialog.combo_dataset_type.setCurrentIndex(self.dataset_info.get_type_index())
-            dialog.combo_dataset_type.setEnabled(False)
-            dialog.exec_()
 
     def handle_changed_annotation_status(self, prev: EAnnotationStatus, current: EAnnotationStatus):
         self.update_labels_by_status(prev, False)

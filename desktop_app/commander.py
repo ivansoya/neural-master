@@ -49,6 +49,7 @@ class UGlobalSignalHolder(QObject):
     delete_pressed = pyqtSignal(int)
 
     classes_updated = pyqtSignal()
+    loaded_images_to_annotate = pyqtSignal(list)
 
     command_key_pressed = pyqtSignal(int)
     number_key_pressed = pyqtSignal(int)

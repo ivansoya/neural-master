@@ -358,7 +358,7 @@ class UTrainProject:
             ann_lines = [str(ann_line) + '\n' for ann_line in ann_data]
             save_file.writelines(ann_lines)
         # Изменение аннотаций и запись их в память проекта
-        new_ann_item = FAnnotationItem(ann_data, target_image_path)
+        new_ann_item = FAnnotationItem(ann_data, target_image_path, dataset)
         error = self.add_annotation(dataset, new_ann_item, dataset_type)
         print(error)
 
