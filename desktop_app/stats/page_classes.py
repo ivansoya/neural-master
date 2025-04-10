@@ -64,7 +64,7 @@ class UPageClasses(QWidget, Ui_classes_page_design):
                 )
         for key, value in dict_classes.items():
             for item in value:
-                data = item.get_item_data()
+                data = item.get_annotation_data()
                 for class_t in data:
                     class_name = self.project.classes.get_name(class_t.ClassID) or str(class_t.ClassID)
                     if not class_name in count_classes:

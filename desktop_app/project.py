@@ -26,11 +26,11 @@ class UMergeAnnotationThread(QThread):
     signal_on_loaded_image = pyqtSignal(str, int, int)
     signal_on_ended = pyqtSignal(str)
 
-    def __init__(self, project: "UTrainProject", source_dict: dict[str, list[FAnnotationItem]], type_d: str = DATASETS):
+    def __init__(self, project: "UTrainProject", source_list: list[FAnnotationItem], type_d: str = DATASETS):
         super().__init__()
 
         self.project = project
-        self.source_dict = source_dict
+        self.source_list = source_list
         self.type_d = type_d
         if type_d == DATASETS:
             self.target_dict = self.project.get_current_annotations()
@@ -38,21 +38,21 @@ class UMergeAnnotationThread(QThread):
             self.target_dict = self.project.get_reserved_annotations()
 
     def run(self):
-        total = sum(len(ann_list) for ann_list in self.source_dict.values())
+        total = len(self.source_list)
         current = 1
-        for dataset, ann_list in self.source_dict.items():
-            if not dataset in self.target_dict:
+        for annotation_item in self.source_list:
+            dataset = annotation_item.get_dataset_name()
+            if dataset not in self.target_dict:
                 self.target_dict[dataset] = list()
                 self.project.add_dataset(dataset, self.type_d)
                 self.project.create_dataset_dir(dataset, self.type_d)
-            for annotation in ann_list:
-                try:
-                    self.project.save_annotation_to_project(annotation, dataset, self.type_d)
-                    current += 1
-                    self.signal_on_loaded_image.emit(annotation.get_image_path(), current, total)
-                except Exception as error:
-                    print(str(error))
-                    continue
+            try:
+                self.project.save_annotation_to_project(annotation_item, dataset, self.type_d)
+                current += 1
+                self.signal_on_loaded_image.emit(annotation_item.get_image_path(), current, total)
+            except Exception as error:
+                print(str(error))
+                continue
         self.signal_on_ended.emit("Завершено!")
 
 class UTrainProject:
@@ -255,10 +255,27 @@ class UTrainProject:
         if dataset in ref_dataset_dict:
             if dataset not in ref_annotations_dict:
                 ref_annotations_dict[dataset] = list()
+
             ref_annotations_dict[dataset].append(ann_item)
             return
         else:
             return UErrorsText.not_existing_dataset_in_project("UTrainProject.add_annotation", dataset)
+
+    def update_annotation(self, ann_item: FAnnotationItem, type_dataset: str = DATASETS):
+        ref_dataset_dict = self._get_ref_to_list(type_dataset)
+        ref_annotations_dict = self._get_ref_to_annotation_dict(type_dataset)
+        if ref_dataset_dict is None or ref_annotations_dict is None:
+            return UErrorsText.not_existing_type_dataset("UTrainProject.update_annotation", type_dataset)
+
+        dataset = ann_item.get_dataset_name()
+        if dataset is None or dataset not in ref_dataset_dict or dataset not in ref_annotations_dict:
+            return UErrorsText.not_existing_dataset_in_project("UTrainProject.update_annotation", type_dataset)
+
+        found_data_item = next((item for item in ref_annotations_dict[dataset] if item == ann_item), None)
+        if found_data_item is None or not isinstance(found_data_item, ann_item.__class__):
+            return "Не существует аннотации в списке! UTrainProject.update_annotations."
+        found_data_item.update_annotation_data(ann_item.get_annotation_data())
+
 
     def delete_annotation(self, dataset: str, ann_item: FAnnotationItem, type_dataset: str = DATASETS):
         ref_dataset_list = self._get_ref_to_list(type_dataset)
@@ -350,17 +367,22 @@ class UTrainProject:
         target_image_path = os.path.join(image_dir, image_name).replace('\\', '/')
         target_label_path = os.path.join(label_dir, os.path.splitext(image_name)[0] + ".txt").replace('\\', '/')
 
-        # Копирование изображения
-        shutil.copy2(annotation_item.get_image_path(), target_image_path)
+        ann_data = annotation_item.get_annotation_data()
+        annotation_list = self._get_ref_to_annotation_dict(dataset_type).get(dataset, [])
+        if annotation_item in annotation_list:
+            # Изменение аннотаций в памяти проекта
+            annotation_list[annotation_list.index(annotation_item)].update_annotation_data(ann_data)
+        else:
+            # Копирование изображения
+            shutil.copy2(annotation_item.get_image_path(), target_image_path)
+            # Изменение аннотаций и запись их в память проекта
+            new_ann_item = FAnnotationItem(ann_data, target_image_path, dataset)
+            error = self.add_annotation(dataset, new_ann_item, dataset_type)
+            print(error)
         # Запись аннотаций в файл
-        ann_data, _ = annotation_item.get_item_data()
         with open(target_label_path, "w") as save_file:
             ann_lines = [str(ann_line) + '\n' for ann_line in ann_data]
             save_file.writelines(ann_lines)
-        # Изменение аннотаций и запись их в память проекта
-        new_ann_item = FAnnotationItem(ann_data, target_image_path, dataset)
-        error = self.add_annotation(dataset, new_ann_item, dataset_type)
-        print(error)
 
     def create_dataset_dir(self, dataset_name: str, dataset_type: str = DATASETS):
         dataset = self.get_dataset_path(dataset_name, dataset_type)

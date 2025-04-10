@@ -181,26 +181,25 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def handle_clicked_add_to_project(self):
         if self.overlay or (self.merge_thread and self.merge_thread.isRunning()):
             return
-        dict_dataset, list_annotations = self.thumbnail_carousel.get_annotations()
-
-        if len(list_annotations) == 0 and len(dict_dataset) == 0:
+        list_annotations, list_nones = self.thumbnail_carousel.get_annotations()
+        if len(list_annotations) == 0 and len(list_nones) == 0:
+            UMessageBox.show_error("Нет выбранных аннотаций!")
             return
-        dialog = UTextInputDialog()
-        self.commander.set_block(True)
-        if dialog.exec_():
-            dataset_name = dialog.lineedit_dataset_name.text()
-            if dataset_name not in dict_dataset:
-                dict_dataset[dataset_name] = list_annotations
-            else:
-                dict_dataset[dataset_name] += list_annotations
 
-            self.overlay = UOverlayLoader(self.display_scene)
-            self.merge_thread = UMergeAnnotationThread(self.project, dict_dataset, DATASETS)
+        if len(list_nones) != 0:
+            dialog = UTextInputDialog()
+            self.commander.set_block(True)
+            if dialog.exec_():
+                dataset_name = dialog.lineedit_dataset_name.text()
+                for ann_item in list_nones:
+                    ann_item.set_dataset_name(dataset_name)
+                list_annotations.extend(list_nones)
 
-            self.merge_thread.signal_on_loaded_image.connect(self.overlay.update_progress)
-            self.merge_thread.signal_on_ended.connect(self.handle_on_ended_adding_dataset)
-
-            self.merge_thread.start()
+        self.overlay = UOverlayLoader(self.display_scene)
+        self.merge_thread = UMergeAnnotationThread(self.project, list_annotations, DATASETS)
+        self.merge_thread.signal_on_loaded_image.connect(self.overlay.update_progress)
+        self.merge_thread.signal_on_ended.connect(self.handle_on_ended_adding_dataset)
+        self.merge_thread.start()
 
         self.commander.set_block(False)
 
@@ -233,15 +232,16 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                     None,
                     []
                 )
-            else:
-                ann_data_list = file.get_item_data()
+            elif isinstance(file, FAnnotationItem):
                 thumb = UAnnotationThumbnail(
                     200,
                     175,
                     file.get_image_path(),
                     file.get_dataset_name(),
-                    ann_data_list
+                    file.get_annotation_data()
                 )
+            else:
+                continue
             thumb = self.thumbnail_carousel.add_thumbnail(thumb)
             self.update_labels_by_status(thumb.annotation_status, True)
             self.label_count_images.setText(str(len(self.thumbnail_carousel.thumbnails)))

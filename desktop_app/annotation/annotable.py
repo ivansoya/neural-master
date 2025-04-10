@@ -444,15 +444,14 @@ class UAnnotationGraphicsView(QGraphicsView):
             return
 
         for item in self._get_current_thumb_annotation_data():
-            data = item.get_data()
             if isinstance(item, FDetectAnnotationData):
-                x, y, width, height = data
+                class_id, class_name, color, (x, y, width, height) = item.get_data()
                 ann_box = UAnnotationBox(
                     x,
                     y,
                     width,
                     height,
-                    (item.get_id(), item.get_class_name(), item.get_color()),
+                    (class_id, class_name, QColor(color)),
                     self.scale_factor,
                     self.current_image
                 )
@@ -540,14 +539,13 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     def add_annotation_by_data(self, data: FAnnotationData):
         if isinstance(data, FDetectAnnotationData):
-            detect_data: FDetectAnnotationData = data
-            x, y, width, height = detect_data.get_data()
+            class_id, class_name, color, (x, y, width, height) = data.get_data()
             self.add_annotation_box(
                 x,
                 y,
                 width,
                 height,
-                (detect_data.get_id(), detect_data.get_class_name(), detect_data.get_color())
+                (class_id, class_name, QColor(color))
             )
         else:
             return

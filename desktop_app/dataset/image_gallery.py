@@ -131,9 +131,8 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
         painter.setRenderHint(QPainter.Antialiasing)
 
         for annotation in self.annotation_data.annotation_list:
-            color = annotation.get_color()
             if isinstance(annotation, FDetectAnnotationData):
-                x, y, width, height = annotation.get_data()
+                _, _, color, (x, y, width, height) = annotation.get_data()
                 pen = QPen(color)
                 pen.setWidth(int(self.board_width * (image.width() // self.size)))
                 painter.setPen(pen)
@@ -423,9 +422,15 @@ class UImageGallery(QGraphicsView):
         return [self.annotation_data[index] for index in self.set_selected]
 
     def set_all_selected(self):
-        self.set_selected = [index for index in range(len(self.annotation_data))]
+        self.set_selected = set([index for index in range(len(self.annotation_data))])
         for index, widget in self.widget_cache.items():
             widget.setSelected(True)
+        self.update_visibility()
+
+    def clear_all_selections(self):
+        self.set_selected.clear()
+        for index, widget in self.widget_cache.items():
+            widget.setSelected(False)
         self.update_visibility()
 
     def clear_scene(self):

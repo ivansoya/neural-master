@@ -35,7 +35,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             height: int,
             image_path: str,
             dataset: str | None,
-            annotation_data: list[FAnnotationData]
+            annotation_data: list[FAnnotationData] = None
     ):
         super().__init__()
 
@@ -59,7 +59,11 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
         self.board_width = 4
         self.annotation_width = 1
 
-        self.annotation_data_list : list[FAnnotationData] = list()
+        if annotation_data is None:
+            self.annotation_data_list: list[FAnnotationData] = list()
+        else:
+            self.annotation_data_list : list[FAnnotationData] = annotation_data
+            self.annotation_status = EAnnotationStatus.Annotated
         self.update()
 
     def get_annotation_data(self):
@@ -343,6 +347,8 @@ class UThumbnailCarousel(QGraphicsView):
 
         thumbnail.set_index(len(self.thumbnails))
         self.thumbnails.append(thumbnail)
+        if thumbnail.get_annotated_status().value == EAnnotationStatus.Annotated.value:
+            self.annotated_thumbnails_indexes.append(thumbnail.get_index())
 
         if len(self.thumbnails) == 1 and self.current_selected is None:
             self.select_thumbnail(self.thumbnails[0])
@@ -441,24 +447,21 @@ class UThumbnailCarousel(QGraphicsView):
         )
 
     def get_annotations(self):
-        ann_dict: [str, list[FAnnotationItem]] = dict()
-        list_item: [list[FAnnotationItem]] = list()
+        list_annotation_items: list[FAnnotationItem] = list()
+        list_annotations_none_dataset: list[FAnnotationItem] = list()
         for index in self.annotated_thumbnails_indexes:
             if not self.thumbnails[index].get_annotated_status().value == EAnnotationStatus.Annotated.value:
                 continue
-            data_t = self.thumbnails[index].get_annotation_data()
+            data_t = list(self.thumbnails[index].get_annotation_data())
             image_path = self.thumbnails[index].get_image_path()
             dataset = self.thumbnails[index].get_dataset()
             ann_item = FAnnotationItem(data_t, image_path, dataset)
-
             if dataset is None:
-                list_item.append(ann_item)
+                list_annotations_none_dataset.append(ann_item)
             else:
-                if not dataset in ann_dict:
-                    ann_dict[dataset] = list()
-                ann_dict[dataset].append(ann_item)
+                list_annotation_items.append(ann_item)
 
-        return ann_dict, list_item
+        return list_annotation_items, list_annotations_none_dataset
 
     def update(self):
         super().update()

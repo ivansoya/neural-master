@@ -139,6 +139,9 @@ class FAnnotationData:
     def __str__(self):
         return f"Объект аннотации не инициализирован!"
 
+    def update_data(self, data):
+        pass
+
     def get_data(self):
         pass
 
@@ -160,6 +163,20 @@ class FAnnotationData:
     def get_resolution(self):
         return self.Resolution_w, self.Resolution_h
 
+    def __eq__(self, other):
+        if not isinstance(other, FAnnotationData):
+            return self is other
+        return (
+                self.ClassID == other.ClassID and
+                self.class_name == other.class_name and
+                self.color == other.color and
+                self.Resolution_w == other.Resolution_w and
+                self.Resolution_h == other.Resolution_h
+        )
+
+    def __ne__(self, other):
+        return not self == other
+
 class FDetectAnnotationData(FAnnotationData):
     def __init__(self, x, y, width, height, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
         super().__init__(class_id, class_name, color, res_w, res_h)
@@ -180,12 +197,31 @@ class FDetectAnnotationData(FAnnotationData):
                 f"{self.Height / float(self.Resolution_h)}")
 
     def get_data(self):
-        return self.X, self.Y, self.Width, self.Height
+        return (self.ClassID, self.class_name, self.color,
+                (self.X, self.Y, self.Width, self.Height))
+
+    def update_data(self, data: tuple[int, str, QColor, tuple[int, int, int, int]]):
+        self.ClassID, self.class_name, color, (self.X, self.Y, self.Width, self.Height) = data
+        self.color = QColor(color)
 
     def get_rect_to_draw(self):
         top_left = QPoint(int(self.X), int(self.Y))
         bottom_right = QPoint(int(self.X + self.Width), int(self.Y + self.Height))
         return QRect(top_left, bottom_right)
+
+    def __eq__(self, other):
+        if not isinstance(other, FDetectAnnotationData):
+            return self is other
+        return (
+                super().__eq__(other) and
+                self.X == other.X and
+                self.Y == other.Y and
+                self.Width == other.Width and
+                self.Height == other.Height
+        )
+
+    def __ne__(self, other):
+        return not self == other
 
 class FAnnotationItem:
     def __init__(self, ann_list: list[FAnnotationData], image_path: str, dataset_name: str | None):
@@ -193,7 +229,11 @@ class FAnnotationItem:
         self.image_path = image_path
         self.dataset: Optional[str] = dataset_name
 
-    def get_item_data(self):
+    def update_annotation_data(self, annotation_data: list[FAnnotationData]):
+        self.annotation_list.clear()
+        self.annotation_list = list(annotation_data)
+
+    def get_annotation_data(self):
         return self.annotation_list
 
     def get_image_path(self):
@@ -201,6 +241,16 @@ class FAnnotationItem:
 
     def get_dataset_name(self):
         return self.dataset
+
+    def set_dataset_name(self, dataset_name: str):
+        self.dataset = dataset_name
+
+    def __eq__(self, other):
+        if not isinstance(other, FAnnotationItem):
+            return self is other
+        else:
+            return self.image_path == other.get_image_path() and self.dataset == other.get_dataset_name()
+
 
 class UMessageBox:
     @staticmethod

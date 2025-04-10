@@ -7,7 +7,7 @@ from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem, \
     QApplication
 
-from commander import UGlobalSignalHolder
+from commander import UGlobalSignalHolder, ECommanderStatus
 from design.dataset_page import Ui_page_dataset
 from dataset.list_datasets import UItemDataset, UListDataset
 from dataset.loader import UOverlayLoader, UThreadDatasetLoadAnnotations, UThreadDatasetCopy
@@ -40,7 +40,7 @@ class UThreadDisplayDataset(QThread):
         indicator = 1
         for dataset, annotation_data in self.annotations.items():
             for index in range(len(annotation_data)):
-                data = self.annotations[dataset][index].get_item_data()
+                data = self.annotations[dataset][index].get_annotation_data()
                 image_path = self.annotations[dataset][index].get_image_path()
                 annotation_list: list[tuple[int, int, int, int, int, QColor]] = list()
                 for annotation in data:
@@ -74,6 +74,8 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.button_add_dataset.clicked.connect(self.add_dataset)
         self.button_refresh.clicked.connect(self.update_dataset_page)
         self.button_selected_to_annotate.clicked.connect(self.load_selected_to_annotate_page)
+        self.button_choose_all.clicked.connect(self.handle_on_click_button_choose_all)
+        self.button_reset_selected.clicked.connect(self.handle_on_click_button_clear_all_selections)
 
         self.list_datasets.signal_on_item_clicked.connect(self.move_annotations_to_gallery)
         self.list_reserved.signal_on_item_clicked.connect(self.move_annotations_to_gallery)
@@ -160,6 +162,17 @@ class UPageDataset(QWidget, Ui_page_dataset):
     @pyqtSlot()
     def load_selected_to_annotate_page(self):
         self.commander.loaded_images_to_annotate.emit(self.view_gallery.get_selected_annotation())
+        if self.parent() and isinstance(self.parent(), QStackedWidget):
+            self.parent().setCurrentIndex(2)
+            self.commander.set_status(ECommanderStatus.Annotation)
+
+    @pyqtSlot()
+    def handle_on_click_button_choose_all(self):
+        self.view_gallery.set_all_selected()
+
+    @pyqtSlot()
+    def handle_on_click_button_clear_all_selections(self):
+        self.view_gallery.clear_all_selections()
 
     def load_annotations(self, dataset_name: str):
         if self.thread_copy:
