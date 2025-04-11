@@ -276,13 +276,13 @@ class UTrainProject:
             return "Не существует аннотации в списке! UTrainProject.update_annotations."
         found_data_item.update_annotation_data(ann_item.get_annotation_data())
 
-
-    def delete_annotation(self, dataset: str, ann_item: FAnnotationItem, type_dataset: str = DATASETS):
+    def remove_annotation(self, ann_item: FAnnotationItem, type_dataset: str = DATASETS):
         ref_dataset_list = self._get_ref_to_list(type_dataset)
         ref_annotations_dict = self._get_ref_to_annotation_dict(type_dataset)
         if not ref_dataset_list or not ref_annotations_dict:
             return UErrorsText.not_existing_type_dataset("UTrainProject.delete_annotation", type_dataset)
 
+        dataset = ann_item.get_dataset_name()
         if dataset not in ref_dataset_list:
             return UErrorsText.not_existing_dataset_in_project("UTrainProject.delete_annotation", dataset)
         if dataset not in ref_annotations_dict:
@@ -290,7 +290,13 @@ class UTrainProject:
 
         try:
             ref_annotations_dict[dataset].remove(ann_item)
-        except ValueError:
+            os.remove(ann_item.get_image_path())
+            label_path = os.path.join(
+                self._get_dir_path(dataset, type_dataset, LABELS),
+                os.path.basename(ann_item.get_image_path())[0] + ".txt"
+            )
+            os.remove(label_path)
+        except Exception as error:
             return UErrorsText.not_existing_annotation_in_dataset("UTrainProject.delete_annotation", dataset)
 
     def get_datasets(self):

@@ -358,9 +358,6 @@ class UImageGallery(QGraphicsView):
                 class_list.append(annotation.ClassID)
             if set(class_list) & set(available_annotations) and index not in self.filtered_indexes:
                 self.filtered_indexes[index] = len(self.filtered_indexes)
-            else:
-                pass
-                #self.delete_widget_from_cache(index)
         #
         self.update_scene_rect()
         self.update_grid()
@@ -419,12 +416,15 @@ class UImageGallery(QGraphicsView):
         return index in self.set_selected
 
     def get_selected_annotation(self):
-        return [self.annotation_data[index] for index in self.set_selected]
+        return [self.annotation_data[index] for index in self.filtered_indexes if index in self.set_selected]
 
     def set_all_selected(self):
-        self.set_selected = set([index for index in range(len(self.annotation_data))])
+        self.set_selected = set([index for index in range(len(self.filtered_indexes))])
         for index, widget in self.widget_cache.items():
-            widget.setSelected(True)
+            if index in self.set_selected:
+                widget.setSelected(True)
+            else:
+                widget.setSelected(False)
         self.update_visibility()
 
     def clear_all_selections(self):

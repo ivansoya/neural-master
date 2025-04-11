@@ -16,6 +16,12 @@ class UItemDataset(QWidget, Ui_widget_dataset_item):
         self.label_count.setText(f"Аннотаций: {self.count}")
         self.annotations = annotations
 
+    def update(self):
+        super().update()
+        self.count = sum(len(ann) for ann in self.annotations.values())
+        self.label_name.setText(self.name)
+        self.label_count.setText(f"Аннотаций: {self.count}")
+
     def get_dataset_name(self):
         return self.name
 
@@ -39,6 +45,20 @@ class UListDataset(QListWidget):
         widget = self.itemWidget(item)
         if isinstance(widget, UItemDataset):
             self.signal_on_item_clicked.emit(widget.get_dataset_name(), widget.get_annotations())
+
+    def update_all_items(self):
+        for i in range(self.count()):
+            widget = self.itemWidget(self.item(i))
+            if widget and isinstance(widget, UListDataset):
+                widget.update()
+
+    def get_selected_item(self) -> tuple[int, str]:
+        item = self.currentItem()
+        if item:
+            widget = self.itemWidget(item)
+            if widget and isinstance(widget, UItemDataset):
+                return self.row(item), widget.get_dataset_name()
+        return -1, ""
 
     @staticmethod
     def get_item_widget(list_widget: 'UListDataset'):

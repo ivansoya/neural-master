@@ -6,12 +6,14 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt, QCoreApplication, pyqtSlot
 from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem, \
     QApplication
+from networkx.algorithms.traversal.edgebfs import REVERSE
 
 from commander import UGlobalSignalHolder, ECommanderStatus
 from design.dataset_page import Ui_page_dataset
 from dataset.list_datasets import UItemDataset, UListDataset
 from dataset.loader import UOverlayLoader, UThreadDatasetLoadAnnotations, UThreadDatasetCopy
 from project import UTrainProject, RESERVED, DATASETS
+from supporting.custom_threads import UProgressThread
 from utility import UMessageBox, FAnnotationItem, FAnnotationClasses
 
 DATASET_ALL = "All Annotations"
@@ -70,12 +72,15 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.thread_copy: Optional[UThreadDatasetCopy] = None
         self.thread_display: Optional[UThreadDisplayDataset] = None
 
+        self.thread_custom: Optional[UProgressThread] = None
+
         # Привязка к кнопкам
         self.button_add_dataset.clicked.connect(self.add_dataset)
         self.button_refresh.clicked.connect(self.update_dataset_page)
         self.button_selected_to_annotate.clicked.connect(self.load_selected_to_annotate_page)
         self.button_choose_all.clicked.connect(self.handle_on_click_button_choose_all)
         self.button_reset_selected.clicked.connect(self.handle_on_click_button_clear_all_selections)
+        self.button_delete_selected.clicked.connect(self.handle_on_click_button_delete_annotations)
 
         self.list_datasets.signal_on_item_clicked.connect(self.move_annotations_to_gallery)
         self.list_reserved.signal_on_item_clicked.connect(self.move_annotations_to_gallery)
@@ -161,10 +166,10 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
     @pyqtSlot()
     def load_selected_to_annotate_page(self):
-        self.commander.loaded_images_to_annotate.emit(self.view_gallery.get_selected_annotation())
         if self.parent() and isinstance(self.parent(), QStackedWidget):
             self.parent().setCurrentIndex(2)
             self.commander.set_status(ECommanderStatus.Annotation)
+        self.commander.loaded_images_to_annotate.emit(self.view_gallery.get_selected_annotation())
 
     @pyqtSlot()
     def handle_on_click_button_choose_all(self):
@@ -173,6 +178,36 @@ class UPageDataset(QWidget, Ui_page_dataset):
     @pyqtSlot()
     def handle_on_click_button_clear_all_selections(self):
         self.view_gallery.clear_all_selections()
+
+    @pyqtSlot()
+    def handle_on_click_button_delete_annotations(self):
+        list_images = self.view_gallery.get_selected_annotation()
+        if self.thread_custom and self.thread_custom.isRunning():
+            UMessageBox.show_error("Уже работает поток, выполняя другое действие!")
+            return
+        dataset_type, list_widget, selected_item = (
+            (DATASETS, self.list_datasets, self.list_datasets.selectedItems()[0]) if self.list_datasets.selectedItems()
+            else (REVERSE, self.list_reserved, self.list_reserved.selectedItems()[0]) if self.list_reserved.selectedItems()
+            else (None, None, None)
+        )
+        if dataset_type and selected_item:
+            self.thread_custom = UProgressThread(list_images, self.project.remove_annotation, dataset_type)
+            self.thread_custom.signal_on_finish.connect(self.handle_on_finish_delete_annotations)
+            self.thread_custom.set_finish_params((list_widget, selected_item))
+            self.thread_custom.start()
+        else:
+            UMessageBox.show_error("Не был выбран датасет, из которого нужно удалить аннотации")
+
+    @pyqtSlot(tuple)
+    def handle_on_finish_delete_annotations(self, params: tuple):
+        list_widget, selected_item = params
+        if isinstance(list_widget, UListDataset) and isinstance(selected_item, QListWidgetItem):
+            self.view_gallery.clear_all_selections()
+            list_widget.itemClicked.emit(selected_item)
+            list_widget.update_all_items()
+        else:
+            UMessageBox.show_error("Ошибка во время завершения потока удаления аннотаций!")
+            return
 
     def load_annotations(self, dataset_name: str):
         if self.thread_copy:
@@ -309,6 +344,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.list_datasets.clearSelection()
 
     def create_list_reserved(self):
+        selected_index, selected_name = self.list_reserved.get_selected_item()
         self.list_reserved.clear()
         for dataset in self.project.reserved:
             try:
@@ -322,7 +358,13 @@ class UPageDataset(QWidget, Ui_page_dataset):
             except Exception as error:
                 return str(error)
 
+        if 0 <= selected_index < self.list_reserved.count():
+            widget = self.list_reserved.item(selected_index).listWidget()
+            if isinstance(widget, UItemDataset) and widget.get_dataset_name() == selected_name:
+                self.list_reserved.setCurrentIndex(selected_index)
+
     def create_list_dataset(self):
+        selected_index, selected_name = self.list_datasets.get_selected_item()
         self.list_datasets.clear()
         # Создание общего предмета
         sum_len = sum(len(ann_list) for ann_list in self.project.current_annotations.values())
@@ -346,6 +388,12 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 )
             except Exception as error:
                 return str(error)
+
+        if 0 <= selected_index < self.list_datasets.count():
+            widget = self.list_datasets.item(selected_index).listWidget()
+            if isinstance(widget, UItemDataset) and widget.get_dataset_name() == selected_name:
+                self.list_datasets.setCurrentIndex(selected_index)
+
 
     def fill_filter_list(self):
         widget = self.scroll_classes.widget()
