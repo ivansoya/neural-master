@@ -237,7 +237,7 @@ class FAnnotationItem:
         return self.annotation_list
 
     def get_image_path(self):
-        return self.image_path
+        return self.image_path.strip().replace('\\', '/')
 
     def get_dataset_name(self):
         return self.dataset
@@ -254,10 +254,28 @@ class FAnnotationItem:
 
 class UMessageBox:
     @staticmethod
-    def show_error(message: str, title: str = "Ошибка", status: int = QMessageBox.Critical):
+    def show_error(message: str):
         msg_box = QMessageBox()
-        msg_box.setIcon(status)
-        msg_box.setWindowTitle(title)
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle("Ошибка")
+        msg_box.setText(message)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec_()
+
+    @staticmethod
+    def show_warning(message: str):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setWindowTitle("Предупреждение!")
+        msg_box.setText(message)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec_()
+
+    @staticmethod
+    def show_ok(message: str):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setWindowTitle("Успешно")
         msg_box.setText(message)
         msg_box.setStandardButtons(QMessageBox.Ok)
         msg_box.exec_()

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRectF, QThread, QRect
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRectF, QThread, QRect, pyqtSlot
 from PyQt5.QtGui import QPixmap, QPen, QColor, QBrush, QFont
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
@@ -28,6 +28,16 @@ class ImageLoaderThread(QThread):
             self.image_loaded.emit(None)
             return
 
+class UPixmapSignalEmitter(QObject):
+    clicked = pyqtSignal(object)
+    changed_status = pyqtSignal(int, EAnnotationStatus, EAnnotationStatus)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def emit_signal(self, thumbnail: 'UAnnotationThumbnail'):
+        self.clicked.emit(thumbnail)
+
 class UAnnotationThumbnail(QGraphicsPixmapItem):
     def __init__(
             self,
@@ -35,7 +45,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             height: int,
             image_path: str,
             dataset: str | None,
-            annotation_data: list[FAnnotationData] = None
+            annotation_data: list[FAnnotationData]
     ):
         super().__init__()
 
@@ -59,10 +69,8 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
         self.board_width = 4
         self.annotation_width = 1
 
-        if annotation_data is None:
-            self.annotation_data_list: list[FAnnotationData] = list()
-        else:
-            self.annotation_data_list : list[FAnnotationData] = annotation_data
+        self.annotation_data_list: list[FAnnotationData] = annotation_data
+        if len(annotation_data) > 0:
             self.annotation_status = EAnnotationStatus.Annotated
         self.update()
 
@@ -197,7 +205,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
         if self.annotation_status.value == status.value:
             pass
         else:
-            self.emitter.changed_status.emit(self.annotation_status, status)
+            self.emitter.changed_status.emit(self.index, self.annotation_status, status)
             self.annotation_status = status
             self.update()
 
@@ -224,16 +232,6 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
     def get_dataset(self):
         return self.dataset
 
-class UPixmapSignalEmitter(QObject):
-    clicked = pyqtSignal(UAnnotationThumbnail)
-    changed_status = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    def emit_signal(self, thumbnail: UAnnotationThumbnail):
-        self.clicked.emit(thumbnail)
-
 class UThumbnailCarousel(QGraphicsView):
     view_changed = pyqtSignal(QRectF)
 
@@ -250,7 +248,8 @@ class UThumbnailCarousel(QGraphicsView):
         self.thumbnails : list [UAnnotationThumbnail] = []
         self.current_selected : Optional[UAnnotationThumbnail] = None
 
-        self.annotated_thumbnails_indexes: list[int] = list()
+        self.annotated_thumbnails_indexes: set[int] = set()
+        self.dropped_thumbnails_indexes: set[int] = set()
 
         self.scene = QGraphicsScene()
         self.setScene(self.scene)
@@ -301,13 +300,16 @@ class UThumbnailCarousel(QGraphicsView):
         self.commander.updated_annotation.connect(self.handle_signal_on_update_annotation)
 
     def clear_thumbnails(self):
+        self.scene.clear()  # удаляет все элементы со сцены
+
         self.thumbnails.clear()
+        self.last_displayed_images.clear()
+        self.annotated_thumbnails_indexes.clear()
+        self.dropped_thumbnails_indexes.clear()
+
         self.current_selected = None
         self.x_position = 0
         self.y_position = 0
-        for thumb in self.scene.items():
-            self.scene.removeItem(thumb)
-        self.scene.clear()
 
     def select_thumbnail_by_arrow(self, arrow: int):
         if self.current_selected is None:
@@ -337,8 +339,7 @@ class UThumbnailCarousel(QGraphicsView):
         thumbnail.setTransformationMode(Qt.SmoothTransformation)
 
         thumbnail.emitter.clicked.connect(self.on_thumbnail_clicked)
-        if self.commander:
-            thumbnail.emitter.changed_status.connect(self.commander.emit_global_changed_annotation_status)
+        thumbnail.emitter.changed_status.connect(self.handle_on_thumbnail_status_changed)
 
         self.scene.addItem(thumbnail)
         thumbnail.setPos(self.x_position, self.y_position)
@@ -348,12 +349,29 @@ class UThumbnailCarousel(QGraphicsView):
         thumbnail.set_index(len(self.thumbnails))
         self.thumbnails.append(thumbnail)
         if thumbnail.get_annotated_status().value == EAnnotationStatus.Annotated.value:
-            self.annotated_thumbnails_indexes.append(thumbnail.get_index())
+            self.annotated_thumbnails_indexes.add(thumbnail.get_index())
+        elif thumbnail.get_annotated_status().value == EAnnotationStatus.MarkedDrop.value:
+            self.dropped_thumbnails_indexes.add(thumbnail.get_index())
 
         if len(self.thumbnails) == 1 and self.current_selected is None:
             self.select_thumbnail(self.thumbnails[0])
-
         return thumbnail
+
+    @pyqtSlot(int, EAnnotationStatus, EAnnotationStatus)
+    def handle_on_thumbnail_status_changed(self, index: int, previous: EAnnotationStatus, current: EAnnotationStatus):
+        if current.value == EAnnotationStatus.Annotated.value:
+            self.annotated_thumbnails_indexes.add(index)
+        elif current.value == EAnnotationStatus.MarkedDrop.value:
+            self.dropped_thumbnails_indexes.add(index)
+
+        if previous.value == EAnnotationStatus.Annotated.value:
+            if index in self.annotated_thumbnails_indexes:
+                self.annotated_thumbnails_indexes.remove(index)
+        elif previous.value == EAnnotationStatus.MarkedDrop.value:
+            if index in self.dropped_thumbnails_indexes:
+                self.dropped_thumbnails_indexes.remove(index)
+
+
 
     def display_images(self, display_bounds: QRectF):
         items = self.scene.items(display_bounds, Qt.IntersectsItemBoundingRect)
@@ -415,18 +433,11 @@ class UThumbnailCarousel(QGraphicsView):
                 self.thumbnails[index].set_annotated_status(EAnnotationStatus.Annotated)
                 for annotation in ann_list:
                     self.thumbnails[index].add_annotation(annotation)
-                if index not in self.annotated_thumbnails_indexes:
-                    self.annotated_thumbnails_indexes.append(index)
             else:
-                if index in self.annotated_thumbnails_indexes:
-                    self.annotated_thumbnails_indexes.remove(index)
                 self.thumbnails[index].set_annotated_status(EAnnotationStatus.MarkedDrop)
 
     def set_thumbnail_dropped(self, key: int):
         if self.current_selected:
-            index = self.current_selected.get_index()
-            if index in self.annotated_thumbnails_indexes:
-                self.annotated_thumbnails_indexes.remove(index)
             self.current_selected.set_annotated_status(EAnnotationStatus.MarkedDrop)
 
     def select_thumbnail(self, thumbnail: UAnnotationThumbnail):
@@ -448,20 +459,33 @@ class UThumbnailCarousel(QGraphicsView):
 
     def get_annotations(self):
         list_annotation_items: list[FAnnotationItem] = list()
-        list_annotations_none_dataset: list[FAnnotationItem] = list()
-        for index in self.annotated_thumbnails_indexes:
-            if not self.thumbnails[index].get_annotated_status().value == EAnnotationStatus.Annotated.value:
-                continue
-            data_t = list(self.thumbnails[index].get_annotation_data())
-            image_path = self.thumbnails[index].get_image_path()
-            dataset = self.thumbnails[index].get_dataset()
-            ann_item = FAnnotationItem(data_t, image_path, dataset)
-            if dataset is None:
-                list_annotations_none_dataset.append(ann_item)
-            else:
-                list_annotation_items.append(ann_item)
+        list_annotation_none_dataset: list[FAnnotationItem] = list()
+        list_annotations_to_delete: list[FAnnotationItem] = list()
 
-        return list_annotation_items, list_annotations_none_dataset
+        for index, status_check, target_list in [
+            (self.annotated_thumbnails_indexes, EAnnotationStatus.Annotated, list_annotation_items),
+            (self.dropped_thumbnails_indexes, EAnnotationStatus.MarkedDrop, list_annotations_to_delete),
+        ]:
+            for i in index:
+                thumb = self.thumbnails[i]
+                if thumb.get_annotated_status().value != status_check.value:
+                    continue
+
+                dataset = thumb.get_dataset()
+                if target_list is list_annotations_to_delete and dataset is None:
+                    continue
+
+                ann_item = FAnnotationItem(
+                    list(thumb.get_annotation_data()),
+                    thumb.get_image_path(),
+                    dataset
+                )
+                if target_list is list_annotation_items and dataset is None:
+                    list_annotation_none_dataset.append(ann_item)
+                else:
+                    target_list.append(ann_item)
+
+        return list_annotation_items, list_annotation_none_dataset, list_annotations_to_delete
 
     def update(self):
         super().update()

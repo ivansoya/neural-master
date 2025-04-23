@@ -7,12 +7,6 @@ from rknn.api import RKNN
 
 DATASET_PATH = "/home/voran/voran-ftp-sync/training/export/dataset.txt"
 DEFAULT_QUANT = True
-# yolov11
-REFACTOR_LAYER_NAMES = ["/model.23/Concat_2", "/model.23/Concat_1", "/model.23/Concat"]
-CONV_REPLACE_NAMES = ["/model.23/cv3.2/cv3.2.2/Conv", "/model.23/cv3.1/cv3.1.2/Conv", "/model.23/cv3.0/cv3.0.2/Conv"]
-# yolov8
-#REFACTOR_LAYER_NAMES = ["/model.22/Concat_2", "/model.22/Concat_1", "/model.22/Concat"]
-#CONV_REPLACE_NAMES = ["/model.22/cv3.2/cv3.2.2/Conv", "/model.22/cv3.1/cv3.1.2/Conv", "/model.22/cv3.0/cv3.0.2/Conv"]
 
 def get_tensor_shape(model, tensor_name):
     for vi in model.graph.value_info:
@@ -90,21 +84,26 @@ def trim_onnx_after_layers(model, output_layer_names):
 
 def parse_arg():
     if len(sys.argv) < 3:
-        print("Usage: python3 {} pytorch_model_path [platform] [dtype(optional)] [output_rknn_path(optional)]".format(sys.argv[0]));
+        print("Usage: python3 {} pytorch_model_path [yolo_version] [platform] [dtype(optional)] [output_rknn_path(optional)]".format(sys.argv[0]))
+        print("       yolo version choose from [yolov8, yolov11, yolov12]")
         print("       platform choose from [rk3562,rk3566,rk3568,rk3576,rk3588,rk1808,rv1109,rv1126]")
         print("       dtype choose from [i8, fp] for [rk3562,rk3566,rk3568,rk3576,rk3588]")
         print("       dtype choose from [u8, fp] for [rk1808,rv1109,rv1126]")
         exit(1)
 
     model_path = sys.argv[1]
-    platform = sys.argv[2]
+    yolo_version = sys.argv[2]
+    platform = sys.argv[3]
 
     do_quant = DEFAULT_QUANT
     if not model_path.endswith(".pt"):
         print(f"ERROR: Invalid model format: {model_path}! Needs PyTorch format!")
         exit(1)
-    if len(sys.argv) > 3:
-        model_type = sys.argv[3]
+    if yolo_version not in ['yolov8', 'yolov11', 'yolov12']:
+        print(f"ERROR: Invalid yolo version: {yolo_version}! Needs valid yolo version!")
+        exit(1)
+    if len(sys.argv) > 4:
+        model_type = sys.argv[4]
         if model_type not in ['i8', 'u8', 'fp']:
             print("ERROR: Invalid model type: {}".format(model_type))
             exit(1)
@@ -112,16 +111,29 @@ def parse_arg():
             do_quant = True
         else:
             do_quant = False
-
-    if len(sys.argv) > 4:
-        output_path = sys.argv[4]
+    if len(sys.argv) > 5:
+        output_path = sys.argv[5]
     else:
         output_path = model_path.replace(".pt", ".rknn")
 
-    return model_path, platform, do_quant, output_path
+    return model_path, yolo_version, platform, do_quant, output_path
 
 def main():
-    model_path, platform, do_quant, output_path = parse_arg()
+    model_path, yolo_version, platform, do_quant, output_path = parse_arg()
+
+    if yolo_version == "yolov8":
+        refactor_layer_names = ["/model.22/Concat_2", "/model.22/Concat_1", "/model.22/Concat"]
+        conv_replace_names = ["/model.22/cv3.2/cv3.2.2/Conv", "/model.22/cv3.1/cv3.1.2/Conv", "/model.22/cv3.0/cv3.0.2/Conv"]
+    elif yolo_version == "yolov11":
+        refactor_layer_names = ["/model.23/Concat_2", "/model.23/Concat_1", "/model.23/Concat"]
+        conv_replace_names = ["/model.23/cv3.2/cv3.2.2/Conv", "/model.23/cv3.1/cv3.1.2/Conv",
+                              "/model.23/cv3.0/cv3.0.2/Conv"]
+    elif yolo_version == "yolov12":
+        refactor_layer_names = ["/model.21/Concat", "/model.21/Concat_1", "/model.21/Concat_2"]
+        conv_replace_names = ["/model.21/cv3.2/cv3.2.2/Conv", "/model.21/cv3.1/cv3.1.2/Conv", "/model.21/cv3.0/cv3.0.2/Conv"]
+    else:
+        print(f"ERROR: Invalid yolo version: {yolo_version}! Needs valid yolo version!")
+        exit(1)
 
     model = YOLO(model_path)
 
@@ -132,11 +144,9 @@ def main():
     onnx_optimized_format = onnx_model_path.replace(".onnx", "_ref.onnx")
     print("--> Refactoring Onnx model to rknn optimized format!")
     model_onnx = onnx.load(onnx_model_path)
-    trim_onnx_after_layers(model_onnx, REFACTOR_LAYER_NAMES)
-    if platform == "rk3566":
-        replace_conv_with_conv_sigmoid(model_onnx, CONV_REPLACE_NAMES)
-    else:
-        print("Platform is not rk3566, there are is no changes to do!")
+    trim_onnx_after_layers(model_onnx, refactor_layer_names)
+    if platform == "rk3566" and len(conv_replace_names) > 0:
+        replace_conv_with_conv_sigmoid(model_onnx, conv_replace_names)
     onnx.save(model_onnx, onnx_optimized_format)
     print(f"done!")
     os.remove(onnx_model_path)
@@ -146,8 +156,14 @@ def main():
 
     # Pre-process config
     print('--> Config model')
-    rknn.config(mean_values=[[0, 0, 0]], std_values=[
-        [255, 255, 255]], target_platform=platform, quantized_algorithm="normal")
+    rknn.config(
+        mean_values=[[0, 0, 0]],
+        std_values=[[255, 255, 255]],
+        target_platform=platform,
+        quantized_dtype='w8a8',
+        #optimization_level=0,
+        quant_img_RGB2BGR=True,
+    )
     print('done')
 
     # Load model

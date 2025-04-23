@@ -58,7 +58,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
             self.thread_load.signal_end_load.connect(self.on_end_load)
             self.thread_load.signal_error.connect(self.on_error_load)
             self.thread_load.signal_warning.connect(
-                lambda error_str:UMessageBox.show_error(error_str, "Предупреждение", int(QMessageBox.Warning))
+                lambda error_str:UMessageBox.show_warning(error_str)
             )
 
             self.thread_load.start()
@@ -72,7 +72,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
     def on_end_load(self, datasets: list[str]):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
         self.commander.project_load_complete.emit()
-        UMessageBox.show_error("Датасеты загружены!", "Успех", int(QMessageBox.Ok))
+        UMessageBox.show_ok("Датасеты загружены!")
 
     def create_project(self):
         self.commander.set_block(True)

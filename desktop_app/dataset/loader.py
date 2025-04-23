@@ -141,7 +141,7 @@ class UThreadDatasetLoadAnnotations(QThread):
         self.count_datasets = 0
         self.current_dataset = 0
 
-        self.count_labels = 0
+        self.images_count = 0
         self.current_labels = 0
 
     def run(self):
@@ -156,6 +156,7 @@ class UThreadDatasetLoadAnnotations(QThread):
                 self.signal_end_load.emit(self.input_datasets)
                 return
 
+        self.current_dataset = 1
         self.process_dataset_list(self.input_datasets, DATASETS)
 
         if is_run_reserved:
@@ -165,7 +166,6 @@ class UThreadDatasetLoadAnnotations(QThread):
 
     def process_dataset_list(self, dataset_list: list[str], type_dataset: str):
         count_datasets = len(dataset_list)
-        current_dataset = 1
         for dataset in dataset_list:
             if not((dataset in self.project.datasets) or (dataset in self.project.reserved)):
                 self.signal_warning.emit(f"Warning в UThreadDatasetLoadAnnotations.load_annotations!"
@@ -177,15 +177,31 @@ class UThreadDatasetLoadAnnotations(QThread):
             except Exception as error:
                 self.signal_error.emit(dataset, str(error))
                 return
-            labels = [file for file in os.listdir(label_path) if file.endswith(".txt")]
+            #labels = [file for file in os.listdir(label_path) if file.endswith(".txt")]
             images = [image for image in os.listdir(image_path) if image.endswith((".png", ".jpg", ".jpeg"))]
-            self.count_labels = len(labels)
-            if self.count_labels == 0:
+            self.images_count = len(images)
+            if self.images_count == 0:
                 self.signal_warning.emit(f"Warning в UThreadDatasetLoadAnnotations.load_annotations!"
                                          f"В датасете {dataset} отсутствуют аннотации!")
                 continue
             current_labels = 1
-            self.signal_start_dataset.emit(dataset, current_dataset, count_datasets)
+            self.signal_start_dataset.emit(dataset, self.current_dataset, count_datasets)
+
+            for image in images:
+                image_name = image.split('.')[0]
+                error = self.read_annotation(
+                    dataset,
+                    type_dataset,
+                    os.path.join(label_path, image_name + ".txt").strip().replace('\\', '/'),
+                    os.path.join(image_path, image).strip().replace('\\', '/'),
+                )
+                if error:
+                    self.signal_error.emit(dataset,
+                                           f"Ошибка в UThreadDatasetLoadAnnotations.load_annotations! {error}")
+                    return
+                self.signal_loaded_label.emit(image_name, current_labels, self.images_count)
+                current_labels += 1
+            """
             for label in labels:
                 for image in images:
                     if image.split('.')[0] == label.split('.')[0]:
@@ -199,16 +215,16 @@ class UThreadDatasetLoadAnnotations(QThread):
                             self.signal_error.emit(dataset, f"Ошибка в UThreadDatasetLoadAnnotations.load_annotations! {error}")
                             return
                         images.remove(image)
-                        self.signal_loaded_label.emit(label, current_labels, self.count_labels)
+                        self.signal_loaded_label.emit(label, current_labels, self.images_count)
                         continue
                 current_labels += 1
+            """
             self.current_dataset += 1
 
     def read_annotation(self, dataset: str, type_dataset: str, filename: str, image_path: str):
         try:
             image_data = iio.immeta(image_path)
             width_res, height_res = image_data["shape"]
-            ann_item: Optional[FAnnotationItem] = None
             with open(filename, "r") as file:
                 ann_list: list[FAnnotationData] = list()
                 for line in file:
@@ -236,10 +252,18 @@ class UThreadDatasetLoadAnnotations(QThread):
                         )
                     )
                 ann_item = FAnnotationItem(ann_list, image_path, dataset)
-            if ann_item:
                 error = self.project.add_annotation(dataset, ann_item, type_dataset)
                 if error:
                     return error
-                return
+
         except Exception as error:
-            return f"{str(error)}"
+            if os.path.exists(image_path):
+                error = self.project.add_annotation(
+                    dataset,
+                    FAnnotationItem([], image_path, dataset),
+                    type_dataset
+                )
+                if error:
+                    return error
+            else:
+                return f"{str(error)}"

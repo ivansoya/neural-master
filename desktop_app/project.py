@@ -26,11 +26,18 @@ class UMergeAnnotationThread(QThread):
     signal_on_loaded_image = pyqtSignal(str, int, int)
     signal_on_ended = pyqtSignal(str)
 
-    def __init__(self, project: "UTrainProject", source_list: list[FAnnotationItem], type_d: str = DATASETS):
+    def __init__(
+            self,
+            project: "UTrainProject",
+            source_list: list[FAnnotationItem],
+            delete_list: list[FAnnotationItem],
+            type_d: str = DATASETS
+    ):
         super().__init__()
 
         self.project = project
         self.source_list = source_list
+        self.delete_list = delete_list
         self.type_d = type_d
         if type_d == DATASETS:
             self.target_dict = self.project.get_current_annotations()
@@ -38,7 +45,7 @@ class UMergeAnnotationThread(QThread):
             self.target_dict = self.project.get_reserved_annotations()
 
     def run(self):
-        total = len(self.source_list)
+        total = len(self.source_list) + len(self.delete_list)
         current = 1
         for annotation_item in self.source_list:
             dataset = annotation_item.get_dataset_name()
@@ -53,6 +60,15 @@ class UMergeAnnotationThread(QThread):
             except Exception as error:
                 print(str(error))
                 continue
+
+        for delete_item in self.delete_list:
+            current += 1
+            error = self.project.remove_annotation(delete_item, self.type_d)
+            if error:
+                print(str(error))
+                self.signal_on_loaded_image.emit(f"Ошибка при удалении! {str(error)}", current, total)
+                continue
+            self.signal_on_loaded_image.emit(delete_item.get_image_path(), current, total)
         self.signal_on_ended.emit("Завершено!")
 
 class UTrainProject:
@@ -293,7 +309,7 @@ class UTrainProject:
             os.remove(ann_item.get_image_path())
             label_path = os.path.join(
                 self._get_dir_path(dataset, type_dataset, LABELS),
-                os.path.basename(ann_item.get_image_path())[0] + ".txt"
+                (os.path.basename(ann_item.get_image_path()).split('.')[0] + ".txt").strip().replace("\\", "/")
             )
             os.remove(label_path)
         except Exception as error:

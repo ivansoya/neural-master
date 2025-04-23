@@ -44,6 +44,13 @@ class TrainApp(QMainWindow, Ui_TrainApp):
 
         self.global_signal_holder.project_load_complete.connect(self.handle_on_load_project)
 
+        self.global_signal_holder.go_to_page_datasets.connect(
+            lambda: self.change_page(1, ECommanderStatus.DatasetView)
+        )
+        self.global_signal_holder.go_to_page_annotation.connect(
+            lambda: self.change_page(2, ECommanderStatus.Annotation)
+        )
+
     def change_page(self, page_index: int, status: ECommanderStatus):
         self.stacked_page_loader.setCurrentIndex(page_index)
         self.global_signal_holder.set_status(status)

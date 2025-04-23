@@ -632,10 +632,9 @@ class UAnnotationGraphicsView(QGraphicsView):
         return QAction(QIcon(pixmap), text, menu)
 
     def clear(self):
-        for box in self.boxes_on_scene:
-            self.removeItem(box)
+        self.scene().clear()
+        self.current_image = None
         self.boxes_on_scene.clear()
-        super().clear()
 
     def mousePressEvent(self, event):
         if self.is_model_annotating and self.work_mode.value != EWorkMode.ForceDragMode.value:

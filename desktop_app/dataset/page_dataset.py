@@ -6,7 +6,6 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt, QCoreApplication, pyqtSlot
 from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, QMessageBox, QListWidgetItem, \
     QApplication
-from networkx.algorithms.traversal.edgebfs import REVERSE
 
 from commander import UGlobalSignalHolder, ECommanderStatus
 from design.dataset_page import Ui_page_dataset
@@ -101,6 +100,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
             self.commander.project_load_complete.connect(self.update_dataset_page)
             self.commander.project_updated_datasets.connect(self.update_dataset_page)
 
+            self.commander.go_to_page_datasets.connect(self.update_dataset_page)
+
+    @pyqtSlot()
     def update_dataset_page(self):
         self.create_list_dataset()
         self.create_list_reserved()
@@ -166,10 +168,9 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
     @pyqtSlot()
     def load_selected_to_annotate_page(self):
-        if self.parent() and isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(2)
-            self.commander.set_status(ECommanderStatus.Annotation)
-        self.commander.loaded_images_to_annotate.emit(self.view_gallery.get_selected_annotation())
+        if self.commander:
+            self.commander.go_to_page_annotation.emit()
+            self.commander.loaded_images_to_annotate.emit(self.view_gallery.get_selected_annotation())
 
     @pyqtSlot()
     def handle_on_click_button_choose_all(self):
@@ -187,7 +188,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
             return
         dataset_type, list_widget, selected_item = (
             (DATASETS, self.list_datasets, self.list_datasets.selectedItems()[0]) if self.list_datasets.selectedItems()
-            else (REVERSE, self.list_reserved, self.list_reserved.selectedItems()[0]) if self.list_reserved.selectedItems()
+            else (RESERVED, self.list_reserved, self.list_reserved.selectedItems()[0]) if self.list_reserved.selectedItems()
             else (None, None, None)
         )
         if dataset_type and selected_item:
@@ -236,7 +237,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         if error:
             UMessageBox.show_error(error)
         else:
-            UMessageBox.show_error("Датасет был успешно добавлен в проект и загружен!", "Успех!", int(QMessageBox.Ok))
+            UMessageBox.show_ok("Датасет был успешно добавлен в проект и загружен!")
         # Обновление списка датасетов
         self.list_datasets.clear()
         self.create_list_dataset()
@@ -270,7 +271,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
             self.project.remove_dataset_from_project(widget.name, dataset_type)
             self.view_gallery.clear_scene()
             self.project.save()
-            UMessageBox.show_error(f"Датасет {widget.name} удален из проекта!", "Успех", int(QMessageBox.Ok))
+            UMessageBox.show_ok(f"Датасет {widget.name} удален из проекта!")
             self.commander.project_updated_datasets.emit()
         else:
             return
@@ -418,7 +419,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
     @staticmethod
     def print_warning(error_str: str):
-        UMessageBox.show_error(error_str, "Предупреждение!", QMessageBox.Warning)
+        UMessageBox.show_warning(error_str)
 
     def close_overlay(self):
         if self.overlay:

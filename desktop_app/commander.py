@@ -18,9 +18,6 @@ class UAnnotationSignalHolder(QWidget):
     deleted_annotation = pyqtSignal(int, int)
     updated_annotation = pyqtSignal(int, int, FAnnotationData)
 
-    # Первый статус - изначальный, второй - новый
-    changed_annotation_status = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
-
     selected_thumbnail = pyqtSignal(tuple, int)
 
     change_work_mode = pyqtSignal(int)
@@ -36,9 +33,6 @@ class UAnnotationSignalHolder(QWidget):
 
     def __init__(self):
         super().__init__()
-
-    def emit_global_changed_annotation_status(self, prev: EAnnotationStatus, current: EAnnotationStatus):
-        self.changed_annotation_status.emit(prev, current)
 
 class UGlobalSignalHolder(QObject):
     ctrl_pressed = pyqtSignal(int)
@@ -59,6 +53,9 @@ class UGlobalSignalHolder(QObject):
 
     model_loaded = pyqtSignal()
     model_unloaded = pyqtSignal()
+
+    go_to_page_annotation = pyqtSignal()
+    go_to_page_datasets = pyqtSignal()
 
     def __init__(self):
         super().__init__()

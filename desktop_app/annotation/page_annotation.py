@@ -178,11 +178,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         self.thumbnail_carousel.update()
 
+    @pyqtSlot()
     def handle_clicked_add_to_project(self):
         if self.overlay or (self.merge_thread and self.merge_thread.isRunning()):
             return
-        list_annotations, list_nones = self.thumbnail_carousel.get_annotations()
-        if len(list_annotations) == 0 and len(list_nones) == 0:
+        list_annotations, list_nones, list_to_delete = self.thumbnail_carousel.get_annotations()
+        if len(list_annotations) == 0 and len(list_nones) == 0 and len(list_to_delete) == 0:
             UMessageBox.show_error("Нет выбранных аннотаций!")
             return
 
@@ -196,19 +197,22 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 list_annotations.extend(list_nones)
 
         self.overlay = UOverlayLoader(self.display_scene)
-        self.merge_thread = UMergeAnnotationThread(self.project, list_annotations, DATASETS)
+        self.merge_thread = UMergeAnnotationThread(self.project, list_annotations, list_to_delete, DATASETS)
         self.merge_thread.signal_on_loaded_image.connect(self.overlay.update_progress)
         self.merge_thread.signal_on_ended.connect(self.handle_on_ended_adding_dataset)
         self.merge_thread.start()
 
         self.commander.set_block(False)
 
+    @pyqtSlot(str)
     def handle_on_ended_adding_dataset(self, dataset_name: str):
-        UMessageBox.show_error("Добавлены аннотации в проект!", "Успех!", int(QMessageBox.Ok))
+        UMessageBox.show_ok("Добавлены аннотации в проект!")
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
         self.project.save()
-        self.commander.project_updated_datasets.emit()
-        return
+        self.thumbnail_carousel.clear_thumbnails()
+        self.annotation_scene.clear()
+        if self.commander:
+            self.commander.go_to_page_datasets.emit()
 
     def load_thumbnails(self, files: list[str] | list[FAnnotationItem]):
         if self.overlay:
@@ -251,7 +255,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 len(files)
             )
 
-        UMessageBox.show_error("Изображения загружены!", "Успех", int(QMessageBox.Ok))
+        UMessageBox.show_ok("Изображения загружены!")
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
         self.annotation_scene.center_on_selected()
 

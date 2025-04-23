@@ -38,7 +38,7 @@ class UPageClasses(QWidget, Ui_classes_page_design):
                 self.update_classes()
                 self.update_chart_statistics()
                 self.project.save()
-                UMessageBox.show_error(f"Добавлен новый класс {class_name} в проект!", "ОК", int(QMessageBox.Ok))
+                UMessageBox.show_ok(f"Добавлен новый класс {class_name} в проект!")
 
     def update_classes(self):
         self.list_classes.clear()
