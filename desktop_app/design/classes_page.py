@@ -106,7 +106,7 @@ class Ui_classes_page_design(object):
         self.lineedit_enter_class.setPlaceholderText(_translate("classes_page_design", "Введите название нового класса"))
         self.button_add_class.setText(_translate("classes_page_design", "Добавить класс"))
         self.button_show_all.setText(_translate("classes_page_design", "Вывести все"))
-from annotation.annotable import UClassSelectorList
+from annotation.annotation_scene import UClassSelectorList
 from stats.class_chart import UWidgetChart
 
 

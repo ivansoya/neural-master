@@ -3,9 +3,10 @@ from typing import Optional
 import cv2
 import os
 from PyQt5.QtWidgets import QFileDialog, QWidget, QGraphicsPixmapItem, QStackedWidget, QMessageBox, QDialog
-from PyQt5.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem
+from PyQt5.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem, QColor
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
 
+from annotation.annotation_scene import UAnnotationBox
 from design.annotation_page import Ui_annotataion_page
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
 from annotation.carousel import UAnnotationThumbnail
@@ -90,6 +91,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.select_annotatemode_button.clicked.connect(
             lambda checked=False, mode=EWorkMode.AnnotateMode.value: self.annotate_commander.change_work_mode.emit(mode)
         )
+
+        self.annotate_commander.display_annotations.connect(self.handle_on_screen_loaded_annotations)
+        self.annotate_commander.added_new_annotation.connect(self.handle_on_screen_added_annotations)
+        self.annotate_commander.deleted_annotation.connect(self.handle_on_screen_deleted_annotations)
+        self.annotate_commander.updated_annotation.connect(self.handle_on_screen_updated_annotations)
+        self.annotate_commander.selected_annotation.connect(self.handle_on_select_annotation)
 
         # Обработка событий, связанных с работой модели
         self.commander.command_key_pressed.connect(self.handle_command_pressed)
@@ -214,6 +221,74 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if self.commander:
             self.commander.go_to_page_datasets.emit()
 
+    @pyqtSlot(list)
+    def handle_on_screen_loaded_annotations(self, annotations: list[tuple[int, UAnnotationBox]]):
+        self.list_current_annotations.clear_list_widget()
+        for index in range(len(annotations)):
+            index, ann_box = annotations[index]
+            self.list_current_annotations.add_list_item(
+                ann_box.get_class_name(),
+                index + 1,
+                ann_box.get_color(),
+                ann_box,
+                self.annotation_scene.scene()
+            )
+
+    @pyqtSlot(int, UAnnotationBox)
+    def handle_on_screen_added_annotations(self, index: int, annotation_box: UAnnotationBox):
+        if index == self.annotation_scene.get_current_thumb_index():
+            self.list_current_annotations.add_list_item(
+                annotation_box.get_class_name(),
+                self.list_current_annotations.count() + 1,
+                QColor(annotation_box.get_color()),
+                annotation_box,
+                self.annotation_scene.scene()
+            )
+        self.list_total_annotations.increase_class(
+            annotation_box.get_class_id(),
+            annotation_box.get_class_name(),
+            annotation_box.get_color()
+        )
+
+    @pyqtSlot(int, int, object)
+    def handle_on_screen_deleted_annotations(self, index_thumb: int, index_deleted: int, deleted_data: object):
+        if index_thumb == self.annotation_scene.get_current_thumb_index():
+            self.list_current_annotations.remove_list_item(index_deleted)
+        if isinstance(deleted_data, FAnnotationData):
+            self.list_total_annotations.decrease_class(deleted_data.get_id())
+
+    @pyqtSlot(int, int, object, object)
+    def handle_on_screen_updated_annotations(
+            self,
+            index_thumb: int,
+            index_annotation: int,
+            prev_annotation: FAnnotationData | None,
+            box: UAnnotationBox
+    ):
+        if not isinstance(box, UAnnotationBox):
+            return
+        if index_thumb == self.annotation_scene.get_current_thumb_index():
+            self.list_current_annotations.update_list_item(
+                index_annotation,
+                box.get_class_name(),
+                box.get_color(),
+                box
+            )
+        if not isinstance(prev_annotation, FAnnotationData) or prev_annotation.get_id() == box.get_class_id():
+            return
+        else:
+            self.list_total_annotations.decrease_class(prev_annotation.get_id())
+            self.list_total_annotations.increase_class(
+                box.get_class_id(),
+                box.get_class_name(),
+                box.get_color()
+            )
+
+
+    @pyqtSlot(int)
+    def handle_on_select_annotation(self, index: int):
+          self.list_current_annotations.select_item(index)
+
     def load_thumbnails(self, files: list[str] | list[FAnnotationItem]):
         if self.overlay:
             UMessageBox.show_error("Не удалось выполнить загрузку изображений!")
@@ -237,13 +312,20 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                     []
                 )
             elif isinstance(file, FAnnotationItem):
+                ann_data = file.get_annotation_data()
                 thumb = UAnnotationThumbnail(
                     200,
                     175,
                     file.get_image_path(),
                     file.get_dataset_name(),
-                    file.get_annotation_data()
+                    ann_data
                 )
+                for annotation in ann_data:
+                    self.list_total_annotations.increase_class(
+                        annotation.get_id(),
+                        annotation.get_class_name(),
+                        annotation.get_color()
+                    )
             else:
                 continue
             thumb = self.thumbnail_carousel.add_thumbnail(thumb)

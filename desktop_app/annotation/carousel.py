@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout
 )
 
+from annotation.annotation_box import UAnnotationBox
 from commander import UAnnotationSignalHolder
 from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses, FAnnotationItem
 
@@ -401,26 +402,27 @@ class UThumbnailCarousel(QGraphicsView):
             return
         self.select_thumbnail(thumbnail)
 
-    def handle_signal_on_update_annotation(self, index_thumb: int, index_annotation: int, data: FAnnotationData):
+    @pyqtSlot(int, int, object, object)
+    def handle_signal_on_update_annotation(
+            self,
+            index_thumb: int,
+            index_annotation: int,
+            prev_annotation: None | FAnnotationData,
+            annotation_box: UAnnotationBox):
         if not 0 <= index_thumb < len(self.thumbnails):
             return
-        self.thumbnails[index_thumb].update_annotation(index_annotation, data)
+        self.thumbnails[index_thumb].update_annotation(index_annotation, annotation_box.get_annotation_data())
 
-    def handle_signal_on_delete_annotation(self, index_thumb: int, index_annotation: int):
+    @pyqtSlot(int, int, object)
+    def handle_signal_on_delete_annotation(self, index_thumb: int, index_annotation: int, data: FAnnotationData):
         if not 0 <= index_thumb < len(self.thumbnails):
             return
         self.thumbnails[index_thumb].delete_annotation(index_annotation)
-        if not self.current_selected.annotation_status.value == EAnnotationStatus.Annotated.value:
-            if index_thumb in self.annotated_thumbnails_indexes:
-                self.annotated_thumbnails_indexes.remove(index_thumb)
 
-    def handle_signal_on_added_annotation(self, index_thumb: int, annotation_data: FAnnotationData):
+    def handle_signal_on_added_annotation(self, index_thumb: int, annotation_box: UAnnotationBox):
         if not 0 <= index_thumb < len(self.thumbnails):
             return
-        self.thumbnails[index_thumb].add_annotation(annotation_data)
-        if self.thumbnails[index_thumb].annotation_status.value == EAnnotationStatus.Annotated.value:
-            if not index_thumb in self.annotated_thumbnails_indexes:
-                self.annotated_thumbnails_indexes.append(index_thumb)
+        self.thumbnails[index_thumb].add_annotation(annotation_box.get_annotation_data())
 
     def handle_on_adding_thumb_to_model(self, index: int):
         if 0 <= index <= len(self.thumbnails):

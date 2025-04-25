@@ -503,7 +503,7 @@ QPushButton:pressed {
                <number>0</number>
               </property>
               <item>
-               <widget class="UListAnnotationWidget" name="list_widget_annotated_on_scene">
+               <widget class="UListAnnotationWidget" name="list_current_annotations">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -551,7 +551,7 @@ QPushButton:pressed {
                <number>0</number>
               </property>
               <item>
-               <widget class="QListWidget" name="list_current_annotations"/>
+               <widget class="UListClassCounts" name="list_total_annotations"/>
               </item>
              </layout>
             </widget>
@@ -618,19 +618,24 @@ QWidget &gt; QPushButton:hover {
    <header location="global">custom_widgets</header>
   </customwidget>
   <customwidget>
-   <class>UAnnotationGraphicsView</class>
-   <extends>QGraphicsView</extends>
-   <header location="global">annotation.annotable</header>
-  </customwidget>
-  <customwidget>
    <class>UThumbnailCarousel</class>
    <extends>QGraphicsView</extends>
    <header location="global">annotation.carousel</header>
   </customwidget>
   <customwidget>
+   <class>UListClassCounts</class>
+   <extends>QListWidget</extends>
+   <header location="global">custom_widgets</header>
+  </customwidget>
+  <customwidget>
+   <class>UAnnotationGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">annotation.annotation_scene</header>
+  </customwidget>
+  <customwidget>
    <class>UClassSelectorList</class>
    <extends>QListWidget</extends>
-   <header location="global">annotation.annotable</header>
+   <header location="global">annotation.annotation_scene</header>
   </customwidget>
  </customwidgets>
  <resources/>

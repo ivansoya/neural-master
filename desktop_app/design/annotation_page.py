@@ -232,12 +232,12 @@ class Ui_annotataion_page(object):
         self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.list_widget_annotated_on_scene = UListAnnotationWidget(self.groupBox)
-        self.list_widget_annotated_on_scene.setMinimumSize(QtCore.QSize(0, 0))
-        self.list_widget_annotated_on_scene.setMaximumSize(QtCore.QSize(16777215, 16777215))
-        self.list_widget_annotated_on_scene.setUniformItemSizes(False)
-        self.list_widget_annotated_on_scene.setObjectName("list_widget_annotated_on_scene")
-        self.verticalLayout_3.addWidget(self.list_widget_annotated_on_scene)
+        self.list_current_annotations = UListAnnotationWidget(self.groupBox)
+        self.list_current_annotations.setMinimumSize(QtCore.QSize(0, 0))
+        self.list_current_annotations.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.list_current_annotations.setUniformItemSizes(False)
+        self.list_current_annotations.setObjectName("list_current_annotations")
+        self.verticalLayout_3.addWidget(self.list_current_annotations)
         self.verticalLayout_2.addWidget(self.groupBox)
         self.groupBox_2 = QtWidgets.QGroupBox(self.verticalWidget_4)
         font = QtGui.QFont()
@@ -248,9 +248,9 @@ class Ui_annotataion_page(object):
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.list_current_annotations = QtWidgets.QListWidget(self.groupBox_2)
-        self.list_current_annotations.setObjectName("list_current_annotations")
-        self.verticalLayout_4.addWidget(self.list_current_annotations)
+        self.list_total_annotations = UListClassCounts(self.groupBox_2)
+        self.list_total_annotations.setObjectName("list_total_annotations")
+        self.verticalLayout_4.addWidget(self.list_total_annotations)
         self.verticalLayout_2.addWidget(self.groupBox_2)
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem1)
@@ -301,9 +301,9 @@ class Ui_annotataion_page(object):
         self.groupBox.setTitle(_translate("annotataion_page", "Разметки на сцене"))
         self.groupBox_2.setTitle(_translate("annotataion_page", "Общее количество разметок"))
         self.button_add_to_project.setText(_translate("annotataion_page", "Добавить в проект"))
-from annotation.annotable import UAnnotationGraphicsView, UClassSelectorList
+from annotation.annotation_scene import UAnnotationGraphicsView, UClassSelectorList
 from annotation.carousel import UThumbnailCarousel
-from custom_widgets import UListAnnotationWidget
+from custom_widgets import UListAnnotationWidget, UListClassCounts
 
 
 if __name__ == "__main__":

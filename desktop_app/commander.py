@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, QObject, QEvent, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 
-from utility import EWorkMode, EAnnotationStatus, FAnnotationData
+from utility import EWorkMode, EAnnotationStatus
 
 class ECommanderStatus(Enum):
     LoadProject = 1
@@ -14,9 +14,11 @@ class ECommanderStatus(Enum):
     LoadModel = 5
 
 class UAnnotationSignalHolder(QWidget):
-    added_new_annotation = pyqtSignal(int, FAnnotationData)
-    deleted_annotation = pyqtSignal(int, int)
-    updated_annotation = pyqtSignal(int, int, FAnnotationData)
+    added_new_annotation = pyqtSignal(int, object)
+    deleted_annotation = pyqtSignal(int, int, object)
+    updated_annotation = pyqtSignal(int, int, object, object)
+    display_annotations = pyqtSignal(list)
+    selected_annotation = pyqtSignal(int)
 
     selected_thumbnail = pyqtSignal(tuple, int)
 
