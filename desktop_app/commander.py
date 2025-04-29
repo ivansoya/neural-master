@@ -28,11 +28,6 @@ class UAnnotationSignalHolder(QWidget):
     increase_annotated_counter = pyqtSignal()
     decrease_annotated_counter = pyqtSignal()
 
-    # Сигнал о том, что миниатюра размечается
-    added_to_inference_queue = pyqtSignal(int)
-    # Сигнал о том, что миниатюра получила результаты
-    obtained_results_from_model = pyqtSignal(int, list)
-
     def __init__(self):
         super().__init__()
 
@@ -41,7 +36,7 @@ class UGlobalSignalHolder(QObject):
     ctrl_released = pyqtSignal(int)
 
     arrows_pressed = pyqtSignal(int)
-    drop_pressed = pyqtSignal(int)
+    drop_pressed = pyqtSignal()
     delete_pressed = pyqtSignal(int)
 
     classes_updated = pyqtSignal()
@@ -107,7 +102,7 @@ class UGlobalSignalHolder(QObject):
                     return True
 
                 if event.key() == Qt.Key_N:
-                    self.drop_pressed.emit(event.key())
+                    self.drop_pressed.emit()
                     self.arrows_pressed.emit(Qt.Key_Right)
                     self.delay_timer.start()
                     if self.freq_timer.isActive():
@@ -158,5 +153,5 @@ class UGlobalSignalHolder(QObject):
             self.current_key == Qt.Key_A or self.current_key == Qt.Key_D):
             self.arrows_pressed.emit(self.current_key)
         elif self.current_key == Qt.Key_N:
-            self.drop_pressed.emit(self.current_key)
+            self.drop_pressed.emit()
             self.arrows_pressed.emit(Qt.Key_Right)

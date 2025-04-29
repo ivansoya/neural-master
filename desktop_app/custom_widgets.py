@@ -3,7 +3,7 @@ from collections import OrderedDict
 from PyQt5.QtGui import QColor, QFont, QPainter
 from PyQt5.QtWidgets import QScrollArea, QWidget, QLabel, QHBoxLayout, QListWidget, \
     QListWidgetItem
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 from annotation.annotation_scene import UAnnotationBox, UAnnotationGraphicsView
 
@@ -40,15 +40,15 @@ class UColorLabel(QLabel):
         self.update()
 
 class UListAnnotationWidget(QListWidget):
+    item_selected = pyqtSignal(int)
+
     def __init__(self, parent = None):
         super().__init__(parent)
-
         self.itemClicked.connect(self.on_item_clicked)
 
     def select_item(self, index: int):
         if not (0 <= index < self.count()):
             return
-
         self.setCurrentItem(self.item(index))
 
     def clear_list_widget(self):
@@ -62,32 +62,25 @@ class UListAnnotationWidget(QListWidget):
     def remove_list_item(self, index: int):
         if index < 0 or index >= self.count():
             return
-
         item = self.item(index)
         widget = self.itemWidget(item)
-        if not (widget and isinstance(widget, UListAnnotationItem)):
-            return
-
-        widget.deleteLater()
+        if widget:
+            widget.deleteLater()
         self.takeItem(index)
         del item
-
         self._update_item_indexes()
 
-    def update_list_item(self, index: int, name: str, color: QColor, box: UAnnotationBox):
+    def update_item(self, index: int, name: str, color: QColor):
         if not (0 <= index < self.count()):
             return
 
         widget = self.itemWidget(self.item(index))
-        if not (widget and isinstance(widget, UListAnnotationItem)):
-            return
+        if isinstance(widget, UListAnnotationItem):
+            widget.set_name(name)
+            widget.set_color(color)
 
-        widget.set_name(name)
-        widget.set_color(color)
-        widget.set_annotation_box(box)
-
-    def add_list_item(self, name, index, color: QColor, annotation_object: UAnnotationBox, scene: UAnnotationGraphicsView):
-        annotation_widget = UListAnnotationItem(name, index, color, annotation_object, scene)
+    def add_item(self, name: str, color: QColor):
+        annotation_widget = UListAnnotationItem(self.count(), name, color)
         item = QListWidgetItem(self)
         item.setSizeHint(annotation_widget.sizeHint())
         self.setItemWidget(item, annotation_widget)
@@ -95,66 +88,53 @@ class UListAnnotationWidget(QListWidget):
     def on_item_clicked(self, item):
         widget = self.itemWidget(item)
         if isinstance(widget, UListAnnotationItem):
-            widget.select_scene_object()
+            index_clicked = self.row(item)
+            self.item_selected.emit(index_clicked)
 
     def _update_item_indexes(self):
         for index in range(self.count()):
             widget = self.itemWidget(self.item(index))
-            if not (widget and isinstance(widget, UListAnnotationItem)):
-                return
-
-            widget.set_index(index + 1)
+            if isinstance(widget, UListAnnotationItem):
+                widget.set_index(index)
 
 class UListAnnotationItem(QWidget):
-    def __init__(self, name, index, color: QColor, annotation_object: UAnnotationBox, scene: UAnnotationGraphicsView):
+    def __init__(self, index: int, name: str, color: QColor):
         super().__init__()
-
-        self.annotation_object = annotation_object  # Ссылка на объект на сцене
         self.index = index
-        self.name = name
-        self.scene = scene
 
-        # Создаём цветной прямоугольник (UColorLabel с фоном)
+        self.index_label = QLabel(str(index))
+        index_font = QFont()
+        index_font.setPointSize(10)
+        self.index_label.setFont(index_font)
+
         self.color_label = UColorLabel(color)
-        self.color_label.setFixedSize(30, 12)  # Размер квадрата
+        self.color_label.setFixedSize(30, 12)
 
-        # Текстовое описание
-        self.text_label = QLabel(f"{index}\t {name}")
-        font = QFont()
-        font.setPointSize(10)
-        self.text_label.setFont(font)
+        self.name_label = QLabel(name)
+        name_font = QFont()
+        name_font.setPointSize(10)
+        self.name_label.setFont(name_font)
 
-        # Горизонтальный layout
         layout = QHBoxLayout()
+        layout.addWidget(self.index_label)
         layout.addWidget(self.color_label)
-        layout.addWidget(self.text_label)
-        layout.addStretch()  # Чтобы текст не прилипал к краю
-        layout.setContentsMargins(5, 2, 5, 2)  # Отступы
+        layout.addWidget(self.name_label)
+        layout.addStretch()
+        layout.setContentsMargins(5, 2, 5, 2)
         self.setLayout(layout)
 
-    def select_scene_object(self):
-        if self.annotation_object and self.scene:
-            self.scene.clearSelection()
-            self.annotation_object.setSelected(True)  # Выделяем объект на сцене
-
-    def set_text(self, index: int, text: str):
-        self.text_label.setText(f"{index}\t {text}")
-        self.index = index
-        self.name = text
-
     def set_name(self, name: str):
-        self.name = name
-        self.text_label.setText(f"{self.index}\t {self.name}")
+        self.name_label.setText(f"{name}")
 
     def set_index(self, index: int):
         self.index = index
-        self.text_label.setText(f"{self.index}\t {self.name}")
+        self.index_label.setText(f"{self.index + 1}\t")
 
     def get_name(self):
-        return self.name
+        return self.name_label.text()
 
-    def set_annotation_box(self, box: UAnnotationBox):
-        self.annotation_object = box
+    def get_index(self):
+        return self.index
 
     def set_color(self, color: QColor):
         self.color_label.update_color(color)
@@ -163,27 +143,35 @@ class UListAnnotationItem(QWidget):
 class UListClassCounts(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.class_items: OrderedDict[int, tuple[QListWidgetItem, UListItemClassCount]] = OrderedDict()
+        self.class_widgets: dict[int, UListItemClassCount] = {}
 
     def increase_class(self, class_id: int, class_name: str, color: QColor):
-        if class_id in self.class_items:
-            _, widget = self.class_items[class_id]
-            widget.increment()
+        if class_id in self.class_widgets:
+            self.class_widgets[class_id].increment()
         else:
-            item = QListWidgetItem()
             widget = UListItemClassCount(class_id, class_name, color)
+            item = QListWidgetItem()
             item.setSizeHint(widget.sizeHint())
-            self.addItem(item)
+
+            insert_row = 0
+            for existing_id in sorted(self.class_widgets.keys()):
+                if existing_id > class_id:
+                    break
+                insert_row += 1
+
+            self.insertItem(insert_row, item)
             self.setItemWidget(item, widget)
-            self.class_items[class_id] = item, widget
+            self.class_widgets[class_id] = widget
 
     def decrease_class(self, class_id: int):
-        if class_id in self.class_items:
-            item, widget = self.class_items[class_id]
+        if class_id in self.class_widgets:
+            widget = self.class_widgets[class_id]
             if widget.decrement():
-                row = self.row(item)
-                self.takeItem(row)
-                del self.class_items[class_id]
+                for i in range(self.count()):
+                    if self.itemWidget(self.item(i)) == widget:
+                        self.takeItem(i)
+                        break
+                del self.class_widgets[class_id]
 
 
 class UListItemClassCount(QWidget):

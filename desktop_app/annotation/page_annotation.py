@@ -1,10 +1,8 @@
 from typing import Optional
 
-import cv2
-import os
-from PyQt5.QtWidgets import QFileDialog, QWidget, QGraphicsPixmapItem, QStackedWidget, QMessageBox, QDialog
-from PyQt5.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem, QColor
-from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+from PyQt5.QtWidgets import QFileDialog, QWidget, QDialog
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
+from PyQt5.QtCore import Qt, pyqtSlot
 
 from annotation.annotation_scene import UAnnotationBox
 from design.annotation_page import Ui_annotataion_page
@@ -65,7 +63,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.commander.ctrl_pressed.connect(self.annotation_scene.handle_drag_start_event)
         self.commander.ctrl_released.connect(self.annotation_scene.handle_drag_end_event)
         self.commander.delete_pressed.connect(self.annotation_scene.delete_on_press_key)
-        self.commander.drop_pressed.connect(self.annotation_scene.clean_all_annotations)
+        self.commander.drop_pressed.connect(lambda: self.annotation_scene.clean_all_annotations(to_emit=True))
         self.commander.number_key_pressed.connect(self.handle_clicked_number_key)
 
         self.commander.arrows_pressed.connect(self.thumbnail_carousel.select_thumbnail_by_arrow)
@@ -81,7 +79,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.list_class_selector.class_selected.connect(self.annotation_scene.set_annotate_class)
 
         # Обработка автоаннотации
-        self.annotate_commander.selected_thumbnail.connect(self.auto_annotate)
+        self.annotate_commander.selected_thumbnail.connect(self.handle_auto_annotate_on_select)
 
         # Обработка события изменения режима работы
         self.annotate_commander.change_work_mode.connect(self.set_label_work_mode)
@@ -97,6 +95,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.annotate_commander.deleted_annotation.connect(self.handle_on_screen_deleted_annotations)
         self.annotate_commander.updated_annotation.connect(self.handle_on_screen_updated_annotations)
         self.annotate_commander.selected_annotation.connect(self.handle_on_select_annotation)
+        self.list_current_annotations.item_selected.connect(self.handle_on_select_annotation_from_list)
 
         # Обработка событий, связанных с работой модели
         self.commander.command_key_pressed.connect(self.handle_command_pressed)
@@ -127,25 +126,27 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def handle_on_updated_classes(self):
         self._load_classes()
 
-    def auto_annotate(self, thumb_tuple: tuple, status: int):
-        if self.project.model_thread and self.project.model_thread.is_running():
+    @pyqtSlot(tuple, int)
+    def handle_auto_annotate_on_select(self, thumb_tuple: tuple, status: int):
+        if self.project.model_worker and self.project.model_worker.is_running():
             if self.auto_annotate_checkbox.isChecked():
                 if status == EAnnotationStatus.NoAnnotation.value:
                     self._annotate_image()
 
+    @pyqtSlot(int)
     def handle_command_pressed(self, key: int):
-        if key == int(Qt.Key_Space):
-            self.annotation_scene.clean_all_annotations(0)
+        if (key == Qt.Key_Space and
+                self.thumbnail_carousel.get_current_thumbnail_status() != EAnnotationStatus.PerformingAnnotation and
+                self.project.model_worker and self.project.model_worker.is_running()):
             self._annotate_image()
-            pass
 
     def handle_on_load_model(self):
         self.auto_annotate_checkbox.setEnabled(True)
-        if self.project.model_thread:
-            self.project.model_thread.signal_on_added.connect(self.annotation_scene.handle_image_move_to_model)
-            self.project.model_thread.signal_on_added.connect(self.thumbnail_carousel.handle_on_adding_thumb_to_model)
-            self.project.model_thread.signal_on_result.connect(self.annotation_scene.handle_get_result_from_model)
-            self.project.model_thread.signal_on_result.connect(self.thumbnail_carousel.handle_on_getting_result_from_model)
+        if self.project.model_worker:
+            self.project.model_worker.signal_on_added.connect(self.annotation_scene.handle_image_move_to_model)
+            self.project.model_worker.signal_on_added.connect(self.thumbnail_carousel.handle_on_adding_thumb_to_model)
+
+            self.project.model_worker.signal_on_result.connect(self.handle_get_results_from_model_thread)
 
     @pyqtSlot(list)
     def handle_on_annotation_data_get(self, annotation_data_list: list[FAnnotationItem]):
@@ -226,29 +227,51 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.list_current_annotations.clear_list_widget()
         for index in range(len(annotations)):
             index, ann_box = annotations[index]
-            self.list_current_annotations.add_list_item(
-                ann_box.get_class_name(),
-                index + 1,
-                ann_box.get_color(),
-                ann_box,
-                self.annotation_scene.scene()
-            )
+            self.list_current_annotations.add_item(ann_box.get_class_name(), ann_box.get_color())
 
-    @pyqtSlot(int, UAnnotationBox)
-    def handle_on_screen_added_annotations(self, index: int, annotation_box: UAnnotationBox):
+    @pyqtSlot(int, object)
+    def handle_on_screen_added_annotations(self, index: int, annotation_data):
+        if not isinstance(annotation_data, FAnnotationData):
+            return
         if index == self.annotation_scene.get_current_thumb_index():
-            self.list_current_annotations.add_list_item(
-                annotation_box.get_class_name(),
-                self.list_current_annotations.count() + 1,
-                QColor(annotation_box.get_color()),
-                annotation_box,
-                self.annotation_scene.scene()
+            self.list_current_annotations.add_item(
+                annotation_data.get_class_name(),
+                QColor(annotation_data.get_color())
             )
         self.list_total_annotations.increase_class(
-            annotation_box.get_class_id(),
-            annotation_box.get_class_name(),
-            annotation_box.get_color()
+            annotation_data.get_id(),
+            annotation_data.get_class_name(),
+            annotation_data.get_color()
         )
+
+    @pyqtSlot(int, list)
+    def handle_get_results_from_model_thread(self, index: int, result_annotations: list):
+        print("Зашел в функцию handle_get_results_from_model_thread")
+        current_annotations = self.thumbnail_carousel.get_annotation_data_by_index(index) or []
+        for annotation in current_annotations:
+            self.list_total_annotations.decrease_class(annotation.get_id())
+
+        self.thumbnail_carousel.handle_on_getting_result_from_model(index, result_annotations)
+
+        if index == self.annotation_scene.get_current_thumb_index():
+            self.list_current_annotations.clear_list_widget()
+            self.annotation_scene.handle_get_result_from_model(result_annotations)
+
+        for annotation in result_annotations:
+            if not isinstance(annotation, FAnnotationData):
+                continue
+
+            self.list_total_annotations.increase_class(
+                annotation.get_id(),
+                annotation.get_class_name(),
+                annotation.get_color()
+            )
+            if index == self.annotation_scene.get_current_thumb_index():
+                self.list_current_annotations.add_item(
+                    annotation.get_class_name(),
+                    QColor(annotation.get_color())
+                )
+        print("Вышел из функции handle_get_results_from_model_thread")
 
     @pyqtSlot(int, int, object)
     def handle_on_screen_deleted_annotations(self, index_thumb: int, index_deleted: int, deleted_data: object):
@@ -263,27 +286,29 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             index_thumb: int,
             index_annotation: int,
             prev_annotation: FAnnotationData | None,
-            box: UAnnotationBox
+            updated_annotation: FAnnotationData
     ):
-        if not isinstance(box, UAnnotationBox):
+        if not isinstance(updated_annotation, FAnnotationData):
             return
         if index_thumb == self.annotation_scene.get_current_thumb_index():
-            self.list_current_annotations.update_list_item(
+            self.list_current_annotations.update_item(
                 index_annotation,
-                box.get_class_name(),
-                box.get_color(),
-                box
+                updated_annotation.get_class_name(),
+                updated_annotation.get_color()
             )
-        if not isinstance(prev_annotation, FAnnotationData) or prev_annotation.get_id() == box.get_class_id():
+        if not isinstance(prev_annotation, FAnnotationData) or prev_annotation.get_id() == updated_annotation.get_id():
             return
         else:
             self.list_total_annotations.decrease_class(prev_annotation.get_id())
             self.list_total_annotations.increase_class(
-                box.get_class_id(),
-                box.get_class_name(),
-                box.get_color()
+                updated_annotation.get_id(),
+                updated_annotation.get_class_name(),
+                updated_annotation.get_color()
             )
 
+    @pyqtSlot(int)
+    def handle_on_select_annotation_from_list(self, index: int):
+        self.annotation_scene.select_annotation_by_index(index)
 
     @pyqtSlot(int)
     def handle_on_select_annotation(self, index: int):
@@ -391,9 +416,11 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         thumb_id, matrix = self.annotation_scene.get_selectable_matrix()
         if thumb_id is None or matrix is None:
             return
-        if self.project.model_thread and self.project.model_thread.is_running():
-            print(f"Изображение с инедексом {thumb_id} отправлено на обработку!")
-            self.project.model_thread.add_to_queue(thumb_id, matrix)
+        if self.project.model_worker and self.project.model_worker.is_running():
+            self.project.model_worker.add_to_queue(
+                thumb_id,
+                matrix
+            )
 
     def _load_classes(self):
         self.list_class_selector.clear()

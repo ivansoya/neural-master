@@ -1,13 +1,12 @@
 from typing import Callable
 
-from PyQt5.QtCore import pyqtSignal, Qt, QRectF, QSizeF, QPointF, QObject
+from PyQt5.QtCore import pyqtSignal, Qt, QRectF, QSizeF, QPointF, QObject, pyqtSlot
 from PyQt5.QtGui import QColor, QBrush, QCursor, QPainterPath, QFontMetricsF, QFont, QPen
 from PyQt5.QtWidgets import QGraphicsRectItem, QApplication, QGraphicsPixmapItem
 
 from utility import FDetectAnnotationData
 
 class UAnnotationSignal(QObject):
-    update_event = pyqtSignal(object, object)
     select_event = pyqtSignal(object)
 
 class UAnnotationBox(QGraphicsRectItem):
@@ -171,7 +170,7 @@ class UAnnotationBox(QGraphicsRectItem):
                 int(self.width()),
                 int(self.height()),
                 int(self.class_id),
-                self.class_name,
+                str(self.class_name),
                 QColor(self.color),
                 int(self.parentItem().boundingRect().width()),
                 int(self.parentItem().boundingRect().height())
@@ -191,9 +190,6 @@ class UAnnotationBox(QGraphicsRectItem):
 
     def connect_selected_signal(self, func: Callable[[object], None]):
         self.signal_holder.select_event.connect(func)
-
-    def connect_update_signal(self, func: Callable[[object, object], None]):
-        self.signal_holder.update_event.connect(func)
 
     def hoverMoveEvent(self, event):
         for name, handle in self.get_resize_handles().items():
@@ -223,6 +219,7 @@ class UAnnotationBox(QGraphicsRectItem):
                 QApplication.restoreOverrideCursor()
 
     def hoverLeaveEvent(self, event):
+        self.scene().update()
         QApplication.restoreOverrideCursor()
 
     def boundingRect(self):
@@ -280,8 +277,6 @@ class UAnnotationBox(QGraphicsRectItem):
                 painter.setPen(font_color)
                 painter.drawText(text_background_rect, Qt.AlignCenter, text)
 
-                self.scene().update()
-
         else:
             painter.setBrush(QBrush(self.background_color))
             painter.setPen(QPen(self.color, int(self.line_width * self.draw_scale), Qt.SolidLine))
@@ -293,6 +288,8 @@ class UAnnotationBox(QGraphicsRectItem):
                 self.setZValue(2)
             else:
                 self.setZValue(1)
+        if self.scene() is not None:
+            self.scene().update()
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
@@ -311,6 +308,7 @@ class UAnnotationBox(QGraphicsRectItem):
                 super().mousePressEvent(event)
         else:
             super().mousePressEvent(event)
+        self.scene().update()
 
     def mouseMoveEvent(self, event):
         if self.resizing:
@@ -336,6 +334,7 @@ class UAnnotationBox(QGraphicsRectItem):
         else:
             if self.rect().contains(event.pos()):
                 super().mouseMoveEvent(event)
+        self.scene().update()
 
     def mouseReleaseEvent(self, event):
         if self.resizing:
@@ -345,3 +344,4 @@ class UAnnotationBox(QGraphicsRectItem):
             self.update()
         else:
             super().mouseReleaseEvent(event)
+        self.scene().update()

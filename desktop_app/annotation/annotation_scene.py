@@ -116,8 +116,6 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.overlay = UAnnotationOverlayWidget.delete_overlay(self.overlay)
         self.update()
 
-        print("Количество боксов на сцене: ", len(self.boxes_on_scene))
-
     def _display_all_annotation(self):
         if self.current_display_thumbnail is None:
             return
@@ -185,22 +183,26 @@ class UAnnotationGraphicsView(QGraphicsView):
                 self.overlay = UAnnotationOverlayWidget(self)
                 self.overlay.raise_()
 
-    @pyqtSlot(int, list)
-    def handle_get_result_from_model(self, index: int, ann_list: list[FAnnotationData]):
-        current_index = self.get_current_thumb_index()
-        if index == current_index:
-            self.clean_all_annotations(0)
-            for annotation in ann_list:
-                self.add_annotation_by_data(annotation)
-            self.is_model_annotating = False
-            self.overlay = UAnnotationOverlayWidget.delete_overlay(self.overlay)
+    def handle_get_result_from_model(self, ann_list: list[FAnnotationData]):
+        print("Переход в функцию annotation_scene.handle_get_result_from_model")
+        self.display_image(
+            self.current_display_thumbnail,
+            EAnnotationStatus.Annotated.value if len(ann_list) > 0 else EAnnotationStatus.MarkedDrop.value
+        )
+        for annotation in ann_list:
+            self.add_annotation_by_data(annotation)
+        self.is_model_annotating = False
+        self.overlay = UAnnotationOverlayWidget.delete_overlay(self.overlay)
+        self.update()
+        print("Выход и функции annotation_scene.handle_get_result_from_model")
 
     def wheelEvent(self, event):
         # Получаем текущее значение масштаба
         scale_change = 1.1 if event.angleDelta().y() > 0 else 0.9
         self.scale_factor *= scale_change
         self.setTransform(QTransform().scale(self.scale_factor, self.scale_factor))
-        self.view_scale_changed.emit(self.scale_factor)
+        for box in self.boxes_on_scene:
+            box.set_draw_scale(self.scale_factor)
 
     def add_annotation_box(self, x, y, width, height, class_data: tuple[int, str, QColor]):
         ann_box = UAnnotationBox(
@@ -220,7 +222,7 @@ class UAnnotationGraphicsView(QGraphicsView):
             ann_box.setAcceptedMouseButtons(Qt.NoButton)
             ann_box.setAcceptHoverEvents(False)
 
-        self.view_scale_changed.connect(ann_box.set_draw_scale)
+        #self.view_scale_changed.connect(ann_box.set_draw_scale)
         ann_box.connect_selected_signal(self.handle_on_select_annotation)
 
         self.boxes_on_scene.append(ann_box)
@@ -229,7 +231,7 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     @pyqtSlot(object)
     def handle_on_select_annotation(self, ann_box: object):
-        if ann_box and isinstance(ann_box, UAnnotationBox):
+        if isinstance(ann_box, UAnnotationBox):
             try:
                 index = self.boxes_on_scene.index(ann_box)
                 if self.commander:
@@ -237,12 +239,10 @@ class UAnnotationGraphicsView(QGraphicsView):
             except Exception as error:
                 print(str(error))
 
-    def _emit_commander_on_add(self, annotation_box: UAnnotationBox):
+    def _emit_commander_on_add(self, annotation_data: FAnnotationData):
         if self.commander:
             index, *_ = self.current_display_thumbnail
-            self.commander.added_new_annotation.emit(index, annotation_box)
-            print(f"Добавлен новый бокс на изображение {index} под индексом {len(self.boxes_on_scene) - 1}: "
-                  f"{str(annotation_box.get_annotation_data())}!")
+            self.commander.added_new_annotation.emit(index, annotation_data)
 
     def add_annotation_by_data(self, data: FAnnotationData):
         if isinstance(data, FDetectAnnotationData):
@@ -258,14 +258,14 @@ class UAnnotationGraphicsView(QGraphicsView):
         else:
             return
 
-
     def center_on_selected(self):
         if not self.current_image:
             return
         self.fitInView(self.current_image.sceneBoundingRect(), Qt.KeepAspectRatio)
 
         self.scale_factor = self.transform().m11()
-        self.view_scale_changed.emit(self.scale_factor)
+        for box in self.boxes_on_scene:
+            box.set_draw_scale(self.scale_factor)
 
     def delete_on_press_key(self, key: int):
         if key == Qt.Key_Delete:
@@ -289,11 +289,16 @@ class UAnnotationGraphicsView(QGraphicsView):
             return
         #delete_index = self.boxes_on_scene.index(box)
         #self.commander.deleted_annotation.emit(self.get_current_thumb_index(), delete_index, box.get_annotation_data())
-        self.boxes_on_scene.remove(box)
-        self.annotate_scene.removeItem(box)
+
         if QApplication.overrideCursor():
             QApplication.restoreOverrideCursor()
-        del box
+        if box.signal_holder:
+            box.signal_holder.disconnect()
+            box.signal_holder.deleteLater()
+        self.boxes_on_scene.remove(box)
+        if box.scene() is not None:
+            self.annotate_scene.removeItem(box)
+        box.setParentItem(None)
 
     def set_image_item(self, image):
         self.current_image = image
@@ -319,9 +324,10 @@ class UAnnotationGraphicsView(QGraphicsView):
             return
         prev_data = selected.get_annotation_data()
         selected.update_annotate_class(self.annotate_class)
+        new_data = selected.get_annotation_data()
         if self.commander is not None and self.current_display_thumbnail is not None:
             ann_index = self.boxes_on_scene.index(selected)
-            self.commander.updated_annotation.emit(self.get_current_thumb_index(), ann_index, prev_data, selected)
+            self.commander.updated_annotation.emit(self.get_current_thumb_index(), ann_index, prev_data, new_data)
 
     def get_selected_annotation_box(self):
         items = self.annotate_scene.selectedItems()
@@ -333,15 +339,25 @@ class UAnnotationGraphicsView(QGraphicsView):
         else:
             return None
 
-    def clean_all_annotations(self, key: int):
-        for i in range(len(self.boxes_on_scene) - 1, -1, -1):
-            deleted_data = self.boxes_on_scene[i].get_annotation_data()
-            self.delete_annotation_box(self.boxes_on_scene[i])
-            self.commander.deleted_annotation.emit(
-                self.get_current_thumb_index(),
-                i,
-                deleted_data
-            )
+    def select_annotation_by_index(self, index: int):
+        if 0 <= index < len(self.boxes_on_scene):
+            self.scene().clearSelection()
+            self.boxes_on_scene[index].setSelected(True)
+
+    def clean_all_annotations(self, to_emit: bool = False):
+        self.scene().clearSelection()
+        while self.boxes_on_scene:
+            box = self.boxes_on_scene[-1]
+
+            deleted_data = box.get_annotation_data()
+            self.delete_annotation_box(box)
+
+            if to_emit:
+                self.commander.deleted_annotation.emit(
+                    self.get_current_thumb_index(),
+                    len(self.boxes_on_scene),
+                    deleted_data
+                )
 
     @staticmethod
     def set_action(menu, text, color: QColor):
@@ -367,15 +383,16 @@ class UAnnotationGraphicsView(QGraphicsView):
             if self.current_rect is None and self.annotate_start_point is None:
                 cursor_pos = self.mapToScene(event.pos())
                 self.annotate_start_point = self.current_image.mapFromScene(cursor_pos)
+                class_id, name, color = self.annotate_class
                 self.current_rect = self.add_annotation_box(
                     self.annotate_start_point.x(),
                     self.annotate_start_point.y(),
                     1,
                     1,
-                    self.annotate_class,
+                    (class_id, name, QColor(color)),
                 )
             elif self.current_rect is not None and self.annotate_start_point is not None:
-                print(self.current_rect.rect())
+                self.delete_annotation_box(self.current_rect)
                 self.current_rect = None
                 self.annotate_start_point = None
 
@@ -400,8 +417,9 @@ class UAnnotationGraphicsView(QGraphicsView):
         if self.current_display_thumbnail is None:
             return super().mouseReleaseEvent(event)
         if self.is_model_annotating:
-            if self.current_rect:
+            if self.current_rect is not None:
                 self.delete_annotation_box(self.current_rect)
+                self.current_rect = None
                 return
         if self.work_mode.value == EWorkMode.DragMode.value:
             selected = self.get_selected_annotation_box()
@@ -413,7 +431,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                     self.get_current_thumb_index(),
                     index,
                     None,
-                    selected
+                    selected.get_annotation_data()
                 )
                 pass
         elif self.work_mode.value == EWorkMode.AnnotateMode.value:
@@ -422,9 +440,10 @@ class UAnnotationGraphicsView(QGraphicsView):
             elif self.current_rect is not None and self.annotate_start_point is not None:
                 if self.current_rect.get_square() < 25:
                     self.delete_annotation_box(self.current_rect)
+                    self.current_rect = None
                     return
                 if self.commander is not None:
-                    self._emit_commander_on_add(self.current_rect)
+                    self._emit_commander_on_add(self.current_rect.get_annotation_data())
                     self.current_rect.setSelected(True)
                     self.current_rect = None
                     self.annotate_start_point = None

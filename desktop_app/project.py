@@ -93,22 +93,40 @@ class UTrainProject:
         self.reserved_annotations: dict[str, list[FAnnotationItem]] = dict()
 
         # Поток обработки нейросети
-        self.model_thread: Optional[UBaseNeuralNet] = None
+        self.model_thread: Optional[QThread] = None
+        self.model_worker: Optional[UBaseNeuralNet] = None
 
     def load_local_yolo(self, path: str):
         try:
-            self.model_thread = ULocalDetectYOLO(path, self.classes)
+            self.model_thread = QThread()
+            self.model_worker = ULocalDetectYOLO(path, self.classes)
+
+            self.model_worker.moveToThread(self.model_thread)
+            self.model_thread.started.connect(self.model_worker.start_work)
+            self.model_thread.finished.connect(self.model_worker.deleteLater)
+
             self.model_thread.start()
         except Exception as error:
             return str(error)
 
     def load_remote_yolo(self, ip_address: str, port: int):
         try:
-            self.model_thread = URemoteNeuralNet(self.classes, ip_address, port)
-            self.model_thread.connect_to_server()
+            self.model_thread = QThread()
+            self.model_worker = URemoteNeuralNet(self.classes, ip_address, port)
+
+            self.model_worker.moveToThread(self.model_thread)
+            self.model_thread.started.connect(self.model_worker.start_work)
+            self.model_thread.finished.connect(self.model_worker.deleteLater)
+
+            self.model_worker.connect_to_server()
             self.model_thread.start()
         except Exception as error:
             return str(error)
+
+    def stop_model_thread(self):
+        self.model_worker.stop()
+        self.model_thread.quit()
+        self.model_thread.wait()
 
     def create(self, path: str, name:str, classes:list[str], counter:int = 0):
         try:

@@ -1,70 +1,80 @@
 import json
-import os
 from queue import Queue
 import threading
 import socket
-import pickle
+from typing import Optional
 
 import cv2
 import numpy as np
 from PyQt5.QtGui import QColor
 from ultralytics import YOLO
 
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, QObject, pyqtSlot, QTimer
 
-from utility import FAnnotationClasses, FDetectAnnotationData
+from utility import FAnnotationClasses, FDetectAnnotationData, FAnnotationData
 
 
-class UBaseNeuralNet(QThread):
-    signal_on_result = pyqtSignal(int, list)
+class UBaseNeuralNet(QObject):
     signal_on_added = pyqtSignal(int)
+    signal_on_result = pyqtSignal(int, list)
 
     def __init__(self, classes: FAnnotationClasses):
         super().__init__()
         self.model = None
         self.classes = classes
         self.image_queue: Queue[tuple[int, np.ndarray]] = Queue()
+        self.index_uniques: set[int] = set()
 
         self.running = False
-        self.queue_event = threading.Event()
+        self.processing = False
 
     def load_model(self, model_path: str):
         raise NotImplementedError
 
     def add_to_queue(self, index: int, image: np.ndarray):
-        self.image_queue.put(
-            (index, image)
-        )
-        self.signal_on_added.emit(index)
-        self.queue_event.set()
+        if index in self.index_uniques:
+            return
 
-    def run(self):
+        self.index_uniques.add(index)
+        self.image_queue.put((index, image))
+        self.signal_on_added.emit(index)
+
+        if not self.processing:
+            self.schedule_next()
+
+    @pyqtSlot()
+    def start_work(self):
         self.running = True
 
-        while self.running:
-            self.queue_event.wait()  # Блокировка, если очередь пуста
+    def schedule_next(self):
+        QTimer.singleShot(0, self.process_queue)
 
-            while not self.image_queue.empty():
-                index, image = self.image_queue.get()
-                result = self.process_image(image)
-                self.signal_on_result.emit(index, result)  # Отправляем результаты
+    @pyqtSlot()
+    def process_queue(self):
+        if not self.running:
+            return
 
-            self.queue_event.clear()  # Блокируем поток до следующего добавления
+        if self.image_queue.empty():
+            self.processing = False
+            return
 
-    def process_image(self, image: np.ndarray) -> list[FDetectAnnotationData]:
-        """ Метод инференса (реализуется в наследниках) """
+        self.processing = True
+
+        index, image = self.image_queue.get()
+        self.index_uniques.remove(index)
+        result = self.process_image(image)
+        self.signal_on_result.emit(index, result)
+
+        self.schedule_next()
+
+    def process_image(self, image: np.ndarray) -> list[FAnnotationData]:
         raise NotImplementedError
 
     def is_running(self) -> bool:
         return True if self.model else False
 
     def stop(self):
-        """ Остановка потока """
         self.running = False
-        self.queue_event.set()  # Разблокируем поток перед завершением
-        self.quit()
-        self.wait()
-
 
 class ULocalDetectYOLO(UBaseNeuralNet):
     def __init__(self, model_path, classes: FAnnotationClasses):
@@ -81,7 +91,7 @@ class ULocalDetectYOLO(UBaseNeuralNet):
         for box in results.boxes:
             x, y, width, height = box.xywh[0].tolist()
             class_id = int(box.cls)
-            conf = box.conf
+            #conf = box.conf
 
             res_h, res_w = image.shape[:2]
             class_name = self.classes.get_name(class_id)
