@@ -21,7 +21,9 @@ class UAnnotationSignalHolder(QWidget):
     selected_annotation = pyqtSignal(int)
 
     selected_thumbnail = pyqtSignal(tuple, int)
+    displayed_image = pyqtSignal(str)
 
+    change_status_thumbnail = pyqtSignal(EAnnotationStatus, EAnnotationStatus)
     change_work_mode = pyqtSignal(int)
     changed_class_annotate = pyqtSignal(int)
 

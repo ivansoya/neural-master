@@ -130,11 +130,17 @@ class FAnnotationClasses:
 
 class FAnnotationData:
     def __init__(self, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
-        self.ClassID = class_id
+        self.class_id = class_id
         self.class_name = class_name
         self.color = color
-        self.Resolution_w = res_w
-        self.Resolution_h = res_h
+        self.w_resolution = res_w
+        self.h_resolution = res_h
+
+    def _copy_init_args(self):
+        return self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
+
+    def copy(self):
+        return FAnnotationData(*self._copy_init_args())
 
     def __str__(self):
         return f"Объект аннотации не инициализирован!"
@@ -158,20 +164,20 @@ class FAnnotationData:
         return self.class_name
 
     def get_id(self):
-        return self.ClassID
+        return self.class_id
 
     def get_resolution(self):
-        return self.Resolution_w, self.Resolution_h
+        return self.w_resolution, self.h_resolution
 
     def __eq__(self, other):
         if not isinstance(other, FAnnotationData):
             return self is other
         return (
-                self.ClassID == other.ClassID and
+                self.class_id == other.class_id and
                 self.class_name == other.class_name and
                 self.color == other.color and
-                self.Resolution_w == other.Resolution_w and
-                self.Resolution_h == other.Resolution_h
+                self.w_resolution == other.w_resolution and
+                self.h_resolution == other.h_resolution
         )
 
     def __ne__(self, other):
@@ -188,20 +194,29 @@ class FDetectAnnotationData(FAnnotationData):
     def __str__(self):
         if self.X < 0: self.X = 0
         if self.Y < 0: self.Y = 0
-        if self.X + self.Width > self.Resolution_w: self.Width = self.Resolution_w - self.X
-        if self.Y + self.Height > self.Resolution_h: self.Height = self.Resolution_h - self.Y
-        return (f"{self.ClassID} "
-                f"{(self.X + self.Width / 2) / float(self.Resolution_w)} "
-                f"{(self.Y + self.Height / 2) / float(self.Resolution_h)} "
-                f"{self.Width / float(self.Resolution_w)} "
-                f"{self.Height / float(self.Resolution_h)}")
+        if self.X + self.Width > self.w_resolution: self.Width = self.w_resolution - self.X
+        if self.Y + self.Height > self.h_resolution: self.Height = self.h_resolution - self.Y
+        return (f"{self.class_id} "
+                f"{(self.X + self.Width / 2) / float(self.w_resolution)} "
+                f"{(self.Y + self.Height / 2) / float(self.h_resolution)} "
+                f"{self.Width / float(self.w_resolution)} "
+                f"{self.Height / float(self.h_resolution)}")
+
+    def copy(self):
+        return FDetectAnnotationData(
+            self.X,
+            self.Y,
+            self.Width,
+            self.Height,
+            *self._copy_init_args()
+        )
 
     def get_data(self):
-        return (self.ClassID, self.class_name, self.color,
+        return (self.class_id, self.class_name, self.color,
                 (self.X, self.Y, self.Width, self.Height))
 
     def update_data(self, data: tuple[int, str, QColor, tuple[int, int, int, int]]):
-        self.ClassID, self.class_name, color, (self.X, self.Y, self.Width, self.Height) = data
+        self.class_id, self.class_name, color, (self.X, self.Y, self.Width, self.Height) = data
         self.color = QColor(color)
 
     def get_rect_to_draw(self):
@@ -228,6 +243,13 @@ class FAnnotationItem:
         self.annotation_list = ann_list
         self.image_path = image_path
         self.dataset: Optional[str] = dataset_name
+
+    def copy(self):
+        return self.__class__(
+            [annotation.copy() for annotation in self.annotation_list],
+            str(self.image_path),
+            str(self.dataset)
+        )
 
     def update_annotation_data(self, annotation_data: list[FAnnotationData]):
         self.annotation_list.clear()

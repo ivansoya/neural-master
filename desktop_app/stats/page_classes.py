@@ -66,11 +66,11 @@ class UPageClasses(QWidget, Ui_classes_page_design):
             for item in value:
                 data = item.get_annotation_data()
                 for class_t in data:
-                    class_name = self.project.classes.get_name(class_t.ClassID) or str(class_t.ClassID)
+                    class_name = self.project.classes.get_name(class_t.class_id) or str(class_t.class_id)
                     if not class_name in count_classes:
                         count_classes[class_name] = FCountColor(
                             0,
-                            self.project.classes.get_color(class_t.ClassID) or QColor("LightGrey")
+                            self.project.classes.get_color(class_t.class_id) or QColor("LightGrey")
                         )
                     count_classes[class_name].increment_count()
 

@@ -45,9 +45,9 @@ class UThreadDisplayDataset(QThread):
                 image_path = self.annotations[dataset][index].get_image_path()
                 annotation_list: list[tuple[int, int, int, int, int, QColor]] = list()
                 for annotation in data:
-                    color = self.classes.get_color(annotation.ClassID) or QColor(Qt.gray)
+                    color = self.classes.get_color(annotation.class_id) or QColor(Qt.gray)
                     annotation_list.append(
-                        (annotation.ClassID, annotation.X, annotation.Y, annotation.Width, annotation.Height, color)
+                        (annotation.class_id, annotation.X, annotation.Y, annotation.Width, annotation.Height, color)
                     )
                 self.signal_on_image_loaded.emit(image_path, dataset, annotation_list)
                 indicator += 1

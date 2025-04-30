@@ -1,3 +1,4 @@
+import os.path
 from typing import Optional
 
 from PyQt5.QtWidgets import QFileDialog, QWidget, QDialog
@@ -80,6 +81,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         # Обработка автоаннотации
         self.annotate_commander.selected_thumbnail.connect(self.handle_auto_annotate_on_select)
+        self.annotate_commander.displayed_image.connect(self.handle_print_image_name)
 
         # Обработка события изменения режима работы
         self.annotate_commander.change_work_mode.connect(self.set_label_work_mode)
@@ -95,6 +97,9 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.annotate_commander.deleted_annotation.connect(self.handle_on_screen_deleted_annotations)
         self.annotate_commander.updated_annotation.connect(self.handle_on_screen_updated_annotations)
         self.annotate_commander.selected_annotation.connect(self.handle_on_select_annotation)
+
+        self.annotate_commander.change_status_thumbnail.connect(self.handle_on_change_thumbnail_status)
+
         self.list_current_annotations.item_selected.connect(self.handle_on_select_annotation_from_list)
 
         # Обработка событий, связанных с работой модели
@@ -246,7 +251,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     @pyqtSlot(int, list)
     def handle_get_results_from_model_thread(self, index: int, result_annotations: list):
-        print("Зашел в функцию handle_get_results_from_model_thread")
         current_annotations = self.thumbnail_carousel.get_annotation_data_by_index(index) or []
         for annotation in current_annotations:
             self.list_total_annotations.decrease_class(annotation.get_id())
@@ -271,7 +275,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                     annotation.get_class_name(),
                     QColor(annotation.get_color())
                 )
-        print("Вышел из функции handle_get_results_from_model_thread")
 
     @pyqtSlot(int, int, object)
     def handle_on_screen_deleted_annotations(self, index_thumb: int, index_deleted: int, deleted_data: object):
@@ -314,6 +317,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def handle_on_select_annotation(self, index: int):
           self.list_current_annotations.select_item(index)
 
+    @pyqtSlot(str)
+    def handle_print_image_name(self, image_path: str):
+        self.label_file_name.setText(os.path.basename(image_path))
+
     def load_thumbnails(self, files: list[str] | list[FAnnotationItem]):
         if self.overlay:
             UMessageBox.show_error("Не удалось выполнить загрузку изображений!")
@@ -343,7 +350,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                     175,
                     file.get_image_path(),
                     file.get_dataset_name(),
-                    ann_data
+                    [annotation.copy() for annotation in ann_data]
                 )
                 for annotation in ann_data:
                     self.list_total_annotations.increase_class(
@@ -390,7 +397,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.current_annotated_count -= 1
         return self.current_annotated_count
 
-    def handle_changed_annotation_status(self, prev: EAnnotationStatus, current: EAnnotationStatus):
+    @pyqtSlot(EAnnotationStatus, EAnnotationStatus)
+    def handle_on_change_thumbnail_status(self, prev: EAnnotationStatus, current: EAnnotationStatus):
         self.update_labels_by_status(prev, False)
         self.update_labels_by_status(current, True)
 

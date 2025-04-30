@@ -84,8 +84,9 @@ class UAnnotationGraphicsView(QGraphicsView):
             return
 
         self.current_display_thumbnail = thumbnail
+        image_path = self._get_current_thumb_image_path()
         try:
-            self.display_matrix = cv2.imread(self._get_current_thumb_image_path())
+            self.display_matrix = cv2.imread(image_path)
         except Exception as e:
             self._clear_display_image()
             print(f"Ошибка: {str(e)}")
@@ -114,6 +115,8 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.raise_()
         elif not self.is_model_annotating and self.overlay:
             self.overlay = UAnnotationOverlayWidget.delete_overlay(self.overlay)
+        if self.commander:
+            self.commander.displayed_image.emit(image_path)
         self.update()
 
     def _display_all_annotation(self):
@@ -184,17 +187,17 @@ class UAnnotationGraphicsView(QGraphicsView):
                 self.overlay.raise_()
 
     def handle_get_result_from_model(self, ann_list: list[FAnnotationData]):
-        print("Переход в функцию annotation_scene.handle_get_result_from_model")
-        self.display_image(
-            self.current_display_thumbnail,
-            EAnnotationStatus.Annotated.value if len(ann_list) > 0 else EAnnotationStatus.MarkedDrop.value
-        )
+        for item in self.annotate_scene.items():
+            if item == self.current_image:
+                continue
+            else:
+                self.annotate_scene.removeItem(item)
+        self.boxes_on_scene.clear()
         for annotation in ann_list:
             self.add_annotation_by_data(annotation)
         self.is_model_annotating = False
         self.overlay = UAnnotationOverlayWidget.delete_overlay(self.overlay)
         self.update()
-        print("Выход и функции annotation_scene.handle_get_result_from_model")
 
     def wheelEvent(self, event):
         # Получаем текущее значение масштаба

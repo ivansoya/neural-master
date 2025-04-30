@@ -355,7 +355,7 @@ class UImageGallery(QGraphicsView):
         for index in range(len(self.annotation_data)):
             class_list = []
             for annotation in self.annotation_data[index].annotation_list:
-                class_list.append(annotation.ClassID)
+                class_list.append(annotation.class_id)
             if ((set(class_list) & set(available_annotations) and index not in self.filtered_indexes)
                     or len(self.annotation_data[index].annotation_list) == 0):
                 self.filtered_indexes[index] = len(self.filtered_indexes)
