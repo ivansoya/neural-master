@@ -77,6 +77,7 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.commander.selected_thumbnail.connect(self.display_image)
 
     def display_image(self, thumbnail: tuple[int, str, list[FAnnotationData]], thumb_status: int):
+        self._maybe_delete_current_rect()
         self.annotate_scene.clear()
         self.boxes_on_scene.clear()
         if not thumbnail:
@@ -161,6 +162,12 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.current_image = QPixmap(1920, 1400)
         self.current_image.fill(QColor(Qt.gray))
         self.annotate_scene.addItem(self.current_image)
+
+    def _maybe_delete_current_rect(self):
+        if self.current_rect:
+            self.delete_annotation_box(self.current_rect)
+            self.current_rect = None
+            self.annotate_start_point = None
 
     def handle_drag_start_event(self, key: int):
         if key == Qt.Key_Control:
@@ -307,13 +314,15 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.current_image = image
 
     def set_work_mode(self, mode: int):
+        if self.work_mode.value == mode:
+            return
         self.work_mode = EWorkMode(mode)
-        print(self.work_mode.name)
         if self.work_mode.value == EWorkMode.AnnotateMode.value:
             self.annotate_scene.clearSelection()
             for box in self.boxes_on_scene:
                 box.disable_selection()
         if self.work_mode.value == EWorkMode.DragMode.value:
+            self._maybe_delete_current_rect()
             for box in self.boxes_on_scene:
                 box.enable_selection()
 
@@ -444,6 +453,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                 if self.current_rect.get_square() < 25:
                     self.delete_annotation_box(self.current_rect)
                     self.current_rect = None
+                    self.annotate_start_point = None
                     return
                 if self.commander is not None:
                     self._emit_commander_on_add(self.current_rect.get_annotation_data())

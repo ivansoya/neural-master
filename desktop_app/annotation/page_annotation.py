@@ -155,6 +155,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     @pyqtSlot(list)
     def handle_on_annotation_data_get(self, annotation_data_list: list[FAnnotationItem]):
+        self.list_total_annotations.clear()
         self.load_images(annotation_data_list)
 
     @pyqtSlot()
@@ -163,6 +164,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                                                      "Image Files (*.png *.jpg *.jpeg *.bmp)")
         if file_paths:
             self.load_images(file_paths)
+            self.list_total_annotations.clear()
         else:
             UMessageBox.show_error("Нет файлов!")
 
@@ -226,6 +228,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.annotation_scene.clear()
         if self.commander:
             self.commander.go_to_page_datasets.emit()
+            self.commander.project_updated_datasets.emit()
 
     @pyqtSlot(list)
     def handle_on_screen_loaded_annotations(self, annotations: list[tuple[int, UAnnotationBox]]):

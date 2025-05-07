@@ -173,6 +173,10 @@ class UListClassCounts(QListWidget):
                         break
                 del self.class_widgets[class_id]
 
+    def clear(self):
+        self.class_widgets.clear()
+        super().clear()
+
 
 class UListItemClassCount(QWidget):
     def __init__(self, class_id: int, class_name: str, color: QColor):

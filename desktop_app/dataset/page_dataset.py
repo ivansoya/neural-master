@@ -100,8 +100,6 @@ class UPageDataset(QWidget, Ui_page_dataset):
             self.commander.project_load_complete.connect(self.update_dataset_page)
             self.commander.project_updated_datasets.connect(self.update_dataset_page)
 
-            self.commander.go_to_page_datasets.connect(self.update_dataset_page)
-
     @pyqtSlot()
     def update_dataset_page(self):
         self.create_list_dataset()
