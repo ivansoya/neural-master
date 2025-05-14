@@ -14,9 +14,22 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_diag_create_dataset(object):
     def setupUi(self, diag_create_dataset):
         diag_create_dataset.setObjectName("diag_create_dataset")
-        diag_create_dataset.resize(492, 135)
+        diag_create_dataset.resize(492, 186)
         self.diag_main_layout = QtWidgets.QVBoxLayout(diag_create_dataset)
         self.diag_main_layout.setObjectName("diag_main_layout")
+        self.label_2 = QtWidgets.QLabel(diag_create_dataset)
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.label_2.setFont(font)
+        self.label_2.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_2.setObjectName("label_2")
+        self.diag_main_layout.addWidget(self.label_2)
+        self.combo_choose_dataset = QtWidgets.QComboBox(diag_create_dataset)
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.combo_choose_dataset.setFont(font)
+        self.combo_choose_dataset.setObjectName("combo_choose_dataset")
+        self.diag_main_layout.addWidget(self.combo_choose_dataset)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.diag_main_layout.addItem(spacerItem)
         self.label = QtWidgets.QLabel(diag_create_dataset)
@@ -47,7 +60,8 @@ class Ui_diag_create_dataset(object):
     def retranslateUi(self, diag_create_dataset):
         _translate = QtCore.QCoreApplication.translate
         diag_create_dataset.setWindowTitle(_translate("diag_create_dataset", "Create Dataset"))
-        self.label.setText(_translate("diag_create_dataset", "Введите название нового датасета"))
+        self.label_2.setText(_translate("diag_create_dataset", "Выберите датасет"))
+        self.label.setText(_translate("diag_create_dataset", "Или введите название нового датасета"))
         self.button_ok.setText(_translate("diag_create_dataset", "Добавить в проект!"))
 
 

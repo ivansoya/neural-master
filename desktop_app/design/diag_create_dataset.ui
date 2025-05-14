@@ -7,13 +7,37 @@
     <x>0</x>
     <y>0</y>
     <width>492</width>
-    <height>135</height>
+    <height>186</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Create Dataset</string>
   </property>
   <layout class="QVBoxLayout" name="diag_main_layout">
+   <item>
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Выберите датасет</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QComboBox" name="combo_choose_dataset">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+    </widget>
+   </item>
    <item>
     <spacer name="verticalSpacer_2">
      <property name="orientation">
@@ -35,7 +59,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Введите название нового датасета</string>
+      <string>Или введите название нового датасета</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

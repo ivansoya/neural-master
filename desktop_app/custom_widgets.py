@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from PyQt5.QtGui import QColor, QFont, QPainter
 from PyQt5.QtWidgets import QScrollArea, QWidget, QLabel, QHBoxLayout, QListWidget, \
-    QListWidgetItem
+    QListWidgetItem, QVBoxLayout, QComboBox, QPushButton
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from annotation.annotation_scene import UAnnotationBox, UAnnotationGraphicsView

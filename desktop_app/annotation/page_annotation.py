@@ -205,6 +205,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if len(list_nones) != 0:
             dialog = UTextInputDialog()
             self.commander.set_block(True)
+            dialog.combo_choose_dataset.addItems(self.project.get_datasets())
+            dialog.combo_choose_dataset.currentTextChanged.connect(
+                lambda selected_item: dialog.lineedit_dataset_name.setText(selected_item)
+            )
             if dialog.exec_():
                 dataset_name = dialog.lineedit_dataset_name.text()
                 for ann_item in list_nones:
