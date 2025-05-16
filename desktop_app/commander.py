@@ -56,6 +56,11 @@ class UGlobalSignalHolder(QObject):
     go_to_page_annotation = pyqtSignal()
     go_to_page_datasets = pyqtSignal()
 
+    # str - путь к папке, куда экспортируется
+    # list - список датасетов, которые нужно экспортировать
+    # object - словарь для рефактора классов, может быть None
+    start_export = pyqtSignal(str, list, object)
+
     def __init__(self):
         super().__init__()
 

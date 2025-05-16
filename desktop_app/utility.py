@@ -145,6 +145,9 @@ class FAnnotationData:
     def __str__(self):
         return f"Объект аннотации не инициализирован!"
 
+    def refactored_string(self, class_id: int):
+        return f"Объект аннотации не инициализирован!"
+
     def update_data(self, data):
         pass
 
@@ -197,6 +200,17 @@ class FDetectAnnotationData(FAnnotationData):
         if self.X + self.Width > self.w_resolution: self.Width = self.w_resolution - self.X
         if self.Y + self.Height > self.h_resolution: self.Height = self.h_resolution - self.Y
         return (f"{self.class_id} "
+                f"{(self.X + self.Width / 2) / float(self.w_resolution)} "
+                f"{(self.Y + self.Height / 2) / float(self.h_resolution)} "
+                f"{self.Width / float(self.w_resolution)} "
+                f"{self.Height / float(self.h_resolution)}")
+
+    def refactored_string(self, class_id: int):
+        if self.X < 0: self.X = 0
+        if self.Y < 0: self.Y = 0
+        if self.X + self.Width > self.w_resolution: self.Width = self.w_resolution - self.X
+        if self.Y + self.Height > self.h_resolution: self.Height = self.h_resolution - self.Y
+        return (f"{class_id} "
                 f"{(self.X + self.Width / 2) / float(self.w_resolution)} "
                 f"{(self.Y + self.Height / 2) / float(self.h_resolution)} "
                 f"{self.Width / float(self.w_resolution)} "

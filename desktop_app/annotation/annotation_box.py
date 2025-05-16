@@ -113,13 +113,13 @@ class UAnnotationBox(QGraphicsRectItem):
                                QSizeF(handle_size, handle_size)),
             'bottom_right': QRectF(rect.bottomRight() - QPointF(handle_size / 2, handle_size / 2),
                                QSizeF(handle_size, handle_size)),
-            'top_line': QRectF(rect.topLeft() - QPointF(line_width / 2, line_width / 2),
+            'top_line': QRectF(rect.topLeft() - QPointF(line_width, line_width),
                                QSizeF(rect.width() + line_width, line_width)),
-            'right_line': QRectF(rect.topRight() - QPointF(line_width / 2, line_width / 2),
+            'right_line': QRectF(rect.topRight() - QPointF(line_width, line_width),
                                QSizeF(line_width, rect.height() + line_width)),
-            'bottom_line': QRectF(rect.bottomLeft() - QPointF(line_width / 2, line_width / 2),
+            'bottom_line': QRectF(rect.bottomLeft() - QPointF(line_width, line_width),
                                QSizeF(rect.width() + line_width, line_width)),
-            'left_line': QRectF(rect.topLeft() - QPointF(line_width/ 2, line_width / 2),
+            'left_line': QRectF(rect.topLeft() - QPointF(line_width, line_width),
                                QSizeF(line_width, rect.height() + line_width)),
         }
 
@@ -223,38 +223,33 @@ class UAnnotationBox(QGraphicsRectItem):
         QApplication.restoreOverrideCursor()
 
     def boundingRect(self):
-        rect = super().boundingRect()
-        size = self.resize_handle_size / 2 * self.draw_scale
-        if self.isSelected():
-            return rect.adjusted(-size, -size, size, size)
-        else:
-            return rect
+        border_width = int(self.line_width * self.draw_scale)
+        handle_margin = int(self.resize_handle_size * self.draw_scale) if self.isSelected() else 0
+        margin = max(border_width, handle_margin)
+        return self.rect().adjusted(-margin, -margin, margin, margin)
 
     def shape(self):
+        path = QPainterPath()
+        border_width = int(self.line_width * self.draw_scale)
+        rect_with_margin = self.rect().adjusted(-border_width, -border_width, border_width, border_width)
+        path.addRect(rect_with_margin)
+
         if self.isSelected():
-            path = QPainterPath()
-            size = self.resize_handle_size / 2 * self.draw_scale
-            rect = self.rect().adjusted(-size, -size, size, size)  # Расширяем границы
-            path.addRect(rect)
-            return path
-        else:
-            return super().shape()
+            for handle in self.get_resize_handles().values():
+                path.addRect(handle)
+
+        return path
 
     def paint(self, painter, option, widget=None):
-
         if self.isSelected():
-            # Удаление фона
-            self.setBrush(QBrush(Qt.transparent))
-            # Отрисовка якорей
             handles = self.get_resize_handles()
             painter.setBrush(QBrush(self.color))
             painter.setPen(Qt.NoPen)
-
             for handle in handles.values():
                 painter.drawRect(handle)
 
-            if self.resizing is False:
-                # Отрисовка текста на фоне
+            if not self.resizing:
+                # Отрисовка текста
                 text = f"ID: {self.class_id}, {self.class_name}"
                 font = QFont("Arial", int(16 * self.draw_scale))
                 font_color = QColor(Qt.black)
@@ -263,24 +258,24 @@ class UAnnotationBox(QGraphicsRectItem):
                 text_background_rect = font_metrics.boundingRect(text)
                 text_background_rect.adjust(-6, -2, 12, 4)
 
-                # Изменение начала координат для фона
                 top_left = self.get_resize_handles()['top_left']
                 text_background_rect.moveTo(top_left.x(), top_left.y() - text_background_rect.height() - 2)
 
-                # Фон
                 painter.setBrush(QBrush(self.color))
                 painter.setPen(Qt.NoPen)
                 painter.drawRect(text_background_rect)
 
-                # Текст
                 painter.setFont(font)
                 painter.setPen(font_color)
                 painter.drawText(text_background_rect, Qt.AlignCenter, text)
-
         else:
-            painter.setBrush(QBrush(self.background_color))
-            painter.setPen(QPen(self.color, int(self.line_width * self.draw_scale), Qt.SolidLine))
-            painter.drawRect(self.boundingRect())
+            rect = self.rect()
+            pen_width = self.line_width * self.draw_scale
+            adjusted_rect = rect.adjusted(-pen_width, -pen_width, pen_width, pen_width)
+
+            painter.setPen(QPen(self.color, pen_width))
+            painter.setBrush(QBrush(Qt.transparent if self.isSelected() else self.background_color))
+            painter.drawRect(adjusted_rect)
 
     def itemChange(self, change, value):
         if change == QGraphicsRectItem.ItemSelectedChange:

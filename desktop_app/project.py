@@ -336,6 +336,9 @@ class UTrainProject:
     def get_datasets(self):
         return self.datasets
 
+    def get_class_names(self):
+        return [class_object.Name for class_id, class_object in self.classes.get_items()]
+
     def get_current_annotations(self):
         return self.current_annotations
 

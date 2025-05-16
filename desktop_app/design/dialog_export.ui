@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>441</width>
-    <height>496</height>
+    <height>641</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -125,6 +125,12 @@ background-color: white;</string>
    </item>
    <item>
     <widget class="QStackedWidget" name="stack_export">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>400</height>
+      </size>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -146,7 +152,27 @@ background-color: white;</string>
         <number>0</number>
        </property>
        <item>
-        <widget class="QListWidget" name="list_choose_datasets"/>
+        <widget class="QListWidget" name="list_choose_datasets">
+         <property name="styleSheet">
+          <string notr="true">QListWidget {
+    font-size: 11pt;
+}
+
+QListWidget::item {
+    padding: 6px 8px;
+    margin: 2px 4px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    background-color: transparent;
+}
+
+QListWidget::item:selected {
+    background-color: #d0e4f7;  /* мягкий голубой */
+    color: #333333;
+    border: 1px solid #6699cc;
+}</string>
+         </property>
+        </widget>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -196,7 +222,27 @@ background-color: white;</string>
         <number>0</number>
        </property>
        <item>
-        <widget class="QListWidget" name="list_choose_classes"/>
+        <widget class="QListWidget" name="list_choose_classes">
+         <property name="styleSheet">
+          <string notr="true">QListWidget {
+    font-size: 11pt;
+}
+
+QListWidget::item {
+    padding: 6px 8px;
+    margin: 2px 4px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    background-color: transparent;
+}
+
+QListWidget::item:selected {
+    background-color: #d0e4f7;  /* мягкий голубой */
+    color: #333333;
+    border: 1px solid #6699cc;
+}</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -206,6 +252,9 @@ background-color: white;</string>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>

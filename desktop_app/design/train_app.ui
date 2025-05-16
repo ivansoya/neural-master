@@ -151,6 +151,26 @@ QPushButton:hover {
         </spacer>
        </item>
        <item>
+        <widget class="QLabel" name="label_export">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QLabel {
+        border: 1px solid gray;
+        border-radius: 0px;
+        padding: 2px 6px;
+        background-color: palette(button);
+    }</string>
+         </property>
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="button_close_project">
          <property name="styleSheet">
           <string notr="true">QPushButton {
