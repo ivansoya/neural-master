@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QTransform, QFont, QFontMetricsF, QCursor, QPixmap, QIcon, \
     QPainterPath, QImage
 from PyQt5.QtCore import Qt, QRectF, QPointF, QSizeF, pyqtSignal, pyqtSlot
-from click import command
 from cv2 import Mat
 
 from annotation.annotation_box import UAnnotationBox

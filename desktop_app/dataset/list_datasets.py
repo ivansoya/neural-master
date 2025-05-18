@@ -28,6 +28,7 @@ class UItemDataset(QWidget, Ui_widget_dataset_item):
     def get_annotations(self):
         return self.annotations
 
+
 class UListDataset(QListWidget):
     signal_on_item_clicked = pyqtSignal(str, dict)
 

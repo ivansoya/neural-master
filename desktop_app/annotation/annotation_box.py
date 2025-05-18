@@ -2,12 +2,14 @@ from typing import Callable
 
 from PyQt5.QtCore import pyqtSignal, Qt, QRectF, QSizeF, QPointF, QObject, pyqtSlot
 from PyQt5.QtGui import QColor, QBrush, QCursor, QPainterPath, QFontMetricsF, QFont, QPen
-from PyQt5.QtWidgets import QGraphicsRectItem, QApplication, QGraphicsPixmapItem
+from PyQt5.QtWidgets import QGraphicsRectItem, QApplication, QGraphicsPixmapItem, QGraphicsItem
 
 from utility import FDetectAnnotationData
 
+
 class UAnnotationSignal(QObject):
     select_event = pyqtSignal(object)
+
 
 class UAnnotationBox(QGraphicsRectItem):
     resize_cursors = {
@@ -102,25 +104,28 @@ class UAnnotationBox(QGraphicsRectItem):
 
     def get_resize_handles(self):
         rect = self.rect()
-        handle_size = int(self.resize_handle_size * self.draw_scale)
         line_width = int(self.line_width * self.draw_scale)
+        handle_size = int(self.resize_handle_size * self.draw_scale)
+        handle_margin_left = int(handle_size / 2 + line_width / 2)
+        handle_margin_right = int(-handle_size / 2 + line_width / 2)
+        print(rect.topLeft(), rect.width(), rect.height())
         return {
-            'top_left': QRectF(rect.topLeft() - QPointF(handle_size / 2, handle_size / 2),
+            'top_left': QRectF(rect.topLeft() + QPointF(-handle_margin_left, -handle_margin_left),
                                QSizeF(handle_size, handle_size)),
-            'top_right': QRectF(rect.topRight() - QPointF(handle_size / 2, handle_size / 2),
+            'top_right': QRectF(rect.topRight() + QPointF(handle_margin_right, -handle_margin_left),
                                QSizeF(handle_size, handle_size)),
-            'bottom_left': QRectF(rect.bottomLeft() - QPointF(handle_size / 2, handle_size / 2),
+            'bottom_left': QRectF(rect.bottomLeft() + QPointF(-handle_margin_left, handle_margin_right),
                                QSizeF(handle_size, handle_size)),
-            'bottom_right': QRectF(rect.bottomRight() - QPointF(handle_size / 2, handle_size / 2),
+            'bottom_right': QRectF(rect.bottomRight() + QPointF(handle_margin_right, handle_margin_right),
                                QSizeF(handle_size, handle_size)),
-            'top_line': QRectF(rect.topLeft() - QPointF(line_width, line_width),
-                               QSizeF(rect.width() + line_width, line_width)),
-            'right_line': QRectF(rect.topRight() - QPointF(line_width, line_width),
-                               QSizeF(line_width, rect.height() + line_width)),
-            'bottom_line': QRectF(rect.bottomLeft() - QPointF(line_width, line_width),
-                               QSizeF(rect.width() + line_width, line_width)),
-            'left_line': QRectF(rect.topLeft() - QPointF(line_width, line_width),
-                               QSizeF(line_width, rect.height() + line_width)),
+            'top_line': QRectF(rect.topLeft() - QPointF(0, line_width),
+                               QSizeF(rect.width(), line_width)),
+            'right_line': QRectF(rect.topRight(),
+                               QSizeF(line_width, rect.height())),
+            'bottom_line': QRectF(rect.bottomLeft(),
+                               QSizeF(rect.width(), line_width)),
+            'left_line': QRectF(rect.topLeft() + QPointF(-line_width, 0),
+                               QSizeF(line_width, rect.height())),
         }
 
     @staticmethod
@@ -235,8 +240,11 @@ class UAnnotationBox(QGraphicsRectItem):
         path.addRect(rect_with_margin)
 
         if self.isSelected():
-            for handle in self.get_resize_handles().values():
-                path.addRect(handle)
+            for handle, handle_rect in self.get_resize_handles().items():
+                if handle in ['top_left', 'top_right', 'bottom_left', 'bottom_right']:
+                    handle_path = QPainterPath()
+                    handle_path.addRect(handle_rect)
+                    path = path.united(handle_path)
 
         return path
 
@@ -271,7 +279,7 @@ class UAnnotationBox(QGraphicsRectItem):
         else:
             rect = self.rect()
             pen_width = self.line_width * self.draw_scale
-            adjusted_rect = rect.adjusted(-pen_width, -pen_width, pen_width, pen_width)
+            adjusted_rect = rect.adjusted(-pen_width // 2, -pen_width // 2, pen_width // 2, pen_width // 2)
 
             painter.setPen(QPen(self.color, pen_width))
             painter.setBrush(QBrush(Qt.transparent if self.isSelected() else self.background_color))
@@ -328,7 +336,27 @@ class UAnnotationBox(QGraphicsRectItem):
             self.setRect(rect)
         else:
             if self.rect().contains(event.pos()):
-                super().mouseMoveEvent(event)
+                new_pos = self.pos() + event.scenePos() - event.lastScenePos()
+                parent = self.parentItem()
+
+                if parent is not None:
+                    parent_rect = parent.mapToScene(parent.boundingRect()).boundingRect()
+                    rect = self.mapToScene(self.rect()).boundingRect()
+                    delta = new_pos - self.pos()
+
+                    if rect.translated(delta).left() < parent_rect.left():
+                        delta.setX(parent_rect.left() - rect.left())
+                    if rect.translated(delta).right() > parent_rect.right():
+                        delta.setX(parent_rect.right() - rect.right())
+                    if rect.translated(delta).top() < parent_rect.top():
+                        delta.setY(parent_rect.top() - rect.top())
+                    if rect.translated(delta).bottom() > parent_rect.bottom():
+                        delta.setY(parent_rect.bottom() - rect.bottom())
+
+                    self.setPos(self.pos() + delta)
+                else:
+                    super().mouseMoveEvent(event)
+
         self.scene().update()
 
     def mouseReleaseEvent(self, event):

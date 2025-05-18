@@ -175,12 +175,12 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
     def is_loaded(self):
         return self.loaded
 
+
 class UGalleryImageLoader(QObject):
     # ID и QImage изображения, которое нужно загрузить в галерею
     signal_set_image = pyqtSignal(int, object)
     # Объект UGalleryWidget
     signal_add_widget = pyqtSignal(object)
-
 
     def __init__(self, gallery: 'UImageGallery'):
         super().__init__()
@@ -300,8 +300,8 @@ class UImageGallery(QGraphicsView):
 
         self.annotation_data: list[FAnnotationItem] = list()
 
-        self.widget_cache : OrderedDict[int, UGraphicsAnnotationGalleryItem] = OrderedDict()
-        self.cache_size: int = 100
+        self.widget_cache: OrderedDict[int, UGraphicsAnnotationGalleryItem] = OrderedDict()
+        self.cache_size: int = 500
 
         self.set_selected: set[int] = set()
         self.filtered_indexes: dict[int, int] = dict()
@@ -472,7 +472,6 @@ class UImageGallery(QGraphicsView):
         if not isinstance(widget, UGraphicsAnnotationGalleryItem) or widget.is_loaded():
             return None
         return widget
-
 
     def set_margin(self, margin: int):
         self.margin = margin
