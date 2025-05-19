@@ -97,10 +97,10 @@ class UAnnotationBox(QGraphicsRectItem):
         self.setRect(rect)
 
     def set_draw_scale(self, scale: float):
-        if scale > 1.0:
-            self.draw_scale = 1.0
+        if scale > 1:
+            self.draw_scale = 1
         else:
-            self.draw_scale = 1.0 / scale
+            self.draw_scale = 1 / scale
 
     def get_resize_handles(self):
         rect = self.rect()
@@ -197,30 +197,35 @@ class UAnnotationBox(QGraphicsRectItem):
         self.signal_holder.select_event.connect(func)
 
     def hoverMoveEvent(self, event):
+        # Здесь все это нужно только для смены курсоров
+        pos = event.pos()
+        cursor_shape = None
+
         for name, handle in self.get_resize_handles().items():
-            if handle.contains(event.pos()):
-                cursor = QCursor(UAnnotationBox.get_resize_cursor(name))
-                current_cursor = QApplication.overrideCursor()
-                if current_cursor:
-                    if current_cursor.shape() == cursor.shape():
-                        pass
-                    else:
-                        QApplication.restoreOverrideCursor()
-                        QApplication.setOverrideCursor(cursor)
-                else:
-                    QApplication.setOverrideCursor(cursor)
-                return
-            elif self.rect().contains(event.pos()):
-                current_cursor = QApplication.overrideCursor()
-                if current_cursor:
-                    if current_cursor.shape() == QCursor(Qt.SizeAllCursor).shape():
-                        pass
-                    else:
-                        QApplication.restoreOverrideCursor()
-                        QApplication.setOverrideCursor(QCursor(Qt.SizeAllCursor))
-                else:
-                    QApplication.setOverrideCursor(QCursor(Qt.SizeAllCursor))
+            # Расширение линий, как везде в коде
+            if name in ['top_line', 'bottom_line', 'right_line', 'left_line']:
+                expanded_handle = handle.adjusted(
+                    -self.get_line_scaled(), -self.get_line_scaled(),
+                    self.get_line_scaled(), self.get_line_scaled()
+                )
             else:
+                expanded_handle = handle
+            # Взятие иконки курсора, здесь же настройка этих форм
+            if expanded_handle.contains(pos):
+                cursor_shape = UAnnotationBox.get_resize_cursor(name)
+                break
+        else:
+            if self.rect().contains(pos):
+                cursor_shape = Qt.SizeAllCursor
+
+        # Смена курсора
+        current_cursor = QApplication.overrideCursor()
+        if cursor_shape is not None:
+            if not current_cursor or current_cursor.shape() != cursor_shape:
+                QApplication.restoreOverrideCursor()
+                QApplication.setOverrideCursor(QCursor(cursor_shape))
+        else:
+            if current_cursor:
                 QApplication.restoreOverrideCursor()
 
     def hoverLeaveEvent(self, event):
@@ -229,27 +234,27 @@ class UAnnotationBox(QGraphicsRectItem):
 
     def boundingRect(self):
         border_width = int(self.line_width * self.draw_scale)
-        handle_margin = int(self.resize_handle_size * self.draw_scale) if self.isSelected() else 0
+        handle_margin = int(self.resize_handle_size * self.draw_scale)
         margin = max(border_width, handle_margin)
         return self.rect().adjusted(-margin, -margin, margin, margin)
 
     def shape(self):
         path = QPainterPath()
-        border_width = int(self.line_width * self.draw_scale)
-        rect_with_margin = self.rect().adjusted(-border_width, -border_width, border_width, border_width)
-        path.addRect(rect_with_margin)
-
-        if self.isSelected():
-            for handle, handle_rect in self.get_resize_handles().items():
-                if handle in ['top_left', 'top_right', 'bottom_left', 'bottom_right']:
-                    handle_path = QPainterPath()
-                    handle_path.addRect(handle_rect)
-                    path = path.united(handle_path)
-
+        path.addRect(self.rect())
+        for handle, handle_rect in self.get_resize_handles().items():
+            handle_path = QPainterPath()
+            # нужно, чтобы увеличить область захвата линий, типа для удобства
+            if handle in ['top_line', 'bottom_line', 'right_line', 'left_line']:
+                handle_path.addRect(handle_rect.adjusted(-self.get_line_scaled(), -self.get_line_scaled(),
+                                                         self.get_line_scaled(), self.get_line_scaled()))
+            else:
+                handle_path.addRect(handle_rect)
+            path = path.united(handle_path)
         return path
 
     def paint(self, painter, option, widget=None):
         if self.isSelected():
+            # якоря для изменения размеров прямоугольника
             handles = self.get_resize_handles()
             painter.setBrush(QBrush(self.color))
             painter.setPen(Qt.NoPen)
@@ -257,7 +262,7 @@ class UAnnotationBox(QGraphicsRectItem):
                 painter.drawRect(handle)
 
             if not self.resizing:
-                # Отрисовка текста
+                # текст над прямоугольником
                 text = f"ID: {self.class_id}, {self.class_name}"
                 font = QFont("Arial", int(16 * self.draw_scale))
                 font_color = QColor(Qt.black)
@@ -277,6 +282,7 @@ class UAnnotationBox(QGraphicsRectItem):
                 painter.setPen(font_color)
                 painter.drawText(text_background_rect, Qt.AlignCenter, text)
         else:
+            # фон прямоугольника
             rect = self.rect()
             pen_width = self.line_width * self.draw_scale
             adjusted_rect = rect.adjusted(-pen_width // 2, -pen_width // 2, pen_width // 2, pen_width // 2)
@@ -303,7 +309,12 @@ class UAnnotationBox(QGraphicsRectItem):
             self.setSelected(True)
             self.signal_holder.select_event.emit(self)
             for name, handle in self.get_resize_handles().items():
-                if handle.contains(event.pos()):
+                if name in ['top_line', 'bottom_line', 'right_line', 'left_line']:
+                    expanded_handle = handle.adjusted(-self.get_line_scaled(), -self.get_line_scaled(),
+                                                      self.get_line_scaled(), self.get_line_scaled())
+                else:
+                    expanded_handle = handle
+                if expanded_handle.contains(event.pos()):
                     self.resizing = True
                     self.active_handle = name
                     break
@@ -333,12 +344,15 @@ class UAnnotationBox(QGraphicsRectItem):
                 rect.setBottom(pos.y())
             elif self.active_handle == 'left_line':
                 rect.setLeft(pos.x())
-            self.setRect(rect)
+            parent = self.parentItem()
+            if parent is not None:
+                parent_bounds = self.mapFromItem(parent, parent.boundingRect()).boundingRect()
+                new_rect = rect.intersected(parent_bounds)
+                self.setRect(new_rect)
         else:
             if self.rect().contains(event.pos()):
                 new_pos = self.pos() + event.scenePos() - event.lastScenePos()
                 parent = self.parentItem()
-
                 if parent is not None:
                     parent_rect = parent.mapToScene(parent.boundingRect()).boundingRect()
                     rect = self.mapToScene(self.rect()).boundingRect()
@@ -368,3 +382,6 @@ class UAnnotationBox(QGraphicsRectItem):
         else:
             super().mouseReleaseEvent(event)
         self.scene().update()
+
+    def get_line_scaled(self):
+        return int(self.line_width * self.draw_scale)
