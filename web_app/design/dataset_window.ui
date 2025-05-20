@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>416</width>
+    <height>341</height>
+   </rect>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>416</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Создание датасета</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QDialog {
+	background-color: white;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Выбор пути к датасету</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="button_choose_path_dataset">
+       <property name="minimumSize">
+        <size>
+         <width>32</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>32</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="baseSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>-&gt;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_dataset_path">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>11</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">border: 1px solid black; /* Обводка черного цвета толщиной 2px */
+background-color: lightgray; /* Светло-серый фон */
+color: black; /* Черный цвет текста */
+padding: 5px; /* Отступы внутри QLabel */
+border-radius: 5px; /* Закругленные углы */</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QComboBox" name="combo_dataset_type">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <item>
+      <property name="text">
+       <string>Датасет YOLOv8 Yaml</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Датасет YOLOv8 Txt</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Отношение тренировочных данных к валидационным&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QLabel" name="label_train_percentage">
+       <property name="font">
+        <font>
+         <pointsize>-1</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QLabel {
+    font-weight: bold; /* Жирный текст */
+	font-size: 18px;
+    background-color: #29D852; /* Зеленый фон */
+    color: white; /* Белый цвет текста */
+    padding: 5px; /* Внутренние отступы */
+    border-radius: 5px; /* Закругленные углы */
+}</string>
+       </property>
+       <property name="text">
+        <string>75</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_val_percentage">
+       <property name="font">
+        <font>
+         <pointsize>-1</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QLabel {
+    font-weight: bold; /* Жирный текст */
+	font-size: 18px;
+    background-color: #2BCEFF; /* Ярко-синий фон */
+    color: white; /* Белый цвет текста */
+    padding: 5px; /* Внутренние отступы */
+    border-radius: 5px; /* Закругленные углы */
+}</string>
+       </property>
+       <property name="text">
+        <string>25</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QSlider" name="slider_train_val">
+     <property name="value">
+      <number>75</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QPushButton" name="button_create">
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background-color: #2BCEFF; /* Основной цвет кнопки */
+    color: white; /* Цвет текста */
+    border: 2px solid #1BA9CC; /* Обводка */
+    border-radius: 8px; /* Закругленные углы */
+    padding: 5px 10px; /* Отступы внутри кнопки */
+    font-size: 14px; /* Размер шрифта */
+    font-weight: bold; /* Жирный текст */
+}
+
+QPushButton:hover {
+    background-color: #58DFFF; /* Цвет кнопки при наведении */
+    border-color: #26C0E0; /* Изменение цвета обводки */
+}
+
+QPushButton:pressed {
+    background-color: #1BA9CC; /* Цвет кнопки при нажатии */
+    border-color: #118BA0; /* Цвет обводки при нажатии */
+}</string>
+     </property>
+     <property name="text">
+      <string>Начать создание датасета</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_3">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progress_load">
+     <property name="styleSheet">
+      <string notr="true">QProgressBar {
+    border: 2px solid #4CAF50; /* Граница прогресс-бара */
+    border-radius: 5px; /* Закругленные углы */
+    text-align: center; /* Центрирование текста процентов */
+    background: #E0E0E0; /* Цвет фона */
+    font-size: 14px; /* Размер текста */
+    font-weight: bold; /* Жирный текст */
+    color: black; /* Цвет текста */
+}</string>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="textVisible">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
