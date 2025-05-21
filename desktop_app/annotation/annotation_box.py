@@ -108,7 +108,6 @@ class UAnnotationBox(QGraphicsRectItem):
         handle_size = int(self.resize_handle_size * self.draw_scale)
         handle_margin_left = int(handle_size / 2 + line_width / 2)
         handle_margin_right = int(-handle_size / 2 + line_width / 2)
-        print(rect.topLeft(), rect.width(), rect.height())
         return {
             'top_left': QRectF(rect.topLeft() + QPointF(-handle_margin_left, -handle_margin_left),
                                QSizeF(handle_size, handle_size)),
