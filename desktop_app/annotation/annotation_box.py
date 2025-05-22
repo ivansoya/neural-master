@@ -4,14 +4,11 @@ from PyQt5.QtCore import pyqtSignal, Qt, QRectF, QSizeF, QPointF, QObject, pyqtS
 from PyQt5.QtGui import QColor, QBrush, QCursor, QPainterPath, QFontMetricsF, QFont, QPen
 from PyQt5.QtWidgets import QGraphicsRectItem, QApplication, QGraphicsPixmapItem, QGraphicsItem
 
+from annotation.annotation_item import QAnnotationItem
 from utility import FDetectAnnotationData
 
 
-class UAnnotationSignal(QObject):
-    select_event = pyqtSignal(object)
-
-
-class UAnnotationBox(QGraphicsRectItem):
+class UAnnotationBox(QAnnotationItem):
     resize_cursors = {
         'top_left': Qt.SizeFDiagCursor,
         'top_right': Qt.SizeBDiagCursor,
@@ -33,19 +30,12 @@ class UAnnotationBox(QGraphicsRectItem):
             scale: float = 1.0,
             parent = None
     ):
-        super().__init__(parent)
+        super().__init__(class_data, scale, parent)
 
-        self.setFlags(
-            QGraphicsRectItem.ItemIsMovable |
-            QGraphicsRectItem.ItemIsSelectable
-        )
-
-        self.setAcceptHoverEvents(True)
         self.isActive = True
 
-        self.signal_holder = UAnnotationSignal()
+        self._rect = QRectF(x1, y1, width, height)
 
-        self.setRect(x1, y1, width, height)
         self.class_id, self.class_name, self.color = class_data
 
         self.line_width = 4
@@ -53,11 +43,8 @@ class UAnnotationBox(QGraphicsRectItem):
 
         self.set_draw_scale(scale)
 
-        #self.setPen(QPen(self.color, self.line_width, Qt.SolidLine))
-
         self.background_color = QColor(self.color)
         self.background_color.setAlpha(50)
-        self.setBrush(QBrush(self.background_color))
 
         self.resizing = False
         self.resize_handle_size = 12
@@ -70,23 +57,6 @@ class UAnnotationBox(QGraphicsRectItem):
         else:
             return rect.width() * rect.height()
 
-    def on_ctrl_pressed(self, key: int):
-        if key == Qt.Key_Control and self.isActive == True:
-            self.disable_selection()
-
-    def on_ctrl_release(self, key: int):
-        if key == Qt.Key_Control and self.isActive == True:
-            self.enable_selection()
-
-    def disable_selection(self):
-        self.setAcceptedMouseButtons(Qt.NoButton)
-        self.setAcceptHoverEvents(False)
-        QApplication.restoreOverrideCursor()
-
-    def enable_selection(self):
-        self.setAcceptedMouseButtons(Qt.AllButtons)
-        self.setAcceptHoverEvents(True)
-
     def correct_rect(self):
         rect = self.rect()
         if rect.top() > rect.bottom():
@@ -95,6 +65,12 @@ class UAnnotationBox(QGraphicsRectItem):
             rect = QRectF(rect.right(), rect.top(), -rect.width(), rect.height())
 
         self.setRect(rect)
+
+    def rect(self):
+        return self._rect
+
+    def setRect(self, new_rect: QRectF):
+        self._rect = new_rect
 
     def set_draw_scale(self, scale: float):
         if scale > 1:
@@ -134,14 +110,6 @@ class UAnnotationBox(QGraphicsRectItem):
         else:
             return 'default'
 
-    def update_annotate_class(self, data: tuple[int, str, QColor]):
-        self.class_id, self.class_name, self.color = data
-
-        self.background_color = QColor(self.color)
-        self.background_color.setAlpha(50)
-
-        self.update()
-
     def x(self):
         return (self.pos() + self.rect().topLeft()).x()
 
@@ -153,18 +121,6 @@ class UAnnotationBox(QGraphicsRectItem):
 
     def height(self):
         return self.rect().height()
-
-    def resolution_width(self):
-        if self.parentItem() and isinstance(self.parentItem(), QGraphicsPixmapItem):
-            return self.parentItem().boundingRect().width()
-        else:
-            return 0
-
-    def resolution_height(self):
-        if self.parentItem() and isinstance(self.parentItem(), QGraphicsPixmapItem):
-            return self.parentItem().boundingRect().height()
-        else:
-            return 0
 
     def get_annotation_data(self):
         try:
@@ -182,18 +138,6 @@ class UAnnotationBox(QGraphicsRectItem):
         except Exception as error:
             print(str(error))
             return None
-
-    def get_class_name(self):
-        return self.class_name
-
-    def get_class_id(self):
-        return self.class_id
-
-    def get_color(self):
-        return QColor(self.color)
-
-    def connect_selected_signal(self, func: Callable[[object], None]):
-        self.signal_holder.select_event.connect(func)
 
     def hoverMoveEvent(self, event):
         # Здесь все это нужно только для смены курсоров

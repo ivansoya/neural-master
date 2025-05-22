@@ -21,11 +21,6 @@ GColorList = [
     QColor(0, 255, 255),
 ]
 
-class EWorkMode(Enum):
-    DragMode = 1
-    AnnotateMode = 2
-    ForceDragMode = 3
-
 class EAnnotationStatus(Enum):
     NoAnnotation = 1
     Annotated = 2

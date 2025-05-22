@@ -89,7 +89,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             lambda checked=False, mode=EWorkMode.DragMode.value: self.annotate_commander.change_work_mode.emit(mode)
         )
         self.select_annotatemode_button.clicked.connect(
-            lambda checked=False, mode=EWorkMode.AnnotateMode.value: self.annotate_commander.change_work_mode.emit(mode)
+            lambda checked=False, mode=EWorkMode.BoxAnnotationMode.value: self.annotate_commander.change_work_mode.emit(mode)
         )
 
         self.annotate_commander.display_annotations.connect(self.handle_on_screen_loaded_annotations)
@@ -413,7 +413,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if key_number == int(Qt.Key_1):
             self.annotate_commander.change_work_mode.emit(EWorkMode.DragMode.value)
         elif key_number == int(Qt.Key_2):
-            self.annotate_commander.change_work_mode.emit(EWorkMode.AnnotateMode.value)
+            self.annotate_commander.change_work_mode.emit(EWorkMode.BoxAnnotationMode.value)
 
     def update_labels_by_status(self, status: EAnnotationStatus, to_increase: bool):
         value = 1 if to_increase is True else -1

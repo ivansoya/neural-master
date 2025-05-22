@@ -15,10 +15,9 @@ from PyQt5.QtCore import Qt, QRectF, QPointF, QSizeF, pyqtSignal, pyqtSlot
 from cv2 import Mat
 
 from annotation.annotation_box import UAnnotationBox
-from annotation.annotation_mode import EWorkMode, UDragAnnotationMode, UForceDragAnnotationMode, UBoxAnnotationMode, \
-    UBaseAnnotationMode
 from annotation.carousel import UThumbnailCarousel, UAnnotationThumbnail
 from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus
+from utility import EWorkMode, FAnnotationClasses
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
 
 class UAnnotationGraphicsView(QGraphicsView):
@@ -39,13 +38,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.annotate_start_point: Optional[QPointF] = None
         self.current_rect: Optional[UAnnotationBox] = None
         self.annotate_class: Optional[tuple[int, str, QColor]] = None
-
-        self.annotate_mods : dict[EWorkMode, UBaseAnnotationMode] = {
-            EWorkMode.DragMode : UDragAnnotationMode(self, self.commander),
-            EWorkMode.ForceDragMode : UForceDragAnnotationMode(self, self.commander),
-            EWorkMode.BoxAnnotationMode: UBoxAnnotationMode(self, self.commander)
-        }
-        self.current_work_mode = EWorkMode.DragMode
+        self.work_mode = EWorkMode.DragMode
 
         self.current_image: Optional[QGraphicsPixmapItem] = None
         self.current_display_thumbnail: Optional[tuple[int, str, list[FAnnotationData]]] = None
@@ -141,6 +134,20 @@ class UAnnotationGraphicsView(QGraphicsView):
                     height,
                     (class_id, class_name, QColor(color))
                 )
+                """
+                class_id, class_name, color, (x, y, width, height) = item.get_data()
+                ann_box = UAnnotationBox(
+                    x,
+                    y,
+                    width,
+                    height,
+                    (class_id, class_name, QColor(color)),
+                    self.scale_factor,
+                    self.current_image
+                )
+                self.view_scale_changed.connect(ann_box.set_draw_scale)
+                self.boxes_on_scene.append(ann_box)
+                """
                 self.scene().addItem(ann_box)
                 load_annotations.append((len(load_annotations), ann_box))
             else:
@@ -163,7 +170,7 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     def handle_drag_start_event(self, key: int):
         if key == Qt.Key_Control:
-            self.saved_work_mode = self.current_work_mode
+            self.saved_work_mode = self.work_mode
             self.set_work_mode(EWorkMode.ForceDragMode.value)
             self.setDragMode(QGraphicsView.ScrollHandDrag)
             for box in self.boxes_on_scene:
@@ -217,10 +224,10 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.current_image
         )
 
-        if self.current_work_mode.value == EWorkMode.DragMode.value:
+        if self.work_mode.value == EWorkMode.DragMode.value:
             ann_box.setAcceptedMouseButtons(Qt.AllButtons)
             ann_box.setAcceptHoverEvents(True)
-        elif self.current_work_mode.value == EWorkMode.BoxAnnotationMode.value:
+        elif self.work_mode.value == EWorkMode.BoxAnnotationMode.value:
             ann_box.setAcceptedMouseButtons(Qt.NoButton)
             ann_box.setAcceptHoverEvents(False)
 
@@ -306,14 +313,14 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.current_image = image
 
     def set_work_mode(self, mode: int):
-        if self.current_work_mode.value == mode:
+        if self.work_mode.value == mode:
             return
-        self.current_work_mode = EWorkMode(mode)
-        if self.current_work_mode.value == EWorkMode.BoxAnnotationMode.value:
+        self.work_mode = EWorkMode(mode)
+        if self.work_mode.value == EWorkMode.BoxAnnotationMode.value:
             self.annotate_scene.clearSelection()
             for box in self.boxes_on_scene:
                 box.disable_selection()
-        if self.current_work_mode.value == EWorkMode.DragMode.value:
+        if self.work_mode.value == EWorkMode.DragMode.value:
             self._maybe_delete_current_rect()
             for box in self.boxes_on_scene:
                 box.enable_selection()
@@ -375,13 +382,13 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.boxes_on_scene.clear()
 
     def mousePressEvent(self, event):
-        if self.is_model_annotating and self.current_work_mode.value != EWorkMode.ForceDragMode.value:
+        if self.is_model_annotating and self.work_mode.value != EWorkMode.ForceDragMode.value:
             return
-        if self.current_work_mode.value == EWorkMode.DragMode.value:
+        if self.work_mode.value == EWorkMode.DragMode.value:
             pass
-        elif self.current_work_mode.value == EWorkMode.ForceDragMode.value:
+        elif self.work_mode.value == EWorkMode.ForceDragMode.value:
             pass
-        elif self.current_work_mode.value == EWorkMode.BoxAnnotationMode.value:
+        elif self.work_mode.value == EWorkMode.BoxAnnotationMode.value:
             if self.current_image is None or self.annotate_class is None:
                 return super().mousePressEvent(event)
             if self.current_rect is None and self.annotate_start_point is None:
@@ -403,13 +410,13 @@ class UAnnotationGraphicsView(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self.is_model_annotating and self.current_work_mode.value != EWorkMode.ForceDragMode.value:
+        if self.is_model_annotating and self.work_mode.value != EWorkMode.ForceDragMode.value:
             return
-        if self.current_work_mode.value == EWorkMode.DragMode.value:
+        if self.work_mode.value == EWorkMode.DragMode.value:
             pass
-        elif self.current_work_mode.value == EWorkMode.ForceDragMode.value:
+        elif self.work_mode.value == EWorkMode.ForceDragMode.value:
             pass
-        elif self.current_work_mode.value == EWorkMode.BoxAnnotationMode.value:
+        elif self.work_mode.value == EWorkMode.BoxAnnotationMode.value:
             if self.current_rect is None or self.annotate_start_point is None:
                 return super().mouseMoveEvent(event)
             current_cursor_pos = self.current_image.mapFromScene(self.mapToScene(event.pos()))
@@ -425,7 +432,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                 self.delete_annotation_box(self.current_rect)
                 self.current_rect = None
                 return
-        if self.current_work_mode.value == EWorkMode.DragMode.value:
+        if self.work_mode.value == EWorkMode.DragMode.value:
             selected = self.get_selected_annotation_box()
             if selected is None:
                 pass
@@ -438,7 +445,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                     selected.get_annotation_data()
                 )
                 pass
-        elif self.current_work_mode.value == EWorkMode.BoxAnnotationMode.value:
+        elif self.work_mode.value == EWorkMode.BoxAnnotationMode.value:
             if self.current_image is None or self.annotate_class is None:
                 pass
             elif self.current_rect is not None and self.annotate_start_point is not None:
