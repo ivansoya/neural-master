@@ -4,11 +4,11 @@ from PyQt5.QtCore import pyqtSignal, Qt, QRectF, QSizeF, QPointF, QObject, pyqtS
 from PyQt5.QtGui import QColor, QBrush, QCursor, QPainterPath, QFontMetricsF, QFont, QPen
 from PyQt5.QtWidgets import QGraphicsRectItem, QApplication, QGraphicsPixmapItem, QGraphicsItem
 
-from annotation.annotation_item import QAnnotationItem
+from annotation.annotation_item import UAnnotationItem
 from utility import FDetectAnnotationData
 
 
-class UAnnotationBox(QAnnotationItem):
+class UAnnotationBox(UAnnotationItem):
     resize_cursors = {
         'top_left': Qt.SizeFDiagCursor,
         'top_right': Qt.SizeBDiagCursor,
@@ -38,7 +38,7 @@ class UAnnotationBox(QAnnotationItem):
 
         self.class_id, self.class_name, self.color = class_data
 
-        self.line_width = 4
+        self.line_width = 2
         self.draw_scale: float = 1.0
 
         self.set_draw_scale(scale)
@@ -57,19 +57,18 @@ class UAnnotationBox(QAnnotationItem):
         else:
             return rect.width() * rect.height()
 
-    def correct_rect(self):
-        rect = self.rect()
+    def correct_rect(self, rect: QRectF) -> QRectF:
         if rect.top() > rect.bottom():
             rect = QRectF(rect.left(), rect.bottom(), rect.width(), -rect.height())
         if rect.left() > rect.right():
             rect = QRectF(rect.right(), rect.top(), -rect.width(), rect.height())
-
-        self.setRect(rect)
+        return rect
 
     def rect(self):
         return self._rect
 
     def setRect(self, new_rect: QRectF):
+        self.prepareGeometryChange()
         self._rect = new_rect
 
     def set_draw_scale(self, scale: float):
@@ -82,24 +81,22 @@ class UAnnotationBox(QAnnotationItem):
         rect = self.rect()
         line_width = int(self.line_width * self.draw_scale)
         handle_size = int(self.resize_handle_size * self.draw_scale)
-        handle_margin_left = int(handle_size / 2 + line_width / 2)
-        handle_margin_right = int(-handle_size / 2 + line_width / 2)
         return {
-            'top_left': QRectF(rect.topLeft() + QPointF(-handle_margin_left, -handle_margin_left),
+            'top_left': QRectF(rect.topLeft() - QPointF(handle_size / 2, handle_size / 2),
                                QSizeF(handle_size, handle_size)),
-            'top_right': QRectF(rect.topRight() + QPointF(handle_margin_right, -handle_margin_left),
+            'top_right': QRectF(rect.topRight() - QPointF(handle_size / 2, handle_size / 2),
                                QSizeF(handle_size, handle_size)),
-            'bottom_left': QRectF(rect.bottomLeft() + QPointF(-handle_margin_left, handle_margin_right),
+            'bottom_left': QRectF(rect.bottomLeft() - QPointF(handle_size / 2, handle_size / 2),
                                QSizeF(handle_size, handle_size)),
-            'bottom_right': QRectF(rect.bottomRight() + QPointF(handle_margin_right, handle_margin_right),
+            'bottom_right': QRectF(rect.bottomRight() - QPointF(handle_size / 2, handle_size / 2),
                                QSizeF(handle_size, handle_size)),
-            'top_line': QRectF(rect.topLeft() - QPointF(0, line_width),
+            'top_line': QRectF(rect.topLeft() - QPointF(line_width / 2, line_width / 2),
                                QSizeF(rect.width(), line_width)),
-            'right_line': QRectF(rect.topRight(),
+            'right_line': QRectF(rect.topRight() - QPointF(line_width / 2, line_width / 2),
                                QSizeF(line_width, rect.height())),
-            'bottom_line': QRectF(rect.bottomLeft(),
+            'bottom_line': QRectF(rect.bottomLeft() - QPointF(line_width / 2, line_width / 2),
                                QSizeF(rect.width(), line_width)),
-            'left_line': QRectF(rect.topLeft() + QPointF(-line_width, 0),
+            'left_line': QRectF(rect.topLeft() - QPointF(line_width / 2, line_width / 2),
                                QSizeF(line_width, rect.height())),
         }
 
@@ -172,14 +169,26 @@ class UAnnotationBox(QAnnotationItem):
                 QApplication.restoreOverrideCursor()
 
     def hoverLeaveEvent(self, event):
-        self.scene().update()
         QApplication.restoreOverrideCursor()
 
     def boundingRect(self):
+        base_rect = self.rect().normalized()
         border_width = int(self.line_width * self.draw_scale)
         handle_margin = int(self.resize_handle_size * self.draw_scale)
         margin = max(border_width, handle_margin)
-        return self.rect().adjusted(-margin, -margin, margin, margin)
+
+        text = f"ID: {self.class_id}, {self.class_name}"
+        font = QFont("Arial", int(16 * self.draw_scale))
+        font_metrics = QFontMetricsF(font)
+        text_background_rect = font_metrics.boundingRect(text)
+        text_background_rect.adjust(-6, -2, 12, 4)
+
+        return base_rect.adjusted(
+            -margin,
+            -margin - text_background_rect.height(),
+            max(margin, text_background_rect.width() - base_rect.width() + margin),
+            margin
+        )
 
     def shape(self):
         path = QPainterPath()
@@ -196,13 +205,21 @@ class UAnnotationBox(QAnnotationItem):
         return path
 
     def paint(self, painter, option, widget=None):
+        # фон прямоугольника
+        pen_width = self.line_width * self.draw_scale
+
+        painter.setPen(QPen(self.color, pen_width))
+        painter.setBrush(QBrush(Qt.transparent if self.isSelected() else self.background_color))
+        painter.drawRect(self.rect())
+
         if self.isSelected():
             # якоря для изменения размеров прямоугольника
             handles = self.get_resize_handles()
             painter.setBrush(QBrush(self.color))
             painter.setPen(Qt.NoPen)
-            for handle in handles.values():
-                painter.drawRect(handle)
+            for name, handle in handles.items():
+                if name not in ['top_line', 'bottom_line', 'right_line', 'left_line']:
+                    painter.drawRect(handle)
 
             if not self.resizing:
                 # текст над прямоугольником
@@ -224,15 +241,6 @@ class UAnnotationBox(QAnnotationItem):
                 painter.setFont(font)
                 painter.setPen(font_color)
                 painter.drawText(text_background_rect, Qt.AlignCenter, text)
-        else:
-            # фон прямоугольника
-            rect = self.rect()
-            pen_width = self.line_width * self.draw_scale
-            adjusted_rect = rect.adjusted(-pen_width // 2, -pen_width // 2, pen_width // 2, pen_width // 2)
-
-            painter.setPen(QPen(self.color, pen_width))
-            painter.setBrush(QBrush(Qt.transparent if self.isSelected() else self.background_color))
-            painter.drawRect(adjusted_rect)
 
     def itemChange(self, change, value):
         if change == QGraphicsRectItem.ItemSelectedChange:
@@ -240,8 +248,6 @@ class UAnnotationBox(QAnnotationItem):
                 self.setZValue(2)
             else:
                 self.setZValue(1)
-        if self.scene() is not None:
-            self.scene().update()
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
@@ -265,12 +271,20 @@ class UAnnotationBox(QAnnotationItem):
                 super().mousePressEvent(event)
         else:
             super().mousePressEvent(event)
-        self.scene().update()
 
     def mouseMoveEvent(self, event):
         if self.resizing:
             rect = self.rect()
             pos = event.pos()
+
+            parent = self.parentItem()
+            if not parent:
+                return
+
+            parent_bounds = self.mapFromItem(parent, parent.boundingRect()).boundingRect()
+            pos.setX(min(max(pos.x(), parent_bounds.left()), parent_bounds.right()))
+            pos.setY(min(max(pos.y(), parent_bounds.top()), parent_bounds.bottom()))
+
             if self.active_handle == 'top_left':
                 rect.setTopLeft(pos)
             elif self.active_handle == 'top_right':
@@ -287,11 +301,25 @@ class UAnnotationBox(QAnnotationItem):
                 rect.setBottom(pos.y())
             elif self.active_handle == 'left_line':
                 rect.setLeft(pos.x())
-            parent = self.parentItem()
-            if parent is not None:
-                parent_bounds = self.mapFromItem(parent, parent.boundingRect()).boundingRect()
-                new_rect = rect.intersected(parent_bounds)
-                self.setRect(new_rect)
+
+            min_size = 1.0
+            if abs(rect.normalized().width()) < min_size or abs(rect.normalized().height()) < min_size:
+                return
+
+            # Сохраняем текущую ориентацию (вдруг пользователь "инвертировал" прямоугольник)
+            was_inverted_x = rect.left() > rect.right()
+            was_inverted_y = rect.top() > rect.bottom()
+
+            # Ограничиваем и нормализуем
+            rect = rect.normalized().intersected(parent_bounds)
+
+            # Восстанавливаем ориентацию (инверсию)
+            if was_inverted_x:
+                rect = QRectF(rect.right(), rect.top(), -rect.width(), rect.height())
+            if was_inverted_y:
+                rect = QRectF(rect.left(), rect.bottom(), rect.width(), -rect.height())
+
+            self.setRect(rect)
         else:
             if self.rect().contains(event.pos()):
                 new_pos = self.pos() + event.scenePos() - event.lastScenePos()
@@ -314,17 +342,14 @@ class UAnnotationBox(QAnnotationItem):
                 else:
                     super().mouseMoveEvent(event)
 
-        self.scene().update()
 
     def mouseReleaseEvent(self, event):
         if self.resizing:
             self.resizing = False
             self.active_handle = None
-            self.correct_rect()
-            self.update()
+            self.setRect(self.correct_rect(self.rect()))
         else:
             super().mouseReleaseEvent(event)
-        self.scene().update()
 
     def get_line_scaled(self):
-        return int(self.line_width * self.draw_scale)
+        return int(self.line_width * self.draw_scale) * 2

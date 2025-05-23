@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, QObject, QEvent, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 
-from utility import EWorkMode, EAnnotationStatus
+from utility import EAnnotationStatus
 
 class ECommanderStatus(Enum):
     LoadProject = 1

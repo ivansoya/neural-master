@@ -1,16 +1,17 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from optparse import Option
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from PyQt5.QtCore import QPointF, QRectF
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView
-from pandas.core.window.common import prep_binary
 
 from annotation.annotation_box import UAnnotationBox
-from annotation.annotation_scene import UAnnotationGraphicsView
+from annotation.annotation_mask import UAnnotationMask
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
+
+if TYPE_CHECKING:
+    from annotation.annotation_scene import UAnnotationGraphicsView
 
 
 class EWorkMode(Enum):
@@ -50,7 +51,7 @@ class UBaseAnnotationMode(ABC):
         pass
 
 class UDragAnnotationMode(UBaseAnnotationMode):
-    def __init__(self, scene: UAnnotationGraphicsView, commander: UGlobalSignalHolder):
+    def __init__(self, scene: 'UAnnotationGraphicsView', commander: UGlobalSignalHolder):
         self.scene = scene
         self.commander = commander
 
@@ -82,7 +83,7 @@ class UDragAnnotationMode(UBaseAnnotationMode):
         return
 
 class UForceDragAnnotationMode(UBaseAnnotationMode):
-    def __init__(self, scene: UAnnotationGraphicsView, commander: UGlobalSignalHolder):
+    def __init__(self, scene: 'UAnnotationGraphicsView', commander: UGlobalSignalHolder):
         self.scene = scene
         self.commander = commander
 
@@ -118,7 +119,7 @@ class UForceDragAnnotationMode(UBaseAnnotationMode):
         return
 
 class UBoxAnnotationMode(UBaseAnnotationMode):
-    def __init__(self, scene: UAnnotationGraphicsView, commander: UAnnotationSignalHolder):
+    def __init__(self, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
         self.scene = scene
         self.commander = commander
 
@@ -160,7 +161,7 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         if self.current_rect and self.start_point:
             self.scene.emit_commander_to_add(self.current_rect.get_annotation_data())
             self._clean_rect()
-            self.commander.change_work_mode(EWorkMode.DragMode.value)
+            self.commander.change_work_mode.emit(EWorkMode.DragMode.value)
         # Создание нового прямоугольника
         elif not (self.current_rect and self.start_point):
             cursor_pos = self.scene.mapToScene(event.pos())
@@ -187,11 +188,12 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
 
         if self.current_rect.get_square() < 25:
             self._delete_current_rect()
+            return
         if self.commander:
             self.scene.emit_commander_to_add(self.current_rect.get_annotation_data())
             self.current_rect.setSelected(True)
             self._clean_rect()
-            self.commander.change_work_mode(EWorkMode.DragMode.value)
+            self.commander.change_work_mode.emit(EWorkMode.DragMode.value)
 
     def _clean_rect(self):
         self.current_rect = None
@@ -199,6 +201,45 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
 
     def _delete_current_rect(self):
         if self.current_rect and self.current_rect in self.scene.get_annotations():
-            self.scene.delete_annotation_box(self.current_rect)
+            self.scene.delete_annotation_item(self.current_rect)
         self._clean_rect()
+
+
+class UMaskAnnotaionMode(UBaseAnnotationMode):
+
+    def __init__(self, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
+        self.scene = scene
+        self.commander = commander
+
+        self.current_mask: Optional[UAnnotationMask] = None
+
+        self.mode = EWorkMode.MaskAnnotationMode
+        self.previous_mode: Optional[EWorkMode] = None
+
+    def start_mode(self, prev_mode: EWorkMode):
+        self.scene.scene().clearSelection()
+        for annotation in self.scene.get_annotations():
+            annotation.disable_selection()
+        self.previous_mode = prev_mode
+
+    def end_mode(self, change_mode: EWorkMode):
+        if change_mode is EWorkMode.ForceDragMode:
+            return
+        elif change_mode is EWorkMode.GettingResultsMode:
+            self._delete_mask()
+        else:
+            self._clean_mask()
+        for annotation in self.scene.get_annotations():
+            annotation.enable_selection()
+
+    def get_previous_mode(self) -> EWorkMode | None:
+        return self.previous_mode
+
+    def _delete_mask(self):
+        if self.current_mask and self.current_mask in self.scene.get_annotations():
+            self.scene.delete_annotation_item(self.current_mask)
+        self.current_mask = None
+
+    def _clean_mask(self):
+        self.current_mask = None
 

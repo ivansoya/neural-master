@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QFileDialog, QWidget, QDialog
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
 from PyQt5.QtCore import Qt, pyqtSlot
 
+from annotation.annotation_mode import EWorkMode
 from annotation.annotation_scene import UAnnotationBox
 from design.annotation_page import Ui_annotataion_page
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
@@ -12,7 +13,7 @@ from annotation.carousel import UAnnotationThumbnail
 from design.diag_create_dataset import Ui_diag_create_dataset
 from dataset.loader import UOverlayLoader
 from project import UTrainProject, UMergeAnnotationThread, DATASETS
-from utility import EWorkMode, EAnnotationStatus, UMessageBox, FAnnotationData, FAnnotationItem
+from utility import EAnnotationStatus, UMessageBox, FAnnotationData, FAnnotationItem
 
 
 class UTextInputDialog(QDialog, Ui_diag_create_dataset):

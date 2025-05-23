@@ -10,7 +10,7 @@ class UAnnotationSignal(QObject):
     select_event = pyqtSignal(object)
 
 
-class QAnnotationItem(QGraphicsItem):
+class UAnnotationItem(QGraphicsItem):
     def __init__(self, class_data: tuple[int, str, QColor], scale: float, parent = None):
         super().__init__(parent)
 
