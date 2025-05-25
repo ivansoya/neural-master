@@ -51,7 +51,7 @@ class UBaseAnnotationMode(ABC):
         pass
 
 class UDragAnnotationMode(UBaseAnnotationMode):
-    def __init__(self, scene: 'UAnnotationGraphicsView', commander: UGlobalSignalHolder):
+    def __init__(self, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
         self.scene = scene
         self.commander = commander
 
@@ -80,7 +80,19 @@ class UDragAnnotationMode(UBaseAnnotationMode):
         return
 
     def on_release_mouse(self, event):
+        selected = self.scene.get_selected_annotation()
+        if selected is None:
+            pass
+        else:
+            index = self.scene.annotation_items.index(selected)
+            self.commander.updated_annotation.emit(
+                self.scene.get_current_thumb_index(),
+                index,
+                None,
+                selected.get_annotation_data()
+            )
         return
+
 
 class UForceDragAnnotationMode(UBaseAnnotationMode):
     def __init__(self, scene: 'UAnnotationGraphicsView', commander: UGlobalSignalHolder):
@@ -118,6 +130,7 @@ class UForceDragAnnotationMode(UBaseAnnotationMode):
     def on_release_mouse(self, event):
         return
 
+
 class UBoxAnnotationMode(UBaseAnnotationMode):
     def __init__(self, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
         self.scene = scene
@@ -126,10 +139,12 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         self.current_rect: Optional[UAnnotationBox] = None
         self.start_point: Optional[QPointF] = None
 
-        self.mode = EWorkMode.ForceDragMode
+        self.mode = EWorkMode.BoxAnnotationMode
         self.previous_mode: Optional[EWorkMode] = None
 
     def start_mode(self, prev_mode):
+        if prev_mode is self.mode:
+            return
         self.scene.scene().clearSelection()
         for annotation in self.scene.get_annotations():
             annotation.disable_selection()
@@ -137,7 +152,7 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         return
 
     def end_mode(self, change_mode: EWorkMode):
-        if change_mode is EWorkMode.ForceDragMode:
+        if self.mode is change_mode or change_mode is EWorkMode.ForceDragMode:
             return
         elif change_mode is EWorkMode.GettingResultsMode:
             self._delete_current_rect()

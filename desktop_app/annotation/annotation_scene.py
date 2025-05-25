@@ -298,7 +298,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.annotate_class = (class_id, class_name, QColor(color))
 
         # Если есть выбранный на сцене бокс разметки, то изменяем его класс
-        selected = self.get_selected_annotation_box()
+        selected = self.get_selected_annotation()
         if selected is None:
             return
         prev_data = selected.get_annotation_data()
@@ -308,12 +308,12 @@ class UAnnotationGraphicsView(QGraphicsView):
             ann_index = self.annotation_items.index(selected)
             self.commander.updated_annotation.emit(self.get_current_thumb_index(), ann_index, prev_data, new_data)
 
-    def get_selected_annotation_box(self):
+    def get_selected_annotation(self):
         items = self.annotate_scene.selectedItems()
         if len(items) == 0:
             return None
         selected = items[0]
-        if isinstance(selected, UAnnotationBox):
+        if isinstance(selected, UAnnotationItem):
             return selected
         else:
             return None

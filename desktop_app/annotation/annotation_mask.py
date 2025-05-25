@@ -71,15 +71,18 @@ class UAnnotationPoint(QGraphicsRectItem):
             self.parent.update_point(self.index, cursor_pos)
         return super().mouseMoveEvent(event)
 
+
 class UAnnotationPointStart(UAnnotationPoint):
     def __init__(self, index: int, cords: QPointF, size: float, scale: float, parent=None):
         super().__init__(index, cords, size, scale, parent)
+
 
 class UMaskEmitter(QWidget):
     deleted_mask = pyqtSignal(object)
 
     def __init__(self):
         super().__init__()
+
 
 class UAnnotationMask(QGraphicsItem):
     def __init__(self, list_points: list[QPointF], parent = None):

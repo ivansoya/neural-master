@@ -243,11 +243,6 @@ class UAnnotationBox(UAnnotationItem):
                 painter.drawText(text_background_rect, Qt.AlignCenter, text)
 
     def itemChange(self, change, value):
-        if change == QGraphicsRectItem.ItemSelectedChange:
-            if value:
-                self.setZValue(2)
-            else:
-                self.setZValue(1)
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
@@ -341,7 +336,6 @@ class UAnnotationBox(UAnnotationItem):
                     self.setPos(self.pos() + delta)
                 else:
                     super().mouseMoveEvent(event)
-
 
     def mouseReleaseEvent(self, event):
         if self.resizing:

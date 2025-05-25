@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Callable
+from typing import Callable, Optional
 
 from PyQt5.QtCore import Qt, QObject, pyqtSignal
 from PyQt5.QtGui import QColor
@@ -8,15 +8,17 @@ from PyQt5.QtWidgets import QGraphicsItem, QGraphicsPixmapItem, QApplication
 
 class UAnnotationSignal(QObject):
     select_event = pyqtSignal(object)
+    update_event = pyqtSignal(object, object, object)
 
 
 class UAnnotationItem(QGraphicsItem):
-    def __init__(self, class_data: tuple[int, str, QColor], scale: float, parent = None):
+    def __init__(self, class_data: tuple[int, str, QColor], scale: float, parent=None):
         super().__init__(parent)
 
         self.setFlags(
             QGraphicsItem.ItemIsMovable |
-            QGraphicsItem.ItemIsSelectable
+            QGraphicsItem.ItemIsSelectable |
+            QGraphicsItem.ItemSendsGeometryChanges
         )
 
         self.setAcceptHoverEvents(True)
@@ -28,6 +30,8 @@ class UAnnotationItem(QGraphicsItem):
         self.set_draw_scale(scale)
 
         self.signal_holder = UAnnotationSignal()
+        self._old_pos = self.pos()
+        self._old_data = None
 
     @abstractmethod
     def get_annotation_data(self) -> 'FAnnotationData | None':
@@ -56,6 +60,14 @@ class UAnnotationItem(QGraphicsItem):
     @abstractmethod
     def boundingRect(self):
         pass
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemSelectedChange:
+            if value:
+                self.setZValue(2)
+            else:
+                self.setZValue(1)
+        return super().itemChange(change, value)
 
     def get_class_name(self):
         return self.class_name
