@@ -7,11 +7,12 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QWidget, QHBoxLayout, QLabel, QListWidget, QListWidgetItem
 )
 from PyQt5.QtGui import QColor, QPainter, QTransform, QFont, QPixmap, QIcon, QImage
-from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot, QPointF
 from cv2 import Mat
 
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_item import UAnnotationItem
+from annotation.annotation_mask import UAnnotationMask
 from annotation.annotation_mode import EWorkMode, UDragAnnotationMode, UForceDragAnnotationMode, UBoxAnnotationMode, \
     UBaseAnnotationMode
 
@@ -190,7 +191,18 @@ class UAnnotationGraphicsView(QGraphicsView):
         for item in self.annotation_items:
             item.set_draw_scale(self.scale_factor)
 
-    def add_annotation_box(self, x, y, width, height, class_data: tuple[int, str, QColor]):
+    def add_annotation_mask(self, points_list: list[QPointF], class_data: tuple[int, str, QColor]):
+        ann_mask = UAnnotationMask(
+            points_list[:],
+            class_data,
+            self.scale_factor,
+            self.current_image
+        )
+
+        self._set_annotation_item(ann_mask)
+        return ann_mask
+
+    def add_annotation_box(self, x, y, width, height, class_data: tuple[int, str, QColor]) -> UAnnotationBox:
         ann_box = UAnnotationBox(
             x,
             y,
@@ -201,19 +213,23 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.current_image
         )
 
+        self._set_annotation_item(ann_box)
+        return ann_box
+
+    def _set_annotation_item(self, annotation_item: UAnnotationItem):
         if self.current_work_mode is EWorkMode.DragMode:
-            ann_box.setAcceptedMouseButtons(Qt.AllButtons)
-            ann_box.setAcceptHoverEvents(True)
+            annotation_item.setAcceptedMouseButtons(Qt.AllButtons)
+            annotation_item.setAcceptHoverEvents(True)
         elif self.current_work_mode is EWorkMode.BoxAnnotationMode:
-            ann_box.setAcceptedMouseButtons(Qt.NoButton)
-            ann_box.setAcceptHoverEvents(False)
+            annotation_item.setAcceptedMouseButtons(Qt.NoButton)
+            annotation_item.setAcceptHoverEvents(False)
 
         #self.view_scale_changed.connect(ann_box.set_draw_scale)
-        ann_box.connect_selected_signal(self.handle_on_select_annotation)
+        annotation_item.connect_selected_signal(self.handle_on_select_annotation)
 
-        self.annotation_items.append(ann_box)
+        self.annotation_items.append(annotation_item)
 
-        return ann_box
+        return annotation_item
 
     @pyqtSlot(object)
     def handle_on_select_annotation(self, annotation_item: object):
@@ -270,8 +286,8 @@ class UAnnotationGraphicsView(QGraphicsView):
                 if self.commander:
                     self.commander.deleted_annotation.emit(self.get_current_thumb_index(), index, deleted_data)
 
-    def delete_annotation_item(self, annotation: UAnnotationItem):
-        if annotation in self.annotation_items is False or self.current_display_thumbnail is None:
+    def delete_annotation_item(self, annotation: UAnnotationItem | None):
+        if annotation is None or annotation not in self.annotation_items or self.current_display_thumbnail is None:
             return
 
         if QApplication.overrideCursor():
@@ -280,7 +296,7 @@ class UAnnotationGraphicsView(QGraphicsView):
             annotation.signal_holder.disconnect()
             annotation.signal_holder.deleteLater()
         self.annotation_items.remove(annotation)
-        if annotation.scene() is not None:
+        if annotation.scene():
             self.annotate_scene.removeItem(annotation)
         annotation.setParentItem(None)
 

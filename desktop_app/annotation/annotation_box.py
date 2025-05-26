@@ -35,13 +35,7 @@ class UAnnotationBox(UAnnotationItem):
         self.isActive = True
 
         self._rect = QRectF(x1, y1, width, height)
-
-        self.class_id, self.class_name, self.color = class_data
-
         self.line_width = 2
-        self.draw_scale: float = 1.0
-
-        self.set_draw_scale(scale)
 
         self.background_color = QColor(self.color)
         self.background_color.setAlpha(50)

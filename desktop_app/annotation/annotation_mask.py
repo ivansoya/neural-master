@@ -1,8 +1,10 @@
-from PyQt5.QtCore import QPointF, Qt, QRectF, pyqtSignal
-from PyQt5.QtGui import QColor, QPolygonF, QPainterPath, QPainterPathStroker
-from PyQt5.QtWidgets import QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsItem, QWidget
-from sympy import false
+from typing import Callable
 
+from PyQt5.QtCore import QPointF, Qt, QRectF, pyqtSignal, QObject
+from PyQt5.QtGui import QColor, QPolygonF, QPainterPath, QPainterPathStroker, QBrush
+from PyQt5.QtWidgets import QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsItem, QWidget
+
+from annotation.annotation_item import UAnnotationItem
 from supporting.functions import clamp
 
 
@@ -72,10 +74,50 @@ class UAnnotationPoint(QGraphicsRectItem):
         return super().mouseMoveEvent(event)
 
 
+class UStartPointEmitter(QObject):
+    polygon_closed = pyqtSignal(bool)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
 class UAnnotationPointStart(UAnnotationPoint):
     def __init__(self, index: int, cords: QPointF, size: float, scale: float, parent=None):
         super().__init__(index, cords, size, scale, parent)
+        self.setAcceptHoverEvents(True)
 
+        self.default_brush = QBrush(Qt.white)
+        self.hover_brush = QBrush(Qt.green)
+        self.default_rect = self.rect()
+
+        self.setBrush(self.default_brush)
+        self.setAcceptHoverEvents(True)
+
+        self.emitter = UStartPointEmitter()
+
+    def hoverEnterEvent(self, event):
+        self.setBrush(self.hover_brush)
+        resizable_value = int(self.size * 1.5 * self.draw_scale)
+        self.setRect(self.default_rect.adjusted(-resizable_value, -resizable_value, resizable_value, resizable_value))
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        self.setBrush(self.default_brush)
+        self.setRect(self.default_rect)
+        super().hoverLeaveEvent(event)
+
+    def mousePressEvent(self, event):
+        if isinstance(self.parent, UAnnotationMask):
+            polygon = self.parent.get_polygon()
+            if polygon.size() > 3:
+                self.parent.update_point(polygon.size() - 1, self.center)
+                if polygon.isClosed():
+                    self.emitter.polygon_closed.emit(True)
+            self.emitter.polygon_closed.emit(False)
+            print("Нажата кнопка старта создания полигона!")
+            event.accept()
+
+    def connect_to_emitter(self, func: Callable[[bool],  None]):
+        self.emitter.polygon_closed.connect(func)
 
 class UMaskEmitter(QWidget):
     deleted_mask = pyqtSignal(object)
@@ -84,12 +126,15 @@ class UMaskEmitter(QWidget):
         super().__init__()
 
 
-class UAnnotationMask(QGraphicsItem):
-    def __init__(self, list_points: list[QPointF], parent = None):
-        super().__init__(parent)
-
-        self.setFlag(QGraphicsItem.ItemIsMovable)
-        self.setFlag(QGraphicsItem.ItemIsSelectable)
+class UAnnotationMask(UAnnotationItem):
+    def __init__(
+            self,
+            list_points: list[QPointF],
+            class_data: tuple[int, str, QColor],
+            scale: float = 1.0,
+            parent = None
+    ):
+        super().__init__(class_data, scale, parent)
 
         self.emitter = UMaskEmitter()
 
@@ -99,7 +144,14 @@ class UAnnotationMask(QGraphicsItem):
 
         self.points_size: int = 8
         self.line_width: int = 2
-        self.draw_scale: float = 1.0
+
+        self.graphics_points_list: list[UAnnotationPoint] = list()
+
+    def get_polygon(self):
+        return self.polygon
+
+    def get_last_index(self):
+        return self.polygon.size() - 1
 
     def update_point(self, index: int, new_pos: QPointF) -> QPointF | None:
         if not self.polygon.contains(index):
@@ -116,9 +168,20 @@ class UAnnotationMask(QGraphicsItem):
         self.polygon.replace(index, new_pos)
         return new_pos
 
-    def append_point(self, pos: QPointF) -> (bool, 'UAnnotationMask'):
+    def add_point(self):
+        self.polygon.append(self.polygon.last())
+
+    def fix_point(self, pos: QPointF) -> (bool, 'UAnnotationMask'):
         if self.polygon.last() and UAnnotationMask._check_points(self.polygon.last(), pos, self.points_size):
-            self.polygon.append(pos)
+            point = UAnnotationPoint(
+                self.get_last_index(),
+                pos,
+                self.points_size,
+                self.draw_scale,
+                self
+            )
+            self.scene().addItem(point)
+            self.graphics_points_list.append(point)
         if self.polygon.isClosed():
             if self.polygon.size() >= 3:
                 return True, self
@@ -171,33 +234,35 @@ class UAnnotationMask(QGraphicsItem):
         if change == QGraphicsItem.ItemSelectedHasChanged:
             if not self.scene():
                 return super().itemChange(change, value)
+
             if self.isSelected():
                 points = [self.polygon[i] for i in range(self.polygon.size())]
-                if not points:
+                if len(points) == 0:
                     return super().itemChange(change, value)
-                self.scene().addItem(
-                    UAnnotationPointStart(0, points[0], self.points_size, self.draw_scale, self)
-                )
-                points_create = points[1:-1] if self.polygon.isClosed() else points[1:]
+
+                if not self.polygon.isClosed():
+                    point_start = UAnnotationPointStart(0, points[0], self.points_size, self.draw_scale, self)
+                    self.scene().addItem(point_start)
+                    self.graphics_points_list.append(point_start)
+
+                points_create = points[:-1] if self.polygon.isClosed() else points[1:]
                 for i in range(len(points_create)):
-                    self.scene().addItem(
-                        UAnnotationPoint(i, points_create[i], self.points_size, self.draw_scale, self)
-                    )
+                    point = UAnnotationPoint(i, points_create[i], self.points_size, self.draw_scale, self)
+                    self.scene().addItem(point)
+                    self.graphics_points_list.append(point)
             else:
                 self._del_children()
+
         return super().itemChange(change, value)
 
     def delete_mask(self):
         self._del_children()
-        self.scene().removeItem(self)
-        self.emitter.deleteLater()
 
     def _del_children(self):
-        children = self.childItems()
-        for child in children:
-            child.setParentItem(None)
-            child.scene().removeItem(child)
-            del child
+        for point in self.graphics_points_list:
+            if point.scene():
+                point.scene().removeItem(point)
+        self.graphics_points_list.clear()
 
     @staticmethod
     def _check_points(point_1: QPointF, point_2: QPointF, radius: float):

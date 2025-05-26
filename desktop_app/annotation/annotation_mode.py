@@ -221,7 +221,6 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
 
 
 class UMaskAnnotaionMode(UBaseAnnotationMode):
-
     def __init__(self, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
         self.scene = scene
         self.commander = commander
@@ -233,12 +232,14 @@ class UMaskAnnotaionMode(UBaseAnnotationMode):
 
     def start_mode(self, prev_mode: EWorkMode):
         self.scene.scene().clearSelection()
+        if prev_mode is self.mode:
+            return
         for annotation in self.scene.get_annotations():
             annotation.disable_selection()
         self.previous_mode = prev_mode
 
     def end_mode(self, change_mode: EWorkMode):
-        if change_mode is EWorkMode.ForceDragMode:
+        if change_mode in [EWorkMode.ForceDragMode, EWorkMode.MaskAnnotationMode]:
             return
         elif change_mode is EWorkMode.GettingResultsMode:
             self._delete_mask()
@@ -252,6 +253,7 @@ class UMaskAnnotaionMode(UBaseAnnotationMode):
 
     def _delete_mask(self):
         if self.current_mask and self.current_mask in self.scene.get_annotations():
+            self.current_mask.delete_mask()
             self.scene.delete_annotation_item(self.current_mask)
         self.current_mask = None
 
