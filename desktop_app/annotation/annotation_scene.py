@@ -14,7 +14,7 @@ from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_item import UAnnotationItem
 from annotation.annotation_mask import UAnnotationMask
 from annotation.annotation_mode import EWorkMode, UDragAnnotationMode, UForceDragAnnotationMode, UBoxAnnotationMode, \
-    UBaseAnnotationMode
+    UBaseAnnotationMode, UMaskAnnotationMode
 
 from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus
 from commander import UAnnotationSignalHolder
@@ -76,7 +76,8 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.annotate_mods: dict[EWorkMode, UBaseAnnotationMode] = {
                 EWorkMode.DragMode: UDragAnnotationMode(self, self.commander),
                 EWorkMode.ForceDragMode: UForceDragAnnotationMode(self, self.commander),
-                EWorkMode.BoxAnnotationMode: UBoxAnnotationMode(self, self.commander)
+                EWorkMode.BoxAnnotationMode: UBoxAnnotationMode(self, self.commander),
+                EWorkMode.MaskAnnotationMode: UMaskAnnotationMode(self, self.commander),
             }
 
     def display_image(self, thumbnail: tuple[int, str, list[FAnnotationData]], thumb_status: int):
@@ -228,6 +229,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         annotation_item.connect_selected_signal(self.handle_on_select_annotation)
 
         self.annotation_items.append(annotation_item)
+        self.scene().addItem(annotation_item)
 
         return annotation_item
 

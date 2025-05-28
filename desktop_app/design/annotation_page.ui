@@ -130,7 +130,7 @@ QPushButton:pressed {
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="select_dragmode_button">
+            <widget class="QPushButton" name="button_drag_mode">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -158,12 +158,12 @@ QPushButton:pressed {
               <enum>Qt::LeftToRight</enum>
              </property>
              <property name="text">
-              <string>1: Перемещение</string>
+              <string>Просмотр</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="select_annotatemode_button">
+            <widget class="QPushButton" name="button_detect_mode">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -188,7 +188,14 @@ QPushButton:pressed {
               </font>
              </property>
              <property name="text">
-              <string>2: Разметка</string>
+              <string>Ограничивающие боксы</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_mask_mode">
+             <property name="text">
+              <string>Маски распознавания</string>
              </property>
             </widget>
            </item>

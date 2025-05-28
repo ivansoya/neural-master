@@ -57,7 +57,7 @@ class UExportWorker(QObject):
                     if self.class_refactor and annotation.get_id() in self.class_refactor:
                         class_id, _ = self.class_refactor[annotation.get_id()]
                         if class_id is not None:
-                            class_strings.append(annotation.refactored_string(class_id) + '\n')
+                            class_strings.append(annotation.serialize(class_id) + '\n')
 
                 if len(class_strings) > 0:
                     try:

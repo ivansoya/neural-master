@@ -2,13 +2,14 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
 
-from PyQt5.QtCore import QPointF, QRectF
+from PyQt5.QtCore import QPointF, QRectF, pyqtSlot
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView
 
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_mask import UAnnotationMask
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
+from supporting.functions import clamp
 
 if TYPE_CHECKING:
     from annotation.annotation_scene import UAnnotationGraphicsView
@@ -220,7 +221,7 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         self._clean_rect()
 
 
-class UMaskAnnotaionMode(UBaseAnnotationMode):
+class UMaskAnnotationMode(UBaseAnnotationMode):
     def __init__(self, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
         self.scene = scene
         self.commander = commander
@@ -248,8 +249,62 @@ class UMaskAnnotaionMode(UBaseAnnotationMode):
         for annotation in self.scene.get_annotations():
             annotation.enable_selection()
 
+    def refresh(self):
+        if self.current_mask:
+            self.current_mask.delete_mask()
+            if self.current_mask.scene():
+                self.scene.scene().removeItem(self.current_mask)
+            self.current_mask = None
+
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
+
+    def on_move_mouse(self, event: QMouseEvent):
+        image = self.scene.get_image()
+        if not self.current_mask or not image:
+            return
+
+        cursor_pos_scene = self.scene.mapToScene(event.pos())
+        cursor_pos_image = image.mapFromScene(cursor_pos_scene)
+        self.current_mask.update_point(self.current_mask.get_last_index(), cursor_pos_image)
+
+    def on_release_mouse(self, event: QMouseEvent):
+        image, class_data = self.scene.get_image(), self.scene.get_current_class()
+        if not image or not class_data:
+            return
+
+        cursor_pos_scene = self.scene.mapToScene(event.pos())
+        cursor_pos_image = image.mapFromScene(cursor_pos_scene)
+        if not self.current_mask:
+            cursor_pos_image.setX(clamp(cursor_pos_image.x(), 0, image.boundingRect().width()))
+            cursor_pos_image.setY(clamp(cursor_pos_image.y(), 0, image.boundingRect().height()))
+            self.current_mask = self.scene.add_annotation_mask(
+                [cursor_pos_image],
+                class_data
+            )
+            self.current_mask.connect_deleted_mask(self.on_delete_mask)
+            self.current_mask.connect_closed_polygon(self.on_mask_closed)
+            self.current_mask.setSelected(True)
+            self.current_mask.add_point()
+        else:
+            self.current_mask.fix_point(cursor_pos_image)
+            self.current_mask.add_point()
+
+    def on_press_mouse(self, event: QMouseEvent):
+        pass
+
+    @pyqtSlot()
+    def on_mask_closed(self):
+        if not self.current_mask:
+            return
+        self.current_mask.get_emitter().disconnect()
+        self.current_mask = None
+
+    @pyqtSlot(object)
+    def on_delete_mask(self, mask: UAnnotationMask):
+        if mask and self.current_mask is mask:
+            self.current_mask.delete_mask()
+            self.current_mask = None
 
     def _delete_mask(self):
         if self.current_mask and self.current_mask in self.scene.get_annotations():

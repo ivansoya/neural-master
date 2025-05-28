@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsIte
 
 from annotation.annotation_item import UAnnotationItem
 from supporting.functions import clamp
+from utility import FSegmentationAnnotationData
 
 
 class UAnnotationPoint(QGraphicsRectItem):
@@ -73,13 +74,6 @@ class UAnnotationPoint(QGraphicsRectItem):
             self.parent.update_point(self.index, cursor_pos)
         return super().mouseMoveEvent(event)
 
-
-class UStartPointEmitter(QObject):
-    polygon_closed = pyqtSignal(bool)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
 class UAnnotationPointStart(UAnnotationPoint):
     def __init__(self, index: int, cords: QPointF, size: float, scale: float, parent=None):
         super().__init__(index, cords, size, scale, parent)
@@ -92,7 +86,6 @@ class UAnnotationPointStart(UAnnotationPoint):
         self.setBrush(self.default_brush)
         self.setAcceptHoverEvents(True)
 
-        self.emitter = UStartPointEmitter()
 
     def hoverEnterEvent(self, event):
         self.setBrush(self.hover_brush)
@@ -111,16 +104,18 @@ class UAnnotationPointStart(UAnnotationPoint):
             if polygon.size() > 3:
                 self.parent.update_point(polygon.size() - 1, self.center)
                 if polygon.isClosed():
-                    self.emitter.polygon_closed.emit(True)
-            self.emitter.polygon_closed.emit(False)
+                    self.parent.get_emitter().polygon_closed.emit()
+            self.parent.get_emitter().deleted_mask.emit(self.parent)
             print("Нажата кнопка старта создания полигона!")
             event.accept()
 
-    def connect_to_emitter(self, func: Callable[[bool],  None]):
-        self.emitter.polygon_closed.connect(func)
+    def mouseReleaseEvent(self, event):
+        event.accept()
+
 
 class UMaskEmitter(QWidget):
     deleted_mask = pyqtSignal(object)
+    closed_polygon = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -136,7 +131,7 @@ class UAnnotationMask(UAnnotationItem):
     ):
         super().__init__(class_data, scale, parent)
 
-        self.emitter = UMaskEmitter()
+        self._emitter = UMaskEmitter()
 
         self.polygon = QPolygonF()
         for point in list_points:
@@ -146,12 +141,6 @@ class UAnnotationMask(UAnnotationItem):
         self.line_width: int = 2
 
         self.graphics_points_list: list[UAnnotationPoint] = list()
-
-    def get_polygon(self):
-        return self.polygon
-
-    def get_last_index(self):
-        return self.polygon.size() - 1
 
     def update_point(self, index: int, new_pos: QPointF) -> QPointF | None:
         if not self.polygon.contains(index):
@@ -203,7 +192,7 @@ class UAnnotationMask(UAnnotationItem):
         self.polygon.remove(index)
 
         if self.polygon.size() < 3:
-            self.emitter.deleted_mask.emit(self)
+            self._emitter.deleted_mask.emit(self)
         elif self.polygon.isClosed():
             self.close_polygon()
 
@@ -263,6 +252,49 @@ class UAnnotationMask(UAnnotationItem):
             if point.scene():
                 point.scene().removeItem(point)
         self.graphics_points_list.clear()
+
+    def get_annotation_data(self):
+        if not self.parentItem() or not self.polygon.isClosed():
+            return None
+        return FSegmentationAnnotationData(
+            1,
+            [(point.x(), point.y()) for point in self.polygon],
+            self.class_id,
+            self.class_name,
+            self.color,
+            self.parentItem().boundingRect().width(),
+            self.parentItem().boundingRect().height()
+        )
+
+    def rect(self):
+        return self.polygon.boundingRect()
+
+    def x(self):
+        return self.polygon.boundingRect().center().x()
+
+    def y(self):
+        return self.polygon.boundingRect().center().y()
+
+    def width(self):
+        return self.polygon.boundingRect().width()
+
+    def height(self):
+        return self.polygon.boundingRect().height()
+
+    def get_polygon(self):
+        return self.polygon
+
+    def get_last_index(self):
+        return self.polygon.size() - 1
+
+    def get_emitter(self):
+        return self._emitter
+
+    def connect_deleted_mask(self, func: Callable[[object], None]):
+        self._emitter.deleted_mask.connect(func)
+
+    def connect_closed_polygon(self, func: Callable[[], None]):
+        self._emitter.closed_polygon.connect(func)
 
     @staticmethod
     def _check_points(point_1: QPointF, point_2: QPointF, radius: float):

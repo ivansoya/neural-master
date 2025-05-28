@@ -12,6 +12,8 @@ import random
 
 from PyQt5.QtWidgets import QMessageBox
 
+from supporting.functions import clamp
+
 GColorList = [
     QColor(255, 0, 0),
     QColor(0, 255, 0),
@@ -140,7 +142,7 @@ class FAnnotationData:
     def __str__(self):
         return f"Объект аннотации не инициализирован!"
 
-    def refactored_string(self, class_id: int):
+    def serialize(self, class_id: int) -> str:
         return f"Объект аннотации не инициализирован!"
 
     def update_data(self, data):
@@ -189,27 +191,25 @@ class FDetectAnnotationData(FAnnotationData):
         self.Width = width
         self.Height = height
 
-    def __str__(self):
-        if self.X < 0: self.X = 0
-        if self.Y < 0: self.Y = 0
-        if self.X + self.Width > self.w_resolution: self.Width = self.w_resolution - self.X
-        if self.Y + self.Height > self.h_resolution: self.Height = self.h_resolution - self.Y
-        return (f"{self.class_id} "
-                f"{(self.X + self.Width / 2) / float(self.w_resolution)} "
-                f"{(self.Y + self.Height / 2) / float(self.h_resolution)} "
-                f"{self.Width / float(self.w_resolution)} "
-                f"{self.Height / float(self.h_resolution)}")
+    def _clamp_bbox(self):
+        self.X = max(0, self.X)
+        self.Y = max(0, self.Y)
+        self.Width = min(self.Width, self.w_resolution - self.X)
+        self.Height = min(self.Height, self.h_resolution - self.Y)
 
-    def refactored_string(self, class_id: int):
-        if self.X < 0: self.X = 0
-        if self.Y < 0: self.Y = 0
-        if self.X + self.Width > self.w_resolution: self.Width = self.w_resolution - self.X
-        if self.Y + self.Height > self.h_resolution: self.Height = self.h_resolution - self.Y
-        return (f"{class_id} "
-                f"{(self.X + self.Width / 2) / float(self.w_resolution)} "
-                f"{(self.Y + self.Height / 2) / float(self.h_resolution)} "
-                f"{self.Width / float(self.w_resolution)} "
-                f"{self.Height / float(self.h_resolution)}")
+    def serialize(self, class_id: int = None) -> str:
+        self._clamp_bbox()
+        serialized_class_id = self.class_id if class_id is None else class_id
+
+        x_center = (self.X + self.Width / 2) / self.w_resolution
+        y_center = (self.Y + self.Height / 2) / self.h_resolution
+        width = self.Width / self.w_resolution
+        height = self.Height / self.h_resolution
+
+        return f"{serialized_class_id} {x_center} {y_center} {width} {height}"
+
+    def __str__(self):
+        return self.serialize()
 
     def copy(self):
         return FDetectAnnotationData(
@@ -246,6 +246,63 @@ class FDetectAnnotationData(FAnnotationData):
 
     def __ne__(self, other):
         return not self == other
+
+
+class FSegmentationAnnotationData(FAnnotationData):
+    def __init__(self, object_id, points_list: list[tuple[float, float]], class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
+        super().__init__(class_id, class_name, color, res_w, res_h)
+        self.object_id = object_id
+        self.points_list = points_list
+
+    def serialize(self, class_id: int = None) -> str:
+        points_str = " ".join(
+            f"{clamp(x, 0, self.w_resolution)} {clamp(y, 0, self.h_resolution)}"
+            for x, y in self.points_list
+        )
+
+        serialized_class_id = self.class_id if class_id is None else class_id
+
+        return f"{serialized_class_id} {points_str}"
+
+    def __str__(self):
+        return self.serialize()
+
+    def copy(self):
+        return FSegmentationAnnotationData(
+            self.object_id,
+            self.points_list[:],
+            *self._copy_init_args()
+        )
+
+    def get_data(self):
+        return self.class_id, self.class_name, self.color, self.object_id, self.points_list
+
+    def update_data(self, data: tuple[int, str, QColor, int, list[tuple[float, float]]]):
+        self.class_id, self.class_name, color, self.object_id, list_points = data
+        self.color = QColor(color)
+        self.points_list = list_points[:]
+
+    def get_rect_to_draw(self):
+        min_x, min_y, max_x, max_y = self.w_resolution, self.h_resolution, 0, 0
+        for x, y in self.points_list:
+            min_x = min(min_x, x)
+            min_y = min(min_y, y)
+            max_x = max(max_x, x)
+            max_y = max(max_y, y)
+        return QRect(QPoint(min_x, min_y), QPoint(max_x, max_y))
+
+    def __eq__(self, other):
+        if not isinstance(other, FSegmentationAnnotationData):
+            return self is other
+        return (
+                super().__eq__(other) and
+                self.object_id == other.object_id and
+                self.points_list == other.points_list
+        )
+
+    def __ne__(self, other):
+        return not self == other
+
 
 class FAnnotationItem:
     def __init__(self, ann_list: list[FAnnotationData], image_path: str, dataset_name: str | None):
