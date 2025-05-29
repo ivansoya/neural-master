@@ -23,7 +23,6 @@ class UAnnotationItem(QGraphicsItem):
 
         self.setAcceptHoverEvents(True)
 
-        self.draw_scale = scale
         self.class_id, self.class_name, self.color = class_data
 
         self.background_color: QColor = QColor(Qt.black)
