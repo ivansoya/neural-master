@@ -281,32 +281,23 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
             cursor_pos_image.setX(clamp(cursor_pos_image.x(), 0, image.boundingRect().width()))
             cursor_pos_image.setY(clamp(cursor_pos_image.y(), 0, image.boundingRect().height()))
             if not self.current_mask:
+                self.scene.scene().clearSelection()
                 self.current_mask = self.scene.add_annotation_mask(
                     [cursor_pos_image],
                     class_data
                 )
-                self.current_mask.connect_deleted_mask(self.on_delete_mask)
-                self.current_mask.connect_closed_polygon(self.on_mask_closed)
                 self.current_mask.create_graphic_points()
                 self.current_mask.add_point()
             else:
-                if self.current_mask.fix_point(cursor_pos_image):
+                ret = self.current_mask.fix_point(cursor_pos_image)
+                if ret == 2:
+                    self.current_mask.setSelected(False)
+                    self.current_mask = None
+                elif ret == 1:
                     self.current_mask.add_point()
-        print("Realease идет от мода!")
 
     def on_press_mouse(self, event: QMouseEvent):
         pass
-
-    def on_mask_closed(self):
-        if not self.current_mask:
-            return
-        self.current_mask.get_emitter().disconnect()
-        self.current_mask = None
-
-    def on_delete_mask(self, mask: UAnnotationMask):
-        if mask and self.current_mask is mask:
-            self.current_mask.delete_mask()
-            self.current_mask = None
 
     def _delete_mask(self):
         if self.current_mask and self.current_mask in self.scene.get_annotations():
