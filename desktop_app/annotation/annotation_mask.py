@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 
 from PyQt5.QtCore import QPointF, Qt, QRectF, pyqtSignal, QObject, QRect
 from PyQt5.QtGui import QColor, QPolygonF, QPainterPath, QPainterPathStroker, QBrush, QPen
@@ -75,6 +75,7 @@ class UAnnotationPoint(QGraphicsRectItem):
             self.parent.update_point(self.index, cursor_pos)
         event.accept()
 
+
 class UAnnotationPointStart(UAnnotationPoint):
     def __init__(self, index: int, cords: QPointF, size: float, scale: float, parent=None):
         super().__init__(index, cords, size, scale, parent)
@@ -119,7 +120,7 @@ class UAnnotationMask(UAnnotationItem):
             list_points: list[QPointF],
             class_data: tuple[int, str, QColor],
             scale: float = 1.0,
-            parent = None
+            parent=None
     ):
         self.graphics_points_list: list[UAnnotationPoint] = list()
 
@@ -132,6 +133,7 @@ class UAnnotationMask(UAnnotationItem):
         self.line_width: int = 2
 
         self.points: list[QPointF] = list()
+        self.move_point: Optional[QPointF] = None
         self.closed = False
 
     def update_point(self, index: int, new_pos: QPointF) -> QPointF | None:
@@ -146,15 +148,18 @@ class UAnnotationMask(UAnnotationItem):
             new_pos.setX(clamp(new_pos.x(), 0, max_x))
             new_pos.setY(clamp(new_pos.y(), 0, max_y))
 
-        self.polygon.replace(index, new_pos)
+        self.points[index] = QPointF(new_pos)
         self.update()
         return new_pos
 
-    def add_point(self):
-        self.polygon.append(self.polygon.last())
+    def add_point(self, pos: QPointF):
+        self.points.append(QPointF(pos))
+
+    def set_move_point(self, pos):
+        self.move_point = QPointF(pos)
 
     def fix_point(self, pos: QPointF) -> (bool, 'UAnnotationMask'):
-        ret = self._check_point_to_fix(pos)
+        ret = self._check_point_to_fix()
         if ret == 2:
             self.close_polygon()
         elif ret == 1:
@@ -171,49 +176,43 @@ class UAnnotationMask(UAnnotationItem):
         return ret
 
     def close_polygon(self):
-        if self.polygon.size() >= 3:
-            self.polygon.append(self.polygon.first())
-            self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-            self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.closed = True
 
-    def remove_point(self, index: int):
-        if index < 0 or index >= self.polygon.size():
-            return
-        was_closed = self.is_closed()
+    # Функция удаляет точку по индексу,
+    # Возвращает истину, если маски после этого удаления уже не должно существовать
+    def remove_point(self, index: int) -> bool:
+        if not 0 <= index < len(self.points):
+            return True
 
-        if index == 0:
-            self.polygon.remove(self.polygon.size() - 1)  # удаляем "замыкающую" точку
-        self.polygon.remove(index)
-        try:
-            graphic_point = self.graphics_points_list.pop(index)
-            if graphic_point:
-                self.scene().removeItem(graphic_point)
-        except Exception as error:
-            print(str(error))
+        # Удаление графической точки, если такая есть
+        if 0 <= index < len(self.graphics_points_list):
+            if self.graphics_points_list[index].get_center() == self.points[index]:
+                self.graphics_points_list.pop(index)
 
-        if was_closed and not self.is_closed(): self.close_polygon()
+        self.points.pop(index)
+        return False
 
     def shape(self):
         path = QPainterPath()
 
-        if self.is_closed():
-            path.addPolygon(self.polygon)
+        if self.closed:
+            path.addPolygon(QPolygonF(self.points))
 
-        if len(self.polygon) >= 2:
-            path.moveTo(self.polygon[0])
-            for pt in self.polygon[1:]:
+        if len(self.points) >= 2:
+            path.moveTo(self.points[0])
+            for pt in self.points[1:]:
                 path.lineTo(pt)
 
         stroke = QPainterPathStroker()
         stroke.setWidth(self.line_width * 2)
 
-        return stroke.createStroke(path) if not self.polygon.isClosed() else path.united(stroke.createStroke(path))
+        return stroke.createStroke(path) if not self.closed else path.united(stroke.createStroke(path))
 
     def boundingRect(self):
-        if self.polygon.isEmpty():
+        if len(self.points):
             return QRectF()
 
-        bounds = self.polygon.boundingRect()
+        bounds = QPolygonF(self.points).boundingRect()
         return bounds.adjusted(-self.points_size, -self.points_size, self.points_size, self.points_size)
 
     def itemChange(self, change, value):
@@ -229,32 +228,28 @@ class UAnnotationMask(UAnnotationItem):
         return super().itemChange(change, value)
 
     def create_graphic_points(self):
-        points = [self.polygon[i] for i in range(self.polygon.size())]
-        if len(points) == 0:
+        if len(self.points) == 0:
             return
 
-        if not self.is_closed():
-            point_start = UAnnotationPointStart(0, points[0], self.points_size, self.draw_scale, self)
-            self.scene().addItem(point_start)
-            self.graphics_points_list.append(point_start)
-
-        points_create = points[:-1] if self.polygon.isClosed() else points[1:]
-        for i in range(len(points_create)):
-            point = UAnnotationPoint(i, points_create[i], self.points_size, self.draw_scale, self)
+        for index in range(len(self.points)):
+            if index == 0 and not self.closed:
+                point = UAnnotationPointStart(index, self.points[index], self.points_size, self.draw_scale, self)
+            else:
+                point = UAnnotationPoint(index, self.points[index], self.points_size, self.draw_scale, self)
             self.scene().addItem(point)
             self.graphics_points_list.append(point)
 
-    def paint(self, painter, option, widget = ...):
+    def paint(self, painter, option, widget=...):
         scaled_line_width = int(self.line_width * self.draw_scale)
         painter.setPen(QPen(self.color, scaled_line_width))
-        if self.is_closed():
+        if self.closed:
             fill_color = QColor(self.color)
             fill_color.setAlpha(100)
             painter.setBrush(QBrush(fill_color, Qt.SolidPattern))
-            painter.drawPolygon(self.polygon)
+            painter.drawPolygon(self.points)
         else:
             painter.setBrush(Qt.NoBrush)
-            painter.drawPolyline(self.polygon)
+            painter.drawPolyline(list(self.points + self.move_point))
 
     def set_draw_scale(self, scale: float):
         if scale > 1:
@@ -275,11 +270,11 @@ class UAnnotationMask(UAnnotationItem):
         self.graphics_points_list.clear()
 
     def get_annotation_data(self):
-        if not self.parentItem() or not self.polygon.isClosed():
+        if not self.parentItem() or not self.closed:
             return None
         return FSegmentationAnnotationData(
             1,
-            [(point.x(), point.y()) for point in self.polygon],
+            [(point.x(), point.y()) for point in self.points],
             self.class_id,
             self.class_name,
             self.color,
@@ -288,45 +283,43 @@ class UAnnotationMask(UAnnotationItem):
         )
 
     def rect(self):
-        return self.polygon.boundingRect()
+        return QPolygonF(self.points).boundingRect()
 
     def x(self):
-        return self.polygon.boundingRect().center().x()
+        return QPolygonF(self.points).boundingRect().center().x()
 
     def y(self):
-        return self.polygon.boundingRect().center().y()
+        return QPolygonF(self.points).boundingRect().center().y()
 
     def width(self):
-        return self.polygon.boundingRect().width()
+        return QPolygonF(self.points).boundingRect().width()
 
     def height(self):
-        return self.polygon.boundingRect().height()
+        return QPolygonF(self.points).boundingRect().height()
 
     def get_polygon(self):
-        return self.polygon
+        return self.points
 
     def get_last_index(self):
-        return self.polygon.size() - 1
+        return len(self.points) - 1
 
     def is_closed(self):
-        if self.polygon.size() < 3:
-            return False
-        return self.polygon.first() == self.polygon.last()
+        return self.closed
 
-    def _check_point_to_fix(self, check_point: QPointF):
+    def _check_point_to_fix(self):
         def rect_with_center(point):
             rect = QRectF(point.boundingRect())
             rect.moveCenter(point.get_center())
             return rect
 
-        if not self.graphics_points_list:
+        if len(self.graphics_points_list) < 1 or self.move_point is None:
             return 1
 
-        if self.graphics_points_list[0] and rect_with_center(self.graphics_points_list[0]).contains(check_point):
+        if self.graphics_points_list[0] and rect_with_center(self.graphics_points_list[0]).contains(self.move_point):
             return 2
 
         for point in self.graphics_points_list[1:]:
-            if point and rect_with_center(point).contains(check_point):
+            if point and rect_with_center(point).contains(self.move_point):
                 return 0
 
         return 1
