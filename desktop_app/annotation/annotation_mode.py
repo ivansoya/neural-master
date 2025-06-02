@@ -251,11 +251,7 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
             annotation.enable_selection()
 
     def refresh(self):
-        if self.current_mask:
-            self.current_mask.delete_mask()
-            if self.current_mask.scene():
-                self.scene.scene().removeItem(self.current_mask)
-            self.current_mask = None
+        self._clean_mask()
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
@@ -265,9 +261,7 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         if not self.current_mask or not image:
             return
 
-        cursor_pos_scene = self.scene.mapToScene(event.pos())
-        cursor_pos_image = image.mapFromScene(cursor_pos_scene)
-        self.current_mask.update_point(self.current_mask.get_last_index(), cursor_pos_image)
+        self.current_mask.move(self._get_clamped_pos(event.pos(), image))
         self.scene.scene().update()
 
     def on_release_mouse(self, event: QMouseEvent):
@@ -276,35 +270,38 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
             return
 
         if event.button() == Qt.LeftButton:
-            cursor_pos_scene = self.scene.mapToScene(event.pos())
-            cursor_pos_image = image.mapFromScene(cursor_pos_scene)
-            cursor_pos_image.setX(clamp(cursor_pos_image.x(), 0, image.boundingRect().width()))
-            cursor_pos_image.setY(clamp(cursor_pos_image.y(), 0, image.boundingRect().height()))
+            cursor_pos_image = self._get_clamped_pos(event.pos(), image)
             if not self.current_mask:
                 self.scene.scene().clearSelection()
                 self.current_mask = self.scene.add_annotation_mask(
                     [cursor_pos_image],
                     class_data
                 )
-                self.current_mask.create_graphic_points()
-                self.current_mask.add_point()
+                self.current_mask.setSelected(True)
             else:
-                ret = self.current_mask.fix_point(cursor_pos_image)
-                if ret == 2:
+                if self.current_mask.fix_point():
+                    print("Выбранна ли данная маска: ", self.current_mask.isSelected())
                     self.current_mask.setSelected(False)
                     self.current_mask = None
-                elif ret == 1:
-                    self.current_mask.add_point()
 
     def on_press_mouse(self, event: QMouseEvent):
         pass
 
+    def _get_clamped_pos(self, cursor_pos: QPointF, image) -> QPointF:
+        cursor_pos_scene = self.scene.mapToScene(cursor_pos)
+        cursor_pos_image = image.mapFromScene(cursor_pos_scene)
+        cursor_pos_image.setX(clamp(cursor_pos_image.x(), 0, image.boundingRect().width()))
+        cursor_pos_image.setY(clamp(cursor_pos_image.y(), 0, image.boundingRect().height()))
+        return cursor_pos_image
+
     def _delete_mask(self):
-        if self.current_mask and self.current_mask in self.scene.get_annotations():
+        if self.current_mask:
             self.current_mask.delete_mask()
             self.scene.delete_annotation_item(self.current_mask)
         self.current_mask = None
 
     def _clean_mask(self):
+        if self.current_mask and not self.current_mask.is_closed():
+            self.current_mask.delete_mask()
+            self.scene.delete_annotation_item(self.current_mask)
         self.current_mask = None
-

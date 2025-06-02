@@ -5,7 +5,7 @@ import yaml
 import configparser
 from enum import Enum
 
-from PyQt5.QtCore import Qt, QPointF, QPoint, QRect
+from PyQt5.QtCore import Qt, QPointF, QPoint, QRect, QRectF
 from PyQt5.QtGui import QColor
 
 import random
@@ -289,7 +289,7 @@ class FSegmentationAnnotationData(FAnnotationData):
             min_y = min(min_y, y)
             max_x = max(max_x, x)
             max_y = max(max_y, y)
-        return QRect(QPoint(min_x, min_y), QPoint(max_x, max_y))
+        return QRectF(QPointF(min_x, min_y), QPointF(max_x, max_y))
 
     def __eq__(self, other):
         if not isinstance(other, FSegmentationAnnotationData):

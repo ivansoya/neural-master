@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable
 
 from PyQt5.QtCore import QPointF, Qt, QRectF, pyqtSignal, QObject, QRect
 from PyQt5.QtGui import QColor, QPolygonF, QPainterPath, QPainterPathStroker, QBrush, QPen
@@ -73,8 +73,8 @@ class UAnnotationPoint(QGraphicsRectItem):
         if self.parent and self.parent.parentItem():
             cursor_pos = self.mapToItem(self.parent.parentItem(), event.pos())
             self.parent.update_point(self.index, cursor_pos)
+            self.setPos(cursor_pos)
         event.accept()
-
 
 class UAnnotationPointStart(UAnnotationPoint):
     def __init__(self, index: int, cords: QPointF, size: float, scale: float, parent=None):
@@ -86,6 +86,17 @@ class UAnnotationPointStart(UAnnotationPoint):
 
         self.setBrush(self.default_brush)
         self.is_hovered = False
+
+    @classmethod
+    def from_point(cls, point: 'UAnnotationPoint') -> 'UAnnotationPointStart':
+        new_point = cls(
+            point.index,
+            point.center,
+            point.size,
+            point.draw_scale,
+            point.parent
+        )
+        return new_point
 
     def paint(self, painter, option, widget=None):
         painter.setPen(QPen(QColor(Qt.black), self.width_pen))
@@ -113,6 +124,13 @@ class UAnnotationPointStart(UAnnotationPoint):
     def mouseReleaseEvent(self, event):
         event.accept()
 
+    def mouseMoveEvent(self, event):
+        return super().mouseMoveEvent(event)
+
+
+class UMaskEmitter(QObject):
+    deleted = pyqtSignal(object)
+
 
 class UAnnotationMask(UAnnotationItem):
     def __init__(
@@ -120,25 +138,33 @@ class UAnnotationMask(UAnnotationItem):
             list_points: list[QPointF],
             class_data: tuple[int, str, QColor],
             scale: float = 1.0,
-            parent=None
+            parent = None
     ):
         self.graphics_points_list: list[UAnnotationPoint] = list()
 
         super().__init__(class_data, scale, parent)
 
-        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemIsMovable, False)
 
         self.points_size: int = 8
         self.line_width: int = 2
 
-        self.points: list[QPointF] = list()
-        self.move_point: Optional[QPointF] = None
+        self.points: list[QPointF] = list_points
+        if self.points and len(self.points) > 0:
+            self.move_point = self.points[-1]
+        else:
+            self.move_point = None
         self.closed = False
 
-    def update_point(self, index: int, new_pos: QPointF) -> QPointF | None:
+        self._emitter = UMaskEmitter()
+
+    def connect_to_delete_signal(self, func: Callable[[object], None]):
+        self._emitter.deleted.connect(func)
+
+    def update_point(self, index: int, new_pos: QPointF):
         if not (0 <= index < len(self.points)):
-            return None
+            return
 
         parent = self.parentItem()
         if isinstance(parent, QGraphicsPixmapItem):
@@ -150,47 +176,50 @@ class UAnnotationMask(UAnnotationItem):
 
         self.points[index] = QPointF(new_pos)
         self.update()
-        return new_pos
 
-    def add_point(self, pos: QPointF):
-        self.points.append(QPointF(pos))
+    def add_point(self, new_point: QPointF):
+        self.points.append(QPointF(new_point))
 
-    def set_move_point(self, pos):
-        self.move_point = QPointF(pos)
+    def move(self, new_point: QPointF):
+        self.move_point = QPointF(new_point)
 
-    def fix_point(self, pos: QPointF) -> (bool, 'UAnnotationMask'):
-        ret = self._check_point_to_fix()
+    def fix_point(self) -> bool:
+        ret = self._check_point_to_fix(self.move_point)
         if ret == 2:
-            self.close_polygon()
+            self.close()
+            return True
         elif ret == 1:
-            point = UAnnotationPoint(
-                self.get_last_index(),
-                pos,
-                self.points_size,
-                self.draw_scale,
-                self
-            )
-            self.scene().addItem(point)
-            self.graphics_points_list.append(point)
+            if self.isSelected():
+                point = UAnnotationPoint(
+                    len(self.points),
+                    self.move_point,
+                    self.points_size,
+                    self.draw_scale,
+                    self
+                )
+                self.scene().addItem(point)
+                self.graphics_points_list.append(point)
+            self.points.append(QPointF(self.move_point))
+            return False
 
-        return ret
-
-    def close_polygon(self):
+    def close(self):
         self.closed = True
 
-    # Функция удаляет точку по индексу,
-    # Возвращает истину, если маски после этого удаления уже не должно существовать
-    def remove_point(self, index: int) -> bool:
+    # Удаление точки у маски
+    def remove_point(self, index: int):
         if not 0 <= index < len(self.points):
-            return True
+            return
 
-        # Удаление графической точки, если такая есть
+        deleted_point = self.points.pop(index)
         if 0 <= index < len(self.graphics_points_list):
-            if self.graphics_points_list[index].get_center() == self.points[index]:
-                self.graphics_points_list.pop(index)
+            graph_delete = self.graphics_points_list.pop(index)
+            self.scene().removeItem(graph_delete)
 
-        self.points.pop(index)
-        return False
+        if (len(self.points) <= 2 and self.closed) or len(self.points) == 0:
+            self._emitter.deleted.emit(self)
+            return
+
+        self._check_point_start()
 
     def shape(self):
         path = QPainterPath()
@@ -209,11 +238,11 @@ class UAnnotationMask(UAnnotationItem):
         return stroke.createStroke(path) if not self.closed else path.united(stroke.createStroke(path))
 
     def boundingRect(self):
-        if len(self.points):
+        if len(self.points) == 0:
             return QRectF()
 
-        bounds = QPolygonF(self.points).boundingRect()
-        return bounds.adjusted(-self.points_size, -self.points_size, self.points_size, self.points_size)
+        polygon = QPolygonF(self.points) if self.closed else QPolygonF(self.points + [self.move_point] if self.move_point else [])
+        return polygon.boundingRect().adjusted(-self.points_size, -self.points_size, self.points_size, self.points_size)
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
@@ -228,28 +257,29 @@ class UAnnotationMask(UAnnotationItem):
         return super().itemChange(change, value)
 
     def create_graphic_points(self):
+        self._del_children()
         if len(self.points) == 0:
             return
 
-        for index in range(len(self.points)):
-            if index == 0 and not self.closed:
-                point = UAnnotationPointStart(index, self.points[index], self.points_size, self.draw_scale, self)
+        for p_index in range(len(self.points)):
+            if p_index == 0 and not self.closed:
+                temp = UAnnotationPointStart(p_index, self.points[p_index], self.points_size, self.draw_scale, self)
             else:
-                point = UAnnotationPoint(index, self.points[index], self.points_size, self.draw_scale, self)
-            self.scene().addItem(point)
-            self.graphics_points_list.append(point)
+                temp = UAnnotationPoint(p_index, self.points[p_index], self.points_size, self.draw_scale, self)
+            self.scene().addItem(temp)
+            self.graphics_points_list.append(temp)
 
-    def paint(self, painter, option, widget=...):
+    def paint(self, painter, option, widget = ...):
         scaled_line_width = int(self.line_width * self.draw_scale)
         painter.setPen(QPen(self.color, scaled_line_width))
-        if self.closed:
+        if self.is_closed():
             fill_color = QColor(self.color)
             fill_color.setAlpha(100)
             painter.setBrush(QBrush(fill_color, Qt.SolidPattern))
-            painter.drawPolygon(self.points)
+            painter.drawPolygon(QPolygonF(self.points))
         else:
             painter.setBrush(Qt.NoBrush)
-            painter.drawPolyline(list(self.points + self.move_point))
+            painter.drawPolyline(QPolygonF(self.points + [self.move_point] if self.move_point else []))
 
     def set_draw_scale(self, scale: float):
         if scale > 1:
@@ -262,15 +292,16 @@ class UAnnotationMask(UAnnotationItem):
 
     def delete_mask(self):
         self._del_children()
+        self.points.clear()
 
     def _del_children(self):
         for point in self.graphics_points_list:
-            if point:
+            if point and point.scene():
                 self.scene().removeItem(point)
         self.graphics_points_list.clear()
 
     def get_annotation_data(self):
-        if not self.parentItem() or not self.closed:
+        if not self.closed or self.parentItem() is None:
             return None
         return FSegmentationAnnotationData(
             1,
@@ -306,20 +337,38 @@ class UAnnotationMask(UAnnotationItem):
     def is_closed(self):
         return self.closed
 
-    def _check_point_to_fix(self):
+    def _check_point_to_fix(self, check_point: QPointF):
         def rect_with_center(point):
             rect = QRectF(point.boundingRect())
             rect.moveCenter(point.get_center())
             return rect
 
-        if len(self.graphics_points_list) < 1 or self.move_point is None:
+        if self.closed is True:
+            return 0
+
+        if len(self.graphics_points_list) == 0:
             return 1
 
-        if self.graphics_points_list[0] and rect_with_center(self.graphics_points_list[0]).contains(self.move_point):
+        if self.graphics_points_list[0] and rect_with_center(self.graphics_points_list[0]).contains(check_point):
             return 2
 
         for point in self.graphics_points_list[1:]:
-            if point and rect_with_center(point).contains(self.move_point):
+            if point and rect_with_center(point).contains(check_point):
                 return 0
 
         return 1
+
+    def _check_point_start(self):
+        if len(self.points) == 0 or len(self.graphics_points_list) == 0:
+            return
+
+        current_start = self.graphics_points_list[0]
+        if not isinstance(current_start, UAnnotationPointStart):
+            return
+
+        new_start_point = UAnnotationPointStart.from_point(current_start)
+
+        self.scene().removeItem(current_start)
+        self.graphics_points_list[0] = new_start_point
+        self.scene().addItem(new_start_point)
+
