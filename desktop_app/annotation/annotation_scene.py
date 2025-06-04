@@ -81,9 +81,9 @@ class UAnnotationGraphicsView(QGraphicsView):
             }
 
     def display_image(self, thumbnail: tuple[int, str, list[FAnnotationData]], thumb_status: int):
+        self.annotate_mods[self.current_work_mode].refresh()
         self.annotate_scene.clear()
         self.annotation_items.clear()
-        self.annotate_mods[self.current_work_mode].refresh()
         if not thumbnail:
             self._clear_display_image()
             return

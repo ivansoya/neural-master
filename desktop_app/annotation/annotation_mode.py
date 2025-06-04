@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING
 
 from PyQt5.QtCore import QPointF, QRectF, pyqtSlot, QObject, Qt
 from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtWidgets import QGraphicsView
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsItem
 
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_mask import UAnnotationMask
@@ -251,7 +251,9 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
             annotation.enable_selection()
 
     def refresh(self):
-        self._clean_mask()
+        if self.current_mask:
+            self.current_mask.delete_mask()
+        self.current_mask = None
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
@@ -277,10 +279,12 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
                     [cursor_pos_image],
                     class_data
                 )
-                self.current_mask.setSelected(True)
+                self.current_mask.create_graphic_points()
             else:
                 if self.current_mask.fix_point():
-                    print("Выбранна ли данная маска: ", self.current_mask.isSelected())
+                    self.current_mask.setFlag(QGraphicsItem.ItemIsMovable, True)
+                    self.current_mask.setFlag(QGraphicsItem.ItemIsSelectable, True)
+
                     self.current_mask.setSelected(False)
                     self.current_mask = None
 

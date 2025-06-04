@@ -144,7 +144,7 @@ class UAnnotationMask(UAnnotationItem):
 
         super().__init__(class_data, scale, parent)
 
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
         self.setFlag(QGraphicsItem.ItemIsMovable, False)
 
         self.points_size: int = 8
@@ -338,9 +338,9 @@ class UAnnotationMask(UAnnotationItem):
         return self.closed
 
     def _check_point_to_fix(self, check_point: QPointF):
-        def rect_with_center(point):
-            rect = QRectF(point.boundingRect())
-            rect.moveCenter(point.get_center())
+        def rect_with_center(point_t):
+            rect = QRectF(point_t.boundingRect())
+            rect.moveCenter(point_t.get_center())
             return rect
 
         if self.closed is True:
