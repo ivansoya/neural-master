@@ -3,8 +3,8 @@ from enum import Enum
 from typing import Optional, TYPE_CHECKING
 
 from PyQt5.QtCore import QPointF, QRectF, pyqtSlot, QObject, Qt
-from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsItem
+from PyQt5.QtGui import QMouseEvent, QKeyEvent
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsItem, QWidget, QApplication
 
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_mask import UAnnotationMask
@@ -51,6 +51,14 @@ class UBaseAnnotationMode(ABC):
     def on_release_mouse(self, event: QMouseEvent | None):
         pass
 
+    @abstractmethod
+    def on_key_press(self, event: QKeyEvent):
+        pass
+
+    @abstractmethod
+    def on_key_release(self, event: QKeyEvent):
+        pass
+
 class UDragAnnotationMode(UBaseAnnotationMode):
     def __init__(self, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
         self.scene = scene
@@ -58,6 +66,9 @@ class UDragAnnotationMode(UBaseAnnotationMode):
 
         self.mode = EWorkMode.DragMode
         self.previous_mode: Optional[EWorkMode] = None
+
+        self.mask_adding_point_mode = False
+        self.last_mask: Optional[UAnnotationMask] = None
 
     def start_mode(self, prev_mode):
         for annotation in self.scene.get_annotations():
@@ -78,7 +89,10 @@ class UDragAnnotationMode(UBaseAnnotationMode):
         return
 
     def on_press_mouse(self, event):
-        return
+        if event.button() == Qt.LeftButton and self.mask_adding_point_mode:
+            pass
+        if self.mask_adding_point_mode:
+            return
 
     def on_release_mouse(self, event):
         selected = self.scene.get_selected_annotation()
@@ -94,6 +108,23 @@ class UDragAnnotationMode(UBaseAnnotationMode):
             )
         return
 
+    def on_key_press(self, event):
+        if event.key() == Qt.Key_Shift:
+            selected = [ item for item in self.scene.scene().selectedItems() if isinstance(item, UAnnotationMask)]
+            if len(selected) > 0:
+                self.last_mask = max(selected, key=lambda item: item.zValue())
+            else:
+                self.last_mask = None
+
+            if self.last_mask:
+                self.mask_adding_point_mode = True
+                QApplication.setOverrideCursor(Qt.CrossCursor)
+
+    def on_key_release(self, event):
+        if event.key() == Qt.Key_Shift and self.mask_adding_point_mode:
+            QApplication.restoreOverrideCursor()
+            self.mask_adding_point_mode = False
+            self.last_mask = None
 
 class UForceDragAnnotationMode(UBaseAnnotationMode):
     def __init__(self, scene: 'UAnnotationGraphicsView', commander: UGlobalSignalHolder):
@@ -102,6 +133,8 @@ class UForceDragAnnotationMode(UBaseAnnotationMode):
 
         self.mode = EWorkMode.ForceDragMode
         self.previous_mode: Optional[EWorkMode] = None
+
+        self.mask_adding_point_mode: bool = False
 
     def start_mode(self, prev_mode):
         for annotation in self.scene.get_annotations():
@@ -129,6 +162,12 @@ class UForceDragAnnotationMode(UBaseAnnotationMode):
         return
 
     def on_release_mouse(self, event):
+        return
+
+    def on_key_release(self, event: QKeyEvent):
+        return
+
+    def on_key_press(self, event: QKeyEvent):
         return
 
 
@@ -211,6 +250,12 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
             self._clean_rect()
             self.commander.change_work_mode.emit(EWorkMode.DragMode.value)
 
+    def on_key_release(self, event: QKeyEvent):
+        return
+
+    def on_key_press(self, event: QKeyEvent):
+        return
+
     def _clean_rect(self):
         self.current_rect = None
         self.start_point = None
@@ -280,16 +325,24 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
                     class_data
                 )
                 self.current_mask.create_graphic_points()
+                self.current_mask.setSelected(True)
             else:
                 if self.current_mask.fix_point():
                     self.current_mask.setFlag(QGraphicsItem.ItemIsMovable, True)
                     self.current_mask.setFlag(QGraphicsItem.ItemIsSelectable, True)
 
+                    self.current_mask.clear_graphic_points()
                     self.current_mask.setSelected(False)
                     self.current_mask = None
 
     def on_press_mouse(self, event: QMouseEvent):
         pass
+
+    def on_key_release(self, event: QKeyEvent):
+        return
+
+    def on_key_press(self, event: QKeyEvent):
+        return
 
     def _get_clamped_pos(self, cursor_pos: QPointF, image) -> QPointF:
         cursor_pos_scene = self.scene.mapToScene(cursor_pos)

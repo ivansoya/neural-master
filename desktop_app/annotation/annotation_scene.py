@@ -388,6 +388,20 @@ class UAnnotationGraphicsView(QGraphicsView):
 
         return super().mouseReleaseEvent(event)
 
+    def keyPressEvent(self, event):
+        if self.is_model_annotating:
+            return
+        self.annotate_mods[self.current_work_mode].on_key_press(event)
+
+        return super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        if self.is_model_annotating:
+            return
+        self.annotate_mods[self.current_work_mode].on_key_release(event)
+
+        return super().keyReleaseEvent(event)
+
     def get_current_thumb_index(self) -> int:
         thumb_index, *_ = self.current_display_thumbnail
         return thumb_index
