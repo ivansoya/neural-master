@@ -19,6 +19,7 @@ CLASSES = "classes"
 NAME = "name"
 
 LABELS = "labels"
+LABELS_SEGM = "labels_seg"
 IMAGES = "images"
 
 class UMergeAnnotationThread(QThread):

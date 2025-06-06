@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QGraphicsView, QGraphicsItem, QWidget, QApplication
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_mask import UAnnotationMask
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
-from supporting.functions import clamp
+from supporting.functions import clamp, get_clamped_pos
 
 if TYPE_CHECKING:
     from annotation.annotation_scene import UAnnotationGraphicsView
@@ -89,10 +89,15 @@ class UDragAnnotationMode(UBaseAnnotationMode):
         return
 
     def on_press_mouse(self, event):
-        if event.button() == Qt.LeftButton and self.mask_adding_point_mode:
-            pass
-        if self.mask_adding_point_mode:
+        image = self.scene.get_image()
+        if not image:
             return
+
+        if event.button() == Qt.LeftButton and self.mask_adding_point_mode:
+            if self.last_mask is None:
+                return
+            cursor_pos_image = get_clamped_pos(self.scene, event.pos(), image)
+            return 1
 
     def on_release_mouse(self, event):
         selected = self.scene.get_selected_annotation()
@@ -125,6 +130,7 @@ class UDragAnnotationMode(UBaseAnnotationMode):
             QApplication.restoreOverrideCursor()
             self.mask_adding_point_mode = False
             self.last_mask = None
+
 
 class UForceDragAnnotationMode(UBaseAnnotationMode):
     def __init__(self, scene: 'UAnnotationGraphicsView', commander: UGlobalSignalHolder):
@@ -308,7 +314,7 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         if not self.current_mask or not image:
             return
 
-        self.current_mask.move(self._get_clamped_pos(event.pos(), image))
+        self.current_mask.move(get_clamped_pos(self.scene, event.pos(), image))
         self.scene.scene().update()
 
     def on_release_mouse(self, event: QMouseEvent):
@@ -317,7 +323,7 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
             return
 
         if event.button() == Qt.LeftButton:
-            cursor_pos_image = self._get_clamped_pos(event.pos(), image)
+            cursor_pos_image = get_clamped_pos(self.scene, event.pos(), image)
             if not self.current_mask:
                 self.scene.scene().clearSelection()
                 self.current_mask = self.scene.add_annotation_mask(
@@ -343,13 +349,6 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
 
     def on_key_press(self, event: QKeyEvent):
         return
-
-    def _get_clamped_pos(self, cursor_pos: QPointF, image) -> QPointF:
-        cursor_pos_scene = self.scene.mapToScene(cursor_pos)
-        cursor_pos_image = image.mapFromScene(cursor_pos_scene)
-        cursor_pos_image.setX(clamp(cursor_pos_image.x(), 0, image.boundingRect().width()))
-        cursor_pos_image.setY(clamp(cursor_pos_image.y(), 0, image.boundingRect().height()))
-        return cursor_pos_image
 
     def _delete_mask(self):
         if self.current_mask:

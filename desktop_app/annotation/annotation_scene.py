@@ -370,9 +370,10 @@ class UAnnotationGraphicsView(QGraphicsView):
     def mousePressEvent(self, event):
         if self.is_model_annotating:
             return
-        self.annotate_mods[self.current_work_mode].on_press_mouse(event)
-
-        return super().mousePressEvent(event)
+        if self.annotate_mods[self.current_work_mode].on_press_mouse(event):
+            return
+        else:
+            return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if self.is_model_annotating:
@@ -391,9 +392,10 @@ class UAnnotationGraphicsView(QGraphicsView):
     def keyPressEvent(self, event):
         if self.is_model_annotating:
             return
-        self.annotate_mods[self.current_work_mode].on_key_press(event)
-
-        return super().keyPressEvent(event)
+        if self.annotate_mods[self.current_work_mode].on_key_press(event):
+            return
+        else:
+            return super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
         if self.is_model_annotating:

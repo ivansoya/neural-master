@@ -32,6 +32,12 @@ class UAnnotationPoint(QGraphicsRectItem):
 
         self.setZValue(10)
 
+    def get_index(self) -> int:
+        return self.index
+
+    def set_index(self, index: int):
+        self.index = index
+
     def paint(self, painter, option, widget=None):
         size = int(self.size * self.draw_scale)
         painter.setPen(QPen(QColor(Qt.black), int(self.width_pen * self.draw_scale)))
@@ -183,8 +189,16 @@ class UAnnotationMask(UAnnotationItem):
         self.points[index] = QPointF(new_pos)
         self.update()
 
-    def add_point(self, new_point: QPointF):
-        self.points.append(QPointF(new_point))
+    def add_point(self, pos: QPointF):
+        ret = self._check_between_points(pos)
+        if ret is None:
+            return
+
+        index_p1, index_p2 = ret
+        new_index = index_p1 + 1
+        self.points.insert(new_index, QPointF(pos))
+        if self.isSelected() and len(self.graphics_points_list) > 0:
+            self._add_graphic_point(new_index)
 
     def move(self, new_point: QPointF):
         self.move_point = QPointF(new_point)
@@ -358,6 +372,14 @@ class UAnnotationMask(UAnnotationItem):
     def is_closed(self):
         return self.closed
 
+    def _add_graphic_point(self, index: int):
+        graphic_point = UAnnotationPoint(index, self.points[index], self.points_size, self.draw_scale, self, self.parentItem())
+        self.scene().addItem(graphic_point)
+        self.graphics_points_list.insert(index, graphic_point)
+        for point in self.graphics_points_list[index + 1:]:
+            point.set_index(point.get_index() + 1)
+        return graphic_point
+
     def _check_point_to_fix(self, check_point: QPointF):
         def rect_with_center(point_t):
             rect = QRectF(point_t.boundingRect())
@@ -419,4 +441,6 @@ class UAnnotationMask(UAnnotationItem):
             distance = distance_to_line(cursor_pos, line)
             if distance <= self.line_width * 2:
                 return i, 0 if polygon[i + 1] == polygon[0] else i + 1
+
+
 
