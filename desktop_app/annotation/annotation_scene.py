@@ -16,7 +16,7 @@ from annotation.annotation_mask import UAnnotationMask
 from annotation.annotation_mode import EWorkMode, UDragAnnotationMode, UForceDragAnnotationMode, UBoxAnnotationMode, \
     UBaseAnnotationMode, UMaskAnnotationMode
 
-from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus
+from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus, FSegmentationAnnotationData
 from commander import UAnnotationSignalHolder
 
 class UAnnotationGraphicsView(QGraphicsView):
@@ -141,6 +141,12 @@ class UAnnotationGraphicsView(QGraphicsView):
                 )
                 self.scene().addItem(ann_box)
                 load_annotations.append((len(load_annotations), ann_box))
+            elif isinstance(item, FSegmentationAnnotationData):
+                class_id, class_name, color, obj_id, points_list = item.get_data()
+                qt_points = [QPointF(x, y) for x, y in points_list]
+                ann_mask = self.add_annotation_mask(qt_points, (class_id, class_name, QColor(color)), True)
+                self.scene().addItem(ann_mask)
+                load_annotations.append((len(load_annotations), ann_mask))
             else:
                 continue
         if self.commander:
@@ -192,11 +198,12 @@ class UAnnotationGraphicsView(QGraphicsView):
         for item in self.annotation_items:
             item.set_draw_scale(self.scale_factor)
 
-    def add_annotation_mask(self, points_list: list[QPointF], class_data: tuple[int, str, QColor]):
+    def add_annotation_mask(self, points_list: list[QPointF], class_data: tuple[int, str, QColor], closed: bool = False):
         ann_mask = UAnnotationMask(
             points_list[:],
             class_data,
             self.scale_factor,
+            closed,
             self.current_image
         )
 
@@ -221,11 +228,10 @@ class UAnnotationGraphicsView(QGraphicsView):
         if self.current_work_mode is EWorkMode.DragMode:
             annotation_item.setAcceptedMouseButtons(Qt.AllButtons)
             annotation_item.setAcceptHoverEvents(True)
-        elif self.current_work_mode is EWorkMode.BoxAnnotationMode:
+        elif self.current_work_mode in [EWorkMode.BoxAnnotationMode, EWorkMode.MaskAnnotationMode]:
             annotation_item.setAcceptedMouseButtons(Qt.NoButton)
             annotation_item.setAcceptHoverEvents(False)
 
-        #self.view_scale_changed.connect(ann_box.set_draw_scale)
         annotation_item.connect_selected_signal(self.handle_on_select_annotation)
 
         self.annotation_items.append(annotation_item)
@@ -235,13 +241,15 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     @pyqtSlot(object)
     def handle_on_select_annotation(self, annotation_item: object):
-        if isinstance(annotation_item, UAnnotationItem):
-            try:
-                index = self.annotation_items.index(annotation_item)
-                if self.commander:
-                    self.commander.selected_annotation.emit(index)
-            except Exception as error:
-                print(str(error))
+        if not isinstance(annotation_item, UAnnotationItem):
+            return
+        to_clear = True if isinstance(annotation_item, UAnnotationBox) else False
+        try:
+            index = self.annotation_items.index(annotation_item)
+            if self.commander:
+                self.commander.selected_annotation.emit(index, to_clear)
+        except Exception as error:
+            print(str(error))
 
     def emit_commander_to_add(self, annotation_data: FAnnotationData):
         if self.commander:

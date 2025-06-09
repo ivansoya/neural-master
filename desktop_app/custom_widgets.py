@@ -46,10 +46,13 @@ class UListAnnotationWidget(QListWidget):
         super().__init__(parent)
         self.itemClicked.connect(self.on_item_clicked)
 
+        self.setSelectionMode(QListWidget.ExtendedSelection)
+
     def select_item(self, index: int):
         if not (0 <= index < self.count()):
             return
-        self.setCurrentItem(self.item(index))
+        found_item = self.item(index)
+        found_item.setSelected(not found_item.isSelected())
 
     def clear_list_widget(self):
         while self.count() > 0:

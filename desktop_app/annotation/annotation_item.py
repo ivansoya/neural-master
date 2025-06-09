@@ -8,7 +8,9 @@ from PyQt5.QtWidgets import QGraphicsItem, QGraphicsPixmapItem, QApplication
 
 class UAnnotationSignal(QObject):
     select_event = pyqtSignal(object)
+    # объект маски, предыдущая дата, текущая дата
     update_event = pyqtSignal(object, object, object)
+    delete_event = pyqtSignal(object)
 
 
 class UAnnotationItem(QGraphicsItem):
@@ -29,6 +31,9 @@ class UAnnotationItem(QGraphicsItem):
         self.set_draw_scale(scale)
 
         self.signal_holder = UAnnotationSignal()
+
+        self.alt_pressed = False
+
         self._old_pos = self.pos()
         self._old_data = None
 
@@ -63,10 +68,19 @@ class UAnnotationItem(QGraphicsItem):
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedChange:
             if value:
-                self.setZValue(2)
+                self.setZValue(5)
             else:
                 self.setZValue(1)
         return super().itemChange(change, value)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Alt:
+            self.alt_pressed = True
+            print('Alt pressed')
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key_Alt:
+            self.alt_pressed = False
 
     def get_class_name(self):
         return self.class_name

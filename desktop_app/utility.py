@@ -6,7 +6,7 @@ import configparser
 from enum import Enum
 
 from PyQt5.QtCore import Qt, QPointF, QPoint, QRect, QRectF
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QPolygonF
 
 import random
 
@@ -251,7 +251,7 @@ class FDetectAnnotationData(FAnnotationData):
 class FSegmentationAnnotationData(FAnnotationData):
     def __init__(self, object_id, points_list: list[tuple[float, float]], class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
         super().__init__(class_id, class_name, color, res_w, res_h)
-        self.object_id = object_id
+        self.object_id: int = object_id
         self.points_list = points_list
 
     def serialize(self, class_id: int = None) -> str:
@@ -276,6 +276,12 @@ class FSegmentationAnnotationData(FAnnotationData):
 
     def get_data(self):
         return self.class_id, self.class_name, self.color, self.object_id, self.points_list
+
+    def get_points_list(self):
+        return self.points_list
+
+    def get_polygon_to_draw(self):
+        return QPolygonF([QPointF(x, y) for x, y in self.points_list])
 
     def update_data(self, data: tuple[int, str, QColor, int, list[tuple[float, float]]]):
         self.class_id, self.class_name, color, self.object_id, list_points = data

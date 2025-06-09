@@ -1,7 +1,7 @@
 from typing import Optional
 
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRectF, QThread, QRect, pyqtSlot
-from PyQt5.QtGui import QPixmap, QPen, QColor, QBrush, QFont
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRectF, QThread, QRect, pyqtSlot, QPointF
+from PyQt5.QtGui import QPixmap, QPen, QColor, QBrush, QFont, QPainter
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QWidget, QVBoxLayout
@@ -9,7 +9,8 @@ from PyQt5.QtWidgets import (
 
 from annotation.annotation_box import UAnnotationBox
 from commander import UAnnotationSignalHolder
-from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses, FAnnotationItem
+from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses, FAnnotationItem, FDetectAnnotationData, \
+    FSegmentationAnnotationData
 
 
 class ImageLoaderThread(QThread):
@@ -144,15 +145,20 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
             res_w, _ = ann_data.get_resolution()
             scale = float(self.width()) / res_w
-            rect = ann_data.get_rect_to_draw()
-            scaled_rect = QRect(
-                int(rect.x() * scale),
-                int(rect.y() * scale),
-                int(rect.width() * scale),
-                int(rect.height() * scale),
-            )
+            if isinstance(ann_data, FDetectAnnotationData):
+                rect = ann_data.get_rect_to_draw()
+                scaled_rect = QRect(
+                    int(rect.x() * scale),
+                    int(rect.y() * scale),
+                    int(rect.width() * scale),
+                    int(rect.height() * scale),
+                )
+                painter.drawRect(scaled_rect)
 
-            painter.drawRect(scaled_rect)
+            elif isinstance(ann_data, FSegmentationAnnotationData):
+                points_list = [QPointF(x * scale, y * scale) for x, y in ann_data.get_points_list()]
+                painter.setRenderHint(QPainter.Antialiasing, True)
+                painter.drawPolygon(points_list)
 
         if self.isSelected():
             pen = QPen(Qt.blue)

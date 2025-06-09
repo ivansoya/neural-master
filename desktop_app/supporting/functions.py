@@ -19,3 +19,14 @@ def distance_to_line(point: QPointF, line: QLineF) -> float:
     x1p0 = line.p1().x() - point.x()
 
     return abs(x2x1 * y1p0 - y2y1 * x1p0) / ((x2x1 ** 2 + y2y1 ** 2) ** 0.5)
+
+def distances_sum(point: QPointF, line: QLineF) -> float:
+    point_l1 = ((line.x1() - point.x()) ** 2 + (line.y1() - point.y()) ** 2) ** 0.5
+    point_l2 = ((line.x2() - point.x()) ** 2 + (line.y2() - point.y()) ** 2) ** 0.5
+
+    return point_l1 + point_l2
+
+def distance_to_center(point: QPointF, line: QLineF) -> float:
+    center = QPointF((line.x1() + line.x2()) / 2, (line.y1() + line.y2()) / 2)
+
+    return ((center.x() - point.x()) ** 2 + (center.y() - point.y()) ** 2) ** 0.5

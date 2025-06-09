@@ -18,7 +18,7 @@ class UAnnotationSignalHolder(QWidget):
     deleted_annotation = pyqtSignal(int, int, object)
     updated_annotation = pyqtSignal(int, int, object, object)
     display_annotations = pyqtSignal(list)
-    selected_annotation = pyqtSignal(int)
+    selected_annotation = pyqtSignal(int, bool)
 
     selected_thumbnail = pyqtSignal(tuple, int)
     displayed_image = pyqtSignal(str)

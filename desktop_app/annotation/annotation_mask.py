@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsIte
 from sympy.physics.units import current
 
 from annotation.annotation_item import UAnnotationItem
-from supporting.functions import clamp, distance_to_line
-from utility import FSegmentationAnnotationData
+from supporting.functions import clamp, distance_to_line, distances_sum, distance_to_center
+from utility import FSegmentationAnnotationData, FAnnotationData
 
 
 class UAnnotationPoint(QGraphicsRectItem):
@@ -139,24 +139,20 @@ class UAnnotationPointStart(UAnnotationPoint):
         return super().mouseMoveEvent(event)
 
 
-class UMaskEmitter(QObject):
-    deleted = pyqtSignal(object)
-
-
 class UAnnotationMask(UAnnotationItem):
     def __init__(
             self,
             list_points: list[QPointF],
             class_data: tuple[int, str, QColor],
             scale: float = 1.0,
+            closed = False,
             parent = None
     ):
         self.graphics_points_list: list[UAnnotationPoint] = list()
 
         super().__init__(class_data, scale, parent)
 
-        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
-        self.setFlag(QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
 
         self.points_size: int = 8
         self.line_width: int = 2
@@ -166,13 +162,11 @@ class UAnnotationMask(UAnnotationItem):
             self.move_point = self.points[-1]
         else:
             self.move_point = None
-        self.closed = False
+        self.closed: bool = closed
 
-        self._emitter = UMaskEmitter()
         self.setZValue(1)
 
-    def connect_to_delete_signal(self, func: Callable[[object], None]):
-        self._emitter.deleted.connect(func)
+        self.previous_data: Optional[FAnnotationData] = None
 
     def update_point(self, index: int, new_pos: QPointF):
         if not (0 <= index < len(self.points)):
@@ -194,11 +188,12 @@ class UAnnotationMask(UAnnotationItem):
         if ret is None:
             return
 
+        prev_data = self.get_annotation_data()
         index_p1, index_p2 = ret
-        new_index = index_p1 + 1
-        self.points.insert(new_index, QPointF(pos))
+        self.points.insert(index_p2, QPointF(pos))
         if self.isSelected() and len(self.graphics_points_list) > 0:
-            self._add_graphic_point(new_index)
+            self._add_graphic_point(index_p2)
+        self.signal_holder.update_event.emit(self, prev_data, self.get_annotation_data())
 
     def move(self, new_point: QPointF):
         self.move_point = QPointF(new_point)
@@ -230,15 +225,22 @@ class UAnnotationMask(UAnnotationItem):
         if not 0 <= index < len(self.points):
             return
 
+        prev_data = self.get_annotation_data()
+
         deleted_point = self.points.pop(index)
         if 0 <= index < len(self.graphics_points_list):
             graph_delete = self.graphics_points_list.pop(index)
             self.scene().removeItem(graph_delete)
 
         if (len(self.points) <= 2 and self.closed) or len(self.points) == 0:
-            self._emitter.deleted.emit(self)
+            self.signal_holder.delete_event.emit(self)
             return
 
+        for index in range(len(self.graphics_points_list)):
+            if 0 <= index < len(self.points):
+                self.graphics_points_list[index].set_index(index)
+
+        self.signal_holder.update_event.emit(self, prev_data, self.get_annotation_data())
         self._check_point_start()
         self.scene().update()
 
@@ -271,11 +273,11 @@ class UAnnotationMask(UAnnotationItem):
         if change == QGraphicsItem.ItemSelectedHasChanged:
             if not self.scene():
                 return super().itemChange(change, value)
-
             if self.isSelected():
                 self.create_graphic_points()
             else:
                 self.clear_graphic_points()
+            self.signal_holder.select_event.emit(self)
 
         return super().itemChange(change, value)
 
@@ -294,6 +296,40 @@ class UAnnotationMask(UAnnotationItem):
         self.scene().update()
         event.accept()
 
+    def mousePressEvent(self, event):
+        if not self.scene():
+            return
+
+        if event.button() == Qt.LeftButton:
+            if not self.isSelected():
+                # Убираем выделение со всех объектов кроме масок
+                if self.alt_pressed:
+                    selected_items = self.scene().selectedItems()
+                    for item in selected_items:
+                        if not isinstance(item, UAnnotationMask):
+                            item.setSelected(False)
+                else:
+                    self.scene().clearSelection()
+                self.setSelected(True)
+            # Сохранение данных для дальнейшего вызова сигнала обновления
+            self.previous_data = self.get_annotation_data()
+
+    def mouseReleaseEvent(self, event):
+        if not self.scene():
+            return
+
+        if event.button() == Qt.LeftButton:
+            current_data = self.get_annotation_data()
+            if self.previous_data and self.previous_data == current_data:
+                self.signal_holder.update_event.emit(self, self.previous_data, current_data)
+            self.previous_data = None
+
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        super().keyReleaseEvent(event)
+
     def create_graphic_points(self):
         self.clear_graphic_points()
         if len(self.points) == 0:
@@ -310,10 +346,11 @@ class UAnnotationMask(UAnnotationItem):
     def paint(self, painter, option, widget = ...):
         scaled_line_width = int(self.line_width * self.draw_scale)
         painter.setPen(QPen(self.color, scaled_line_width))
+        fill_color = QColor(self.color)
+        fill_color.setAlpha(100)
         if self.is_closed():
-            fill_color = QColor(self.color)
-            fill_color.setAlpha(100)
-            painter.setBrush(QBrush(fill_color, Qt.SolidPattern))
+            brush = QBrush(Qt.NoBrush) if self.isSelected() else QBrush(fill_color, Qt.SolidPattern)
+            painter.setBrush(brush)
             painter.drawPolygon(QPolygonF(self.points))
         else:
             painter.setBrush(Qt.NoBrush)
@@ -433,14 +470,20 @@ class UAnnotationMask(UAnnotationItem):
             return None
 
         polygon = self.points + [self.points[0]]
+        min_distance: Optional[float] = None
+        min_p1, min_p2 = 0, 1
         for i in range(len(polygon) - 1):
             point_1 = polygon[i]
             point_2 = polygon[i + 1]
 
             line = QLineF(point_1, point_2)
-            distance = distance_to_line(cursor_pos, line)
-            if distance <= self.line_width * 2:
-                return i, 0 if polygon[i + 1] == polygon[0] else i + 1
+            distance = distance_to_center(cursor_pos, line)
+            if min_distance is None: min_distance = distance
+            if distance < min_distance:
+                min_distance = distance
+                min_p1, min_p2 = i, i + 1
+
+        return min_p1, 0 if polygon[min_p2] == polygon[0] else min_p2
 
 
 

@@ -243,8 +243,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def handle_on_screen_loaded_annotations(self, annotations: list[tuple[int, UAnnotationBox]]):
         self.list_current_annotations.clear_list_widget()
         for index in range(len(annotations)):
-            index, ann_box = annotations[index]
-            self.list_current_annotations.add_item(ann_box.get_class_name(), ann_box.get_color())
+            index, ann_item = annotations[index]
+            self.list_current_annotations.add_item(ann_item.get_class_name(), ann_item.get_color())
 
     @pyqtSlot(int, object)
     def handle_on_screen_added_annotations(self, index: int, annotation_data):
@@ -325,9 +325,11 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def handle_on_select_annotation_from_list(self, index: int):
         self.annotation_scene.select_annotation_by_index(index)
 
-    @pyqtSlot(int)
-    def handle_on_select_annotation(self, index: int):
-          self.list_current_annotations.select_item(index)
+    @pyqtSlot(int, bool)
+    def handle_on_select_annotation(self, index: int, to_clear: bool):
+        if to_clear:
+            self.list_current_annotations.clearSelection()
+        self.list_current_annotations.select_item(index)
 
     @pyqtSlot(str)
     def handle_print_image_name(self, image_path: str):

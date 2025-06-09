@@ -77,12 +77,16 @@ class UDragAnnotationMode(UBaseAnnotationMode):
         return
 
     def end_mode(self, change_mode: EWorkMode):
+        self.mask_adding_point_mode = False
+        self.last_mask = None
         return
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
 
     def refresh(self):
+        self.mask_adding_point_mode = False
+        self.last_mask = None
         return
 
     def on_move_mouse(self, event):
@@ -97,6 +101,8 @@ class UDragAnnotationMode(UBaseAnnotationMode):
             if self.last_mask is None:
                 return
             cursor_pos_image = get_clamped_pos(self.scene, event.pos(), image)
+            self.last_mask.add_point(cursor_pos_image)
+            self.scene.scene().update()
             return 1
 
     def on_release_mouse(self, event):
@@ -330,12 +336,11 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
                     [cursor_pos_image],
                     class_data
                 )
+                self.current_mask.disable_selection()
                 self.current_mask.create_graphic_points()
-                self.current_mask.setSelected(True)
             else:
                 if self.current_mask.fix_point():
-                    self.current_mask.setFlag(QGraphicsItem.ItemIsMovable, True)
-                    self.current_mask.setFlag(QGraphicsItem.ItemIsSelectable, True)
+                    self.scene.emit_commander_to_add(self.current_mask.get_annotation_data())
 
                     self.current_mask.clear_graphic_points()
                     self.current_mask.setSelected(False)
