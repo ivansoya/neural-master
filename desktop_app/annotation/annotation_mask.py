@@ -30,6 +30,8 @@ class UAnnotationPoint(QGraphicsRectItem):
         self.index = index
         self.setPos(cords)
 
+        #self.prev_pos = self.pos()
+
         self.setZValue(10)
 
     def get_index(self) -> int:
@@ -62,6 +64,8 @@ class UAnnotationPoint(QGraphicsRectItem):
         if event.button() == Qt.RightButton:
             if self.mask:
                 self.mask.remove_point(self.index)
+        elif event.button() == Qt.LeftButton:
+            pass
         event.accept()
 
     def mouseMoveEvent(self, event):
@@ -233,7 +237,7 @@ class UAnnotationMask(UAnnotationItem):
             self.scene().removeItem(graph_delete)
 
         if (len(self.points) <= 2 and self.closed) or len(self.points) == 0:
-            self.signal_holder.delete_event.emit(self)
+            self.delete_item()
             return
 
         for index in range(len(self.graphics_points_list)):
@@ -287,7 +291,6 @@ class UAnnotationMask(UAnnotationItem):
         delta = self.mapToParent(event.pos() - event.lastPos())
 
         clamped_delta = self._compute_clamped_delta(delta)
-        print(f"Текущая дельта: {clamped_delta}")
 
         for index in range(len(self.points)):
             self.points[index] = self.points[index] + clamped_delta
@@ -320,7 +323,7 @@ class UAnnotationMask(UAnnotationItem):
 
         if event.button() == Qt.LeftButton:
             current_data = self.get_annotation_data()
-            if self.previous_data and self.previous_data == current_data:
+            if self.previous_data and self.previous_data != current_data:
                 self.signal_holder.update_event.emit(self, self.previous_data, current_data)
             self.previous_data = None
 
@@ -344,6 +347,9 @@ class UAnnotationMask(UAnnotationItem):
             self.graphics_points_list.append(temp)
 
     def paint(self, painter, option, widget = ...):
+        if len(self.points) == 0:
+            return
+
         scaled_line_width = int(self.line_width * self.draw_scale)
         painter.setPen(QPen(self.color, scaled_line_width))
         fill_color = QColor(self.color)
@@ -365,14 +371,15 @@ class UAnnotationMask(UAnnotationItem):
         for point in self.graphics_points_list:
             point.set_scale(self.draw_scale)
 
-    def delete_mask(self):
+    def delete_item(self):
         self.clear_graphic_points()
+        self.move_point = None
         self.points.clear()
 
     def clear_graphic_points(self):
         for point in self.graphics_points_list:
             if point and point.scene():
-                self.scene().removeItem(point)
+                point.scene().removeItem(point)
         self.graphics_points_list.clear()
 
     def get_annotation_data(self):

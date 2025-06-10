@@ -65,6 +65,10 @@ class UAnnotationItem(QGraphicsItem):
     def boundingRect(self):
         pass
 
+    @abstractmethod
+    def delete_item(self):
+        pass
+
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedChange:
             if value:
@@ -119,6 +123,12 @@ class UAnnotationItem(QGraphicsItem):
 
     def connect_selected_signal(self, func: Callable[[object], None]):
         self.signal_holder.select_event.connect(func)
+
+    def connect_update_signal(self, func: Callable[[object, object, object], None]):
+        self.signal_holder.update_event.connect(func)
+
+    def connect_delete_signal(self, func: Callable[[object], None]):
+        self.signal_holder.delete_event.connect(func)
 
     def disable_selection(self):
         self.setAcceptedMouseButtons(Qt.NoButton)

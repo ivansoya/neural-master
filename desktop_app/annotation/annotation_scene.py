@@ -233,11 +233,26 @@ class UAnnotationGraphicsView(QGraphicsView):
             annotation_item.setAcceptHoverEvents(False)
 
         annotation_item.connect_selected_signal(self.handle_on_select_annotation)
+        annotation_item.connect_update_signal(self.handle_on_update_annotation)
+        annotation_item.connect_delete_signal(self.handle_on_delete_annotation)
 
         self.annotation_items.append(annotation_item)
         self.scene().addItem(annotation_item)
 
         return annotation_item
+
+    @pyqtSlot(object)
+    def handle_on_delete_annotation(self, item: UAnnotationItem):
+        if isinstance(item, UAnnotationItem) and item in self.annotation_items:
+            index = self.annotation_items.index(item)
+            deleted_data = item.get_annotation_data()
+            self.delete_annotation_item(item)
+            self.commander.deleted_annotation.emit(
+                self.get_current_thumb_index(),
+                index,
+                deleted_data
+            )
+            self.annotate_mods[self.current_work_mode].on_delete_item(item)
 
     @pyqtSlot(object)
     def handle_on_select_annotation(self, annotation_item: object):
@@ -250,6 +265,16 @@ class UAnnotationGraphicsView(QGraphicsView):
                 self.commander.selected_annotation.emit(index, to_clear)
         except Exception as error:
             print(str(error))
+
+    @pyqtSlot(object, object, object)
+    def handle_on_update_annotation(self, item: UAnnotationItem, prev_data: FAnnotationData, curr_data: FAnnotationData):
+        index = self.annotation_items.index(item)
+        self.commander.updated_annotation.emit(
+            self.get_current_thumb_index(),
+            index,
+            prev_data,
+            curr_data
+        )
 
     def emit_commander_to_add(self, annotation_data: FAnnotationData):
         if self.commander:
@@ -285,7 +310,7 @@ class UAnnotationGraphicsView(QGraphicsView):
             if len(items) <= 0:
                 return
             selected_annotation = items[0]
-            if isinstance(selected_annotation, UAnnotationBox):
+            if isinstance(selected_annotation, UAnnotationItem):
                 try:
                     index = self.annotation_items.index(selected_annotation)
                 except Exception as error:
@@ -298,17 +323,18 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     def delete_annotation_item(self, annotation: UAnnotationItem | None):
         if annotation is None or annotation not in self.annotation_items or self.current_display_thumbnail is None:
-            return
+            return False
 
         if QApplication.overrideCursor():
             QApplication.restoreOverrideCursor()
         if annotation.signal_holder:
             annotation.signal_holder.disconnect()
             annotation.signal_holder.deleteLater()
-        self.annotation_items.remove(annotation)
         if annotation.scene():
+            annotation.delete_item()
             self.annotate_scene.removeItem(annotation)
-        annotation.setParentItem(None)
+        self.annotation_items.remove(annotation)
+        return True
 
     def set_image_item(self, image):
         self.current_image = image

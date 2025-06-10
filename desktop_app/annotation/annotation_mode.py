@@ -7,9 +7,11 @@ from PyQt5.QtGui import QMouseEvent, QKeyEvent
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsItem, QWidget, QApplication
 
 from annotation.annotation_box import UAnnotationBox
+from annotation.annotation_item import UAnnotationItem
 from annotation.annotation_mask import UAnnotationMask
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
 from supporting.functions import clamp, get_clamped_pos
+from utility import FAnnotationData
 
 if TYPE_CHECKING:
     from annotation.annotation_scene import UAnnotationGraphicsView
@@ -59,6 +61,18 @@ class UBaseAnnotationMode(ABC):
     def on_key_release(self, event: QKeyEvent):
         pass
 
+    @abstractmethod
+    def on_select_item(self, item: UAnnotationItem):
+        pass
+
+    @abstractmethod
+    def on_update_item(self, item: UAnnotationItem, prev: FAnnotationData, curr: FAnnotationData):
+        pass
+
+    @abstractmethod
+    def on_delete_item(self, item: UAnnotationItem):
+        pass
+
 class UDragAnnotationMode(UBaseAnnotationMode):
     def __init__(self, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
         self.scene = scene
@@ -106,17 +120,6 @@ class UDragAnnotationMode(UBaseAnnotationMode):
             return 1
 
     def on_release_mouse(self, event):
-        selected = self.scene.get_selected_annotation()
-        if selected is None:
-            pass
-        else:
-            index = self.scene.annotation_items.index(selected)
-            self.commander.updated_annotation.emit(
-                self.scene.get_current_thumb_index(),
-                index,
-                None,
-                selected.get_annotation_data()
-            )
         return
 
     def on_key_press(self, event):
@@ -136,6 +139,16 @@ class UDragAnnotationMode(UBaseAnnotationMode):
             QApplication.restoreOverrideCursor()
             self.mask_adding_point_mode = False
             self.last_mask = None
+
+    def on_select_item(self, item: UAnnotationItem):
+        return
+
+    def on_update_item(self, item: UAnnotationItem, prev: FAnnotationData, curr: FAnnotationData):
+        return
+
+    def on_delete_item(self, item: UAnnotationItem):
+        self.last_mask = None
+        return
 
 
 class UForceDragAnnotationMode(UBaseAnnotationMode):
@@ -180,6 +193,15 @@ class UForceDragAnnotationMode(UBaseAnnotationMode):
         return
 
     def on_key_press(self, event: QKeyEvent):
+        return
+
+    def on_select_item(self, item: UAnnotationItem):
+        return
+
+    def on_update_item(self, item: UAnnotationItem, prev: FAnnotationData, curr: FAnnotationData):
+        return
+
+    def on_delete_item(self, item: UAnnotationItem):
         return
 
 
@@ -268,6 +290,15 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
     def on_key_press(self, event: QKeyEvent):
         return
 
+    def on_select_item(self, item: UAnnotationItem):
+        return
+
+    def on_update_item(self, item: UAnnotationItem, prev: FAnnotationData, curr: FAnnotationData):
+        return
+
+    def on_delete_item(self, item: UAnnotationItem):
+        return
+
     def _clean_rect(self):
         self.current_rect = None
         self.start_point = None
@@ -301,15 +332,17 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         if change_mode in [EWorkMode.ForceDragMode, EWorkMode.MaskAnnotationMode]:
             return
         elif change_mode is EWorkMode.GettingResultsMode:
-            self._delete_mask()
+            if self.current_mask:
+                self.current_mask.delete_item()
         else:
-            self._clean_mask()
+            if self.current_mask and not self.current_mask.is_closed():
+                self.current_mask.delete_item()
         for annotation in self.scene.get_annotations():
             annotation.enable_selection()
 
     def refresh(self):
         if self.current_mask:
-            self.current_mask.delete_mask()
+            self.current_mask.clear_graphic_points()
         self.current_mask = None
 
     def get_previous_mode(self) -> EWorkMode | None:
@@ -355,14 +388,12 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
     def on_key_press(self, event: QKeyEvent):
         return
 
-    def _delete_mask(self):
-        if self.current_mask:
-            self.current_mask.delete_mask()
-            self.scene.delete_annotation_item(self.current_mask)
-        self.current_mask = None
+    def on_select_item(self, item: UAnnotationItem):
+        return
 
-    def _clean_mask(self):
-        if self.current_mask and not self.current_mask.is_closed():
-            self.current_mask.delete_mask()
-            self.scene.delete_annotation_item(self.current_mask)
-        self.current_mask = None
+    def on_update_item(self, item: UAnnotationItem, prev: FAnnotationData, curr: FAnnotationData):
+        return
+
+    def on_delete_item(self, mask: UAnnotationItem):
+        if self.current_mask is mask:
+            self.current_mask = None

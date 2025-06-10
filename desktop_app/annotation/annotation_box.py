@@ -339,5 +339,8 @@ class UAnnotationBox(UAnnotationItem):
         else:
             super().mouseReleaseEvent(event)
 
+    def delete_item(self):
+        self.signal_holder.delete_event.emit(self)
+
     def get_line_scaled(self):
         return int(self.line_width * self.draw_scale) * 2
