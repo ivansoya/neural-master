@@ -133,6 +133,10 @@ class UDragAnnotationMode(UBaseAnnotationMode):
             if self.last_mask:
                 self.mask_adding_point_mode = True
                 QApplication.setOverrideCursor(Qt.CrossCursor)
+        if event.key() == Qt.Key_Delete:
+            selected = [ item for item in self.scene.scene().selectedItems() if isinstance(item, UAnnotationItem)]
+            for item in selected:
+                self.scene.handle_on_delete_annotation_item(item)
 
     def on_key_release(self, event):
         if event.key() == Qt.Key_Shift and self.mask_adding_point_mode:
@@ -229,7 +233,8 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         if self.mode is change_mode or change_mode is EWorkMode.ForceDragMode:
             return
         elif change_mode is EWorkMode.GettingResultsMode:
-            self._delete_current_rect()
+            if self.current_rect:
+                self.current_rect.delete_item()
         else:
             self._clean_rect()
         for annotation in self.scene.get_annotations():
@@ -239,7 +244,7 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         return self.previous_mode
 
     def refresh(self):
-        self._delete_current_rect()
+        self._clean_rect()
         return
 
     def on_press_mouse(self, event):
@@ -276,7 +281,7 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
             return
 
         if self.current_rect.get_square() < 25:
-            self._delete_current_rect()
+            self.current_rect.delete_item()
             return
         if self.commander:
             self.scene.emit_commander_to_add(self.current_rect.get_annotation_data())
@@ -297,16 +302,13 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         return
 
     def on_delete_item(self, item: UAnnotationItem):
+        if self.current_rect is item:
+            self._clean_rect()
         return
 
     def _clean_rect(self):
         self.current_rect = None
         self.start_point = None
-
-    def _delete_current_rect(self):
-        if self.current_rect and self.current_rect in self.scene.get_annotations():
-            self.scene.delete_annotation_item(self.current_rect)
-        self._clean_rect()
 
 
 class UMaskAnnotationMode(UBaseAnnotationMode):

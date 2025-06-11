@@ -234,25 +234,12 @@ class UAnnotationGraphicsView(QGraphicsView):
 
         annotation_item.connect_selected_signal(self.handle_on_select_annotation)
         annotation_item.connect_update_signal(self.handle_on_update_annotation)
-        annotation_item.connect_delete_signal(self.handle_on_delete_annotation)
+        annotation_item.connect_delete_signal(self.handle_on_delete_annotation_item)
 
         self.annotation_items.append(annotation_item)
         self.scene().addItem(annotation_item)
 
         return annotation_item
-
-    @pyqtSlot(object)
-    def handle_on_delete_annotation(self, item: UAnnotationItem):
-        if isinstance(item, UAnnotationItem) and item in self.annotation_items:
-            index = self.annotation_items.index(item)
-            deleted_data = item.get_annotation_data()
-            self.delete_annotation_item(item)
-            self.commander.deleted_annotation.emit(
-                self.get_current_thumb_index(),
-                index,
-                deleted_data
-            )
-            self.annotate_mods[self.current_work_mode].on_delete_item(item)
 
     @pyqtSlot(object)
     def handle_on_select_annotation(self, annotation_item: object):
@@ -275,6 +262,32 @@ class UAnnotationGraphicsView(QGraphicsView):
             prev_data,
             curr_data
         )
+
+    @pyqtSlot(object)
+    def handle_on_delete_annotation_item(self, annotation: UAnnotationItem | None):
+        if not isinstance(annotation, UAnnotationItem) or annotation not in self.annotation_items or self.current_display_thumbnail is None:
+            return
+
+        if QApplication.overrideCursor():
+            QApplication.restoreOverrideCursor()
+
+        if self.commander:
+            deleted_data = annotation.get_annotation_data()
+            deleted_index = self.annotation_items.index(annotation)
+            self.commander.deleted_annotation.emit(self.get_current_thumb_index(), deleted_index, deleted_data)
+
+        self.annotate_mods[self.current_work_mode].on_delete_item(annotation)
+
+        if annotation.scene():
+            self.annotate_scene.removeItem(annotation)
+
+        annotation.delete_item()
+
+        if annotation.signal_holder:
+            annotation.signal_holder.disconnect()
+            annotation.signal_holder.deleteLater()
+
+        self.annotation_items.remove(annotation)
 
     def emit_commander_to_add(self, annotation_data: FAnnotationData):
         if self.commander:
@@ -303,38 +316,6 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.scale_factor = self.transform().m11()
         for item in self.annotation_items:
             item.set_draw_scale(self.scale_factor)
-
-    def delete_on_press_key(self, key: int):
-        if key == Qt.Key_Delete:
-            items = self.annotate_scene.selectedItems()
-            if len(items) <= 0:
-                return
-            selected_annotation = items[0]
-            if isinstance(selected_annotation, UAnnotationItem):
-                try:
-                    index = self.annotation_items.index(selected_annotation)
-                except Exception as error:
-                    print(str(error))
-                    return
-                deleted_data = selected_annotation.get_annotation_data()
-                self.delete_annotation_item(selected_annotation)
-                if self.commander:
-                    self.commander.deleted_annotation.emit(self.get_current_thumb_index(), index, deleted_data)
-
-    def delete_annotation_item(self, annotation: UAnnotationItem | None):
-        if annotation is None or annotation not in self.annotation_items or self.current_display_thumbnail is None:
-            return False
-
-        if QApplication.overrideCursor():
-            QApplication.restoreOverrideCursor()
-        if annotation.signal_holder:
-            annotation.signal_holder.disconnect()
-            annotation.signal_holder.deleteLater()
-        if annotation.scene():
-            annotation.delete_item()
-            self.annotate_scene.removeItem(annotation)
-        self.annotation_items.remove(annotation)
-        return True
 
     def set_image_item(self, image):
         self.current_image = image
@@ -381,7 +362,9 @@ class UAnnotationGraphicsView(QGraphicsView):
             annotation_item = self.annotation_items[-1]
 
             deleted_data = annotation_item.get_annotation_data()
-            self.delete_annotation_item(annotation_item)
+            if annotation_item.scene():
+                annotation_item.scene().removeItem(annotation_item)
+            self.annotation_items.remove(annotation_item)
 
             if to_emit:
                 self.commander.deleted_annotation.emit(

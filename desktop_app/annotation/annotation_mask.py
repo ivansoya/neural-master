@@ -30,8 +30,6 @@ class UAnnotationPoint(QGraphicsRectItem):
         self.index = index
         self.setPos(cords)
 
-        #self.prev_pos = self.pos()
-
         self.setZValue(10)
 
     def get_index(self) -> int:
@@ -89,6 +87,9 @@ class UAnnotationPoint(QGraphicsRectItem):
 
     def mouseReleaseEvent(self, event):
         event.accept()
+
+    def clear(self):
+        self.mask = None
 
 class UAnnotationPointStart(UAnnotationPoint):
     def __init__(self, index: int, cords: QPointF, size: float, scale: float, mask=None, parent=None):
@@ -372,14 +373,20 @@ class UAnnotationMask(UAnnotationItem):
             point.set_scale(self.draw_scale)
 
     def delete_item(self):
-        self.clear_graphic_points()
         self.move_point = None
+        self.clear_graphic_points()
         self.points.clear()
+        #self.signal_holder.delete_event.emit(self)
 
     def clear_graphic_points(self):
         for point in self.graphics_points_list:
-            if point and point.scene():
-                point.scene().removeItem(point)
+            if point is not None:
+                try:
+                    if point.scene():
+                        point.scene().removeItem(point)
+                        point.clear()
+                except RuntimeError:
+                    pass
         self.graphics_points_list.clear()
 
     def get_annotation_data(self):

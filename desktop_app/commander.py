@@ -116,10 +116,6 @@ class UGlobalSignalHolder(QObject):
                         self.freq_timer.stop()
                     return True
 
-                if event.key() == Qt.Key_Delete:
-                    self.delete_pressed.emit(event.key())
-                    return True
-
         elif event.type() == QEvent.KeyRelease:
             if self.is_blocked is True:
                 return super().eventFilter(obj, event)

@@ -64,7 +64,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         # Сигналы событий при нажатии на клавиши
         self.commander.ctrl_pressed.connect(self.annotation_scene.handle_drag_start_event)
         self.commander.ctrl_released.connect(self.annotation_scene.handle_drag_end_event)
-        self.commander.delete_pressed.connect(self.annotation_scene.delete_on_press_key)
         self.commander.drop_pressed.connect(lambda: self.annotation_scene.clean_all_annotations(to_emit=True))
         self.commander.number_key_pressed.connect(self.handle_clicked_number_key)
 
