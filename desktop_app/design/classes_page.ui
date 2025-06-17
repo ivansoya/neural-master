@@ -109,6 +109,29 @@ QPushButton:pressed {
          </widget>
         </item>
         <item>
+         <widget class="QGroupBox" name="groupBox_3">
+          <property name="font">
+           <font>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="title">
+           <string>Отображение статистики</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_5">
+           <item>
+            <widget class="EnumComboBox" name="combo_type">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -168,6 +191,11 @@ QPushButton:pressed {
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>EnumComboBox</class>
+   <extends>QComboBox</extends>
+   <header location="global">dataset.dataset_widgets</header>
+  </customwidget>
   <customwidget>
    <class>UWidgetChart</class>
    <extends>QWidget</extends>

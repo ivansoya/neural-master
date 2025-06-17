@@ -87,7 +87,7 @@ class ULocalDetectYOLO(UBaseNeuralNet):
     def process_image(self, image: np.ndarray):
         results = self.model(image)[0]  # Первый кадр
         detections: list[FDetectAnnotationData] = list()
-
+        count = 1
         for box in results.boxes:
             x, y, width, height = box.xywh[0].tolist()
             class_id = int(box.cls)
@@ -101,6 +101,7 @@ class ULocalDetectYOLO(UBaseNeuralNet):
                 int(y - height / 2),
                 int(width),
                 int(height),
+                count,
                 class_id,
                 "Unresolved" if class_name is None else class_name,
                 QColor("#606060") if class_color is None else class_color,
@@ -108,6 +109,7 @@ class ULocalDetectYOLO(UBaseNeuralNet):
                 int(res_h)
             )
             detections.append(detect_data)
+            count += 1
 
         return detections if detections else []
 
@@ -187,6 +189,7 @@ class URemoteNeuralNet(UBaseNeuralNet):
             if error_code < 0:
                 return []
             try:
+                detect_num = 1
                 for i, object_d in enumerate(detections):
                     class_id = object_d['class_id']
                     class_color = self.classes.get_color(class_id)
@@ -196,6 +199,7 @@ class URemoteNeuralNet(UBaseNeuralNet):
                         int(object_d['y'] - object_d['height'] / 2),
                         int(object_d['width']),
                         int(object_d['height']),
+                        detect_num,
                         class_id,
                         "Unresolved" if class_name is None else class_name,
                         QColor("#606060") if class_color is None else class_color,
@@ -203,6 +207,7 @@ class URemoteNeuralNet(UBaseNeuralNet):
                         int(object_d['resolution_h'])
                     )
                     annotation_data.append(ann_data)
+                    detect_num += 1
                 return annotation_data
             except Exception as error:
                 print(str(error))

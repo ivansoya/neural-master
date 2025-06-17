@@ -32,6 +32,9 @@ class UAnnotationPoint(QGraphicsRectItem):
 
         self.setZValue(10)
 
+        self.last_pos = cords
+        self.prev_data = self.mask.get_annotation_data() if self.mask else None
+
     def get_index(self) -> int:
         return self.index
 
@@ -53,7 +56,7 @@ class UAnnotationPoint(QGraphicsRectItem):
         self.draw_scale = scale
 
     def boundingRect(self):
-        size_scaled = int(self.size * self.draw_scale)
+        size_scaled = int(self.size * self.draw_scale) * 1.5
         return (QRectF(-size_scaled / 2, -size_scaled / 2, size_scaled, size_scaled)
                 .adjusted(-self.width_pen, -self.width_pen, self.width_pen, self.width_pen)
                 )
@@ -63,7 +66,9 @@ class UAnnotationPoint(QGraphicsRectItem):
             if self.mask:
                 self.mask.remove_point(self.index)
         elif event.button() == Qt.LeftButton:
-            pass
+            self.last_pos = self.pos()
+            if self.mask:
+                self.prev_data = self.mask.get_annotation_data()
         event.accept()
 
     def mouseMoveEvent(self, event):
@@ -86,7 +91,9 @@ class UAnnotationPoint(QGraphicsRectItem):
         event.accept()
 
     def mouseReleaseEvent(self, event):
-        event.accept()
+        if event.button() == Qt.LeftButton:
+            if self.last_pos != self.pos() and self.mask:
+                self.mask.emit_update_event(self.mask, self.prev_data, self.mask.get_annotation_data())
 
     def clear(self):
         self.mask = None
@@ -272,7 +279,12 @@ class UAnnotationMask(UAnnotationItem):
             return QRectF()
 
         polygon = QPolygonF(self.points) if self.closed else QPolygonF(self.points + [self.move_point] if self.move_point else [])
-        return polygon.boundingRect().adjusted(-self.points_size, -self.points_size, self.points_size, self.points_size)
+        return polygon.boundingRect().adjusted(
+            -self.points_size,
+            -int(self.get_text_bounding_rect().height() + self.points_size),
+            int(self.get_text_bounding_rect().width() + self.points_size),
+            self.points_size
+        )
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
@@ -359,6 +371,8 @@ class UAnnotationMask(UAnnotationItem):
             brush = QBrush(Qt.NoBrush) if self.isSelected() else QBrush(fill_color, Qt.SolidPattern)
             painter.setBrush(brush)
             painter.drawPolygon(QPolygonF(self.points))
+            if self.isSelected():
+                self.paint_text(painter, self.rect().topLeft() - QPointF(self.points_size, self.points_size * 1.5))
         else:
             painter.setBrush(Qt.NoBrush)
             painter.drawPolyline(QPolygonF(self.points + [self.move_point] if self.move_point else []))
@@ -376,7 +390,6 @@ class UAnnotationMask(UAnnotationItem):
         self.move_point = None
         self.clear_graphic_points()
         self.points.clear()
-        #self.signal_holder.delete_event.emit(self)
 
     def clear_graphic_points(self):
         for point in self.graphics_points_list:
@@ -393,8 +406,8 @@ class UAnnotationMask(UAnnotationItem):
         if not self.closed or self.parentItem() is None:
             return None
         return FSegmentationAnnotationData(
-            1,
             [(point.x(), point.y()) for point in self.points],
+            1,
             self.class_id,
             self.class_name,
             self.color,

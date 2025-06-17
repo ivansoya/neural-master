@@ -10,6 +10,8 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from annotation.annotation_scene import UClassSelectorList, UClassSelectorItem
+
 
 class Ui_classes_page_design(object):
     def setupUi(self, classes_page_design):
@@ -73,6 +75,20 @@ class Ui_classes_page_design(object):
         self.button_add_class.setObjectName("button_add_class")
         self.verticalLayout_3.addWidget(self.button_add_class)
         self.verticalLayout_2.addWidget(self.groupBox)
+        self.groupBox_3 = QtWidgets.QGroupBox(self.verticalWidget)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.groupBox_3.setFont(font)
+        self.groupBox_3.setObjectName("groupBox_3")
+        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.groupBox_3)
+        self.verticalLayout_5.setObjectName("verticalLayout_5")
+        self.combo_type = EnumComboBox(self.groupBox_3)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.combo_type.setFont(font)
+        self.combo_type.setObjectName("combo_type")
+        self.verticalLayout_5.addWidget(self.combo_type)
+        self.verticalLayout_2.addWidget(self.groupBox_3)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem)
         self.horizontalLayout.addWidget(self.verticalWidget)
@@ -105,8 +121,10 @@ class Ui_classes_page_design(object):
         self.groupBox.setTitle(_translate("classes_page_design", "Добавление класса"))
         self.lineedit_enter_class.setPlaceholderText(_translate("classes_page_design", "Введите название нового класса"))
         self.button_add_class.setText(_translate("classes_page_design", "Добавить класс"))
+        self.groupBox_3.setTitle(_translate("classes_page_design", "Отображение статистики"))
         self.button_show_all.setText(_translate("classes_page_design", "Вывести все"))
-from annotation.annotation_scene import UClassSelectorList
+
+from dataset.dataset_widgets import EnumComboBox
 from stats.class_chart import UWidgetChart
 
 

@@ -6,7 +6,7 @@ from stats.class_chart import FCountColor
 from commander import UGlobalSignalHolder
 from design.classes_page import Ui_classes_page_design
 from project import UTrainProject
-from utility import UMessageBox
+from utility import UMessageBox, EAnnotationType
 
 
 class UPageClasses(QWidget, Ui_classes_page_design):
@@ -20,6 +20,14 @@ class UPageClasses(QWidget, Ui_classes_page_design):
         self.list_classes.setSelectionMode(QAbstractItemView.NoSelection)
 
         self.button_add_class.clicked.connect(self.add_class_to_project)
+
+        self.combo_type.currentIndexChanged.connect(self.handle_on_type_changed)
+        self.combo_type.set_members({
+            "Все аннотации": [EAnnotationType.BoundingBox, EAnnotationType.Segmentation],
+            "Ограничительные рамки": [EAnnotationType.BoundingBox],
+            "Маски": [EAnnotationType.Segmentation],
+        })
+        self.combo_type.setCurrentIndex(0)
 
         if self.commander:
             self.commander.project_load_complete.connect(self.update_chart_statistics)
@@ -66,6 +74,8 @@ class UPageClasses(QWidget, Ui_classes_page_design):
             for item in value:
                 data = item.get_annotation_data()
                 for class_t in data:
+                    if class_t.get_annotation_type() not in self.combo_type.get_current_enum():
+                        continue
                     class_name = self.project.classes.get_name(class_t.class_id) or str(class_t.class_id)
                     if not class_name in count_classes:
                         count_classes[class_name] = FCountColor(
@@ -76,3 +86,6 @@ class UPageClasses(QWidget, Ui_classes_page_design):
 
         #count_classes = dict(sorted(count_classes.items()))
         self.chart_classes.draw_chart(count_classes)
+
+    def handle_on_type_changed(self):
+        self.update_chart_statistics()

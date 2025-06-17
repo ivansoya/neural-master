@@ -44,6 +44,8 @@ class UAnnotationBox(UAnnotationItem):
         self.resize_handle_size = 12
         self.active_handle = None
 
+        self.prev_data = self.get_annotation_data()
+
     def get_square(self):
         rect = self.rect()
         if rect.isValid() is False:
@@ -120,6 +122,7 @@ class UAnnotationBox(UAnnotationItem):
                 int(self.y()),
                 int(self.width()),
                 int(self.height()),
+                1,
                 int(self.class_id),
                 str(self.class_name),
                 QColor(self.color),
@@ -171,11 +174,7 @@ class UAnnotationBox(UAnnotationItem):
         handle_margin = int(self.resize_handle_size * self.draw_scale)
         margin = max(border_width, handle_margin)
 
-        text = f"ID: {self.class_id}, {self.class_name}"
-        font = QFont("Arial", int(16 * self.draw_scale))
-        font_metrics = QFontMetricsF(font)
-        text_background_rect = font_metrics.boundingRect(text)
-        text_background_rect.adjust(-6, -2, 12, 4)
+        text_background_rect = self.get_text_bounding_rect()
 
         return base_rect.adjusted(
             -margin,
@@ -217,24 +216,7 @@ class UAnnotationBox(UAnnotationItem):
 
             if not self.resizing:
                 # текст над прямоугольником
-                text = f"ID: {self.class_id}, {self.class_name}"
-                font = QFont("Arial", int(16 * self.draw_scale))
-                font_color = QColor(Qt.black)
-
-                font_metrics = QFontMetricsF(font)
-                text_background_rect = font_metrics.boundingRect(text)
-                text_background_rect.adjust(-6, -2, 12, 4)
-
-                top_left = self.get_resize_handles()['top_left']
-                text_background_rect.moveTo(top_left.x(), top_left.y() - text_background_rect.height() - 2)
-
-                painter.setBrush(QBrush(self.color))
-                painter.setPen(Qt.NoPen)
-                painter.drawRect(text_background_rect)
-
-                painter.setFont(font)
-                painter.setPen(font_color)
-                painter.drawText(text_background_rect, Qt.AlignCenter, text)
+                self.paint_text(painter, self.get_resize_handles()['top_left'])
 
     def itemChange(self, change, value):
         return super().itemChange(change, value)
@@ -258,6 +240,7 @@ class UAnnotationBox(UAnnotationItem):
                     break
             if self.resizing is False and self.rect().contains(event.pos()):
                 super().mousePressEvent(event)
+            self.prev_data = self.get_annotation_data()
         else:
             super().mousePressEvent(event)
 
@@ -332,16 +315,18 @@ class UAnnotationBox(UAnnotationItem):
                     super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if self.resizing:
-            self.resizing = False
-            self.active_handle = None
-            self.setRect(self.correct_rect(self.rect()))
-        else:
-            super().mouseReleaseEvent(event)
+        if event.button() == Qt.LeftButton:
+            if self.resizing:
+                self.resizing = False
+                self.active_handle = None
+                self.setRect(self.correct_rect(self.rect()))
+
+            current_data = self.get_annotation_data()
+            if current_data != self.prev_data:
+                self.emit_update_event(self, self.prev_data, current_data)
 
     def delete_item(self):
         pass
-        #self.signal_holder.delete_event.emit(self)
 
     def get_line_scaled(self):
         return int(self.line_width * self.draw_scale) * 2

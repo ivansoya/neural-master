@@ -1,9 +1,11 @@
 from abc import abstractmethod
 from typing import Callable, Optional
 
-from PyQt5.QtCore import Qt, QObject, pyqtSignal
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, QPointF, QRectF
+from PyQt5.QtGui import QColor, QFont, QFontMetricsF, QBrush
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsPixmapItem, QApplication
+
+from utility import EAnnotationType
 
 
 class UAnnotationSignal(QObject):
@@ -11,7 +13,6 @@ class UAnnotationSignal(QObject):
     # объект маски, предыдущая дата, текущая дата
     update_event = pyqtSignal(object, object, object)
     delete_event = pyqtSignal(object)
-
 
 class UAnnotationItem(QGraphicsItem):
     def __init__(self, class_data: tuple[int, str, QColor], scale: float, parent=None):
@@ -36,6 +37,10 @@ class UAnnotationItem(QGraphicsItem):
 
         self._old_pos = self.pos()
         self._old_data = None
+
+        self.font = "Arial"
+        self.font_size = 16
+        self.text_padding = (-6, -2, 12, 4)
 
     @abstractmethod
     def get_annotation_data(self) -> 'FAnnotationData | None':
@@ -86,6 +91,33 @@ class UAnnotationItem(QGraphicsItem):
         if event.key() == Qt.Key_Alt:
             self.alt_pressed = False
 
+    def paint_text(self, painter, point_start: QPointF):
+        text = f"ID: {self.class_id}, {self.class_name}"
+        font = QFont(self.font, int(self.font_size * self.draw_scale))
+        font_color = QColor(Qt.black)
+
+        font_metrics = QFontMetricsF(font)
+        text_background_rect = font_metrics.boundingRect(text)
+        text_background_rect.adjust(*self.text_padding)
+        text_background_rect.moveTo(point_start.x(), point_start.y() - text_background_rect.height() - 2)
+
+        painter.setBrush(QBrush(self.color))
+        painter.setPen(Qt.NoPen)
+        painter.drawRect(text_background_rect)
+
+        painter.setFont(font)
+        painter.setPen(font_color)
+        painter.drawText(text_background_rect, Qt.AlignCenter, text)
+
+    def get_text_bounding_rect(self) -> QRectF:
+        text = f"ID: {self.class_id}, {self.class_name}"
+        font = QFont(self.font, int(self.font_size * self.draw_scale))
+        font_metrics = QFontMetricsF(font)
+        text_background_rect = font_metrics.boundingRect(text)
+        text_background_rect.adjust(*self.text_padding)
+
+        return text_background_rect
+
     def get_class_name(self):
         return self.class_name
 
@@ -129,6 +161,9 @@ class UAnnotationItem(QGraphicsItem):
 
     def connect_delete_signal(self, func: Callable[[object], None]):
         self.signal_holder.delete_event.connect(func)
+
+    def emit_update_event(self, item, prev_data, current_data):
+        self.signal_holder.update_event.emit(item, prev_data, current_data)
 
     def disable_selection(self):
         self.setAcceptedMouseButtons(Qt.NoButton)

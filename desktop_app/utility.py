@@ -38,6 +38,11 @@ class EImagesType(Enum):
     Valid = 2
     Test = 3
 
+class EAnnotationType(Enum):
+    BoundingBox = 1
+    Segmentation = 2
+    NoType = 3
+
 class FAnnotationClasses:
     class FClassData:
         def __init__(self, name: str, color: QColor):
@@ -126,7 +131,8 @@ class FAnnotationClasses:
         return QColor.fromHsv(hue, saturation, value)
 
 class FAnnotationData:
-    def __init__(self, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
+    def __init__(self, object_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
+        self.object_id = object_id
         self.class_id = class_id
         self.class_name = class_name
         self.color = color
@@ -134,7 +140,7 @@ class FAnnotationData:
         self.h_resolution = res_h
 
     def _copy_init_args(self):
-        return self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
+        return self.object_id, self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
 
     def copy(self):
         return FAnnotationData(*self._copy_init_args())
@@ -163,16 +169,23 @@ class FAnnotationData:
     def get_class_name(self):
         return self.class_name
 
+    def get_object_id(self):
+        return self.object_id
+
     def get_id(self):
         return self.class_id
 
     def get_resolution(self):
         return self.w_resolution, self.h_resolution
 
+    def get_annotation_type(self):
+        return EAnnotationType.NoType
+
     def __eq__(self, other):
         if not isinstance(other, FAnnotationData):
             return self is other
         return (
+                self.object_id == other.object_id and
                 self.class_id == other.class_id and
                 self.class_name == other.class_name and
                 self.color == other.color and
@@ -184,8 +197,8 @@ class FAnnotationData:
         return not self == other
 
 class FDetectAnnotationData(FAnnotationData):
-    def __init__(self, x, y, width, height, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
-        super().__init__(class_id, class_name, color, res_w, res_h)
+    def __init__(self, x, y, width, height, object_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
+        super().__init__(object_id, class_id, class_name, color, res_w, res_h)
         self.X = x
         self.Y = y
         self.Width = width
@@ -211,6 +224,9 @@ class FDetectAnnotationData(FAnnotationData):
     def __str__(self):
         return self.serialize()
 
+    def get_annotation_type(self):
+        return EAnnotationType.BoundingBox
+
     def copy(self):
         return FDetectAnnotationData(
             self.X,
@@ -221,11 +237,11 @@ class FDetectAnnotationData(FAnnotationData):
         )
 
     def get_data(self):
-        return (self.class_id, self.class_name, self.color,
+        return (self.object_id, self.class_id, self.class_name, self.color,
                 (self.X, self.Y, self.Width, self.Height))
 
-    def update_data(self, data: tuple[int, str, QColor, tuple[int, int, int, int]]):
-        self.class_id, self.class_name, color, (self.X, self.Y, self.Width, self.Height) = data
+    def update_data(self, data: tuple[int, int, str, QColor, tuple[int, int, int, int]]):
+        self.object_id, self.class_id, self.class_name, color, (self.X, self.Y, self.Width, self.Height) = data
         self.color = QColor(color)
 
     def get_rect_to_draw(self):
@@ -249,14 +265,13 @@ class FDetectAnnotationData(FAnnotationData):
 
 
 class FSegmentationAnnotationData(FAnnotationData):
-    def __init__(self, object_id, points_list: list[tuple[float, float]], class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
-        super().__init__(class_id, class_name, color, res_w, res_h)
-        self.object_id: int = object_id
+    def __init__(self, points_list: list[tuple[float, float]], object_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
+        super().__init__(object_id, class_id, class_name, color, res_w, res_h)
         self.points_list = points_list
 
     def serialize(self, class_id: int = None) -> str:
         points_str = " ".join(
-            f"{clamp(x, 0, self.w_resolution)} {clamp(y, 0, self.h_resolution)}"
+            f"{clamp(x, 0, self.w_resolution) / self.w_resolution} {clamp(y, 0, self.h_resolution) / self.h_resolution}"
             for x, y in self.points_list
         )
 
@@ -269,13 +284,15 @@ class FSegmentationAnnotationData(FAnnotationData):
 
     def copy(self):
         return FSegmentationAnnotationData(
-            self.object_id,
             self.points_list[:],
             *self._copy_init_args()
         )
 
+    def get_annotation_type(self):
+        return EAnnotationType.Segmentation
+
     def get_data(self):
-        return self.class_id, self.class_name, self.color, self.object_id, self.points_list
+        return self.object_id, self.class_id, self.class_name, self.color, self.points_list
 
     def get_points_list(self):
         return self.points_list
@@ -283,8 +300,8 @@ class FSegmentationAnnotationData(FAnnotationData):
     def get_polygon_to_draw(self):
         return QPolygonF([QPointF(x, y) for x, y in self.points_list])
 
-    def update_data(self, data: tuple[int, str, QColor, int, list[tuple[float, float]]]):
-        self.class_id, self.class_name, color, self.object_id, list_points = data
+    def update_data(self, data: tuple[int, int, str, QColor, list[tuple[float, float]]]):
+        self.object_id, self.class_id, self.class_name, color, list_points = data
         self.color = QColor(color)
         self.points_list = list_points[:]
 
@@ -302,7 +319,6 @@ class FSegmentationAnnotationData(FAnnotationData):
             return self is other
         return (
                 super().__eq__(other) and
-                self.object_id == other.object_id and
                 self.points_list == other.points_list
         )
 

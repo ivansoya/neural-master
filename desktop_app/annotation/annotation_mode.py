@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING
 
 from PyQt5.QtCore import QPointF, QRectF, pyqtSlot, QObject, Qt
 from PyQt5.QtGui import QMouseEvent, QKeyEvent
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsItem, QWidget, QApplication
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsItem, QWidget, QApplication, QMenu
 
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_item import UAnnotationItem
@@ -119,6 +119,23 @@ class UDragAnnotationMode(UBaseAnnotationMode):
             self.scene.scene().update()
             return 1
 
+        if event.button() == Qt.RightButton:
+            boxes_to_interact: list[UAnnotationBox] = []
+            selected = self.scene.scene().selectedItems()
+            for item in selected:
+                if not isinstance(item, UAnnotationBox):
+                    continue
+                boxes_to_interact.append(item)
+
+            if len(boxes_to_interact) <= 0:
+                return
+
+            menu_actions = [
+                ("Преобразовать боксы в маски", lambda: [self.scene.remake_box_to_mask(box) for box in boxes_to_interact]),
+            ]
+
+            self.create_contex_menu(event, menu_actions)
+
     def on_release_mouse(self, event):
         return
 
@@ -153,6 +170,15 @@ class UDragAnnotationMode(UBaseAnnotationMode):
     def on_delete_item(self, item: UAnnotationItem):
         self.last_mask = None
         return
+
+    def create_contex_menu(self, event, menu_items):
+        menu = QMenu(self.scene)
+
+        for text, func in menu_items:
+            action = menu.addAction(text)
+            action.triggered.connect(func)
+
+        menu.exec_(event.globalPos())
 
 
 class UForceDragAnnotationMode(UBaseAnnotationMode):

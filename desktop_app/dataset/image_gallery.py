@@ -3,74 +3,13 @@ import queue
 from collections import OrderedDict
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QRectF, QRect, QObject, pyqtSlot, QMetaObject, Q_ARG, QTimer
-from PyQt5.QtGui import QPainter, QPen, QBrush, QPixmap, QColor, QImage
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QRectF, QRect, QObject, pyqtSlot, QMetaObject, Q_ARG, QTimer, QPointF
+from PyQt5.QtGui import QPainter, QPen, QBrush, QPixmap, QColor, QImage, QPolygonF
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QWidget, QGraphicsPixmapItem, QGraphicsProxyWidget, \
     QGraphicsObject
 
-from utility import FAnnotationItem, FDetectAnnotationData
+from utility import FAnnotationItem, FDetectAnnotationData, FSegmentationAnnotationData, EAnnotationType
 
-
-class UThreadImageLoader(QThread):
-    signal_on_load = pyqtSignal(QPixmap)
-
-    def __init__(
-            self,
-            image_path: str,
-            annotation_data: list[tuple[int, int, int, int, int, QColor]],
-            show_dict: dict[int, bool],
-            size: int,
-    ):
-        super().__init__()
-        self.is_running = True
-        self.size = size
-        self.show_dict = show_dict
-        self.annotation_data = annotation_data
-        self.image_path = image_path
-
-        self.line_width = 2
-
-    def run(self):
-        if not self.is_running:
-            return
-
-        pixmap = QPixmap(self.image_path)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        for annotation in self.annotation_data:
-            if not self.is_running:
-                return
-            try:
-                class_id, x, y, width, height, color = annotation
-                if self.show_dict[class_id] is False:
-                    continue
-                pen = QPen(color)
-                pen.setWidth(int(self.line_width * (pixmap.width() // self.size)))
-                painter.setPen(pen)
-                painter.drawRect(
-                    int(max(0, x)),
-                    int(max(0, y)),
-                    width,
-                    height
-                )
-            except Exception as error:
-                print(str(error))
-                continue
-
-        painter.end()
-        scaled_pixmap = pixmap.scaled(
-            self.size,
-            self.size,
-            aspectRatioMode=Qt.KeepAspectRatio,
-            transformMode=Qt.SmoothTransformation
-        )
-        if self.is_running:
-            self.signal_on_load.emit(scaled_pixmap)
-
-    def stop(self):
-        self.is_running = False
 
 class UGraphicsGalleryItem(QGraphicsObject):
     def __init__(self, size: int):
@@ -132,7 +71,7 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
 
         for annotation in self.annotation_data.annotation_list:
             if isinstance(annotation, FDetectAnnotationData):
-                _, _, color, (x, y, width, height) = annotation.get_data()
+                _, _, _, color, (x, y, width, height) = annotation.get_data()
                 pen = QPen(color)
                 pen.setWidth(int(self.board_width * (image.width() // self.size)))
                 painter.setPen(pen)
@@ -142,6 +81,13 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
                     width,
                     height
                 )
+            elif isinstance(annotation, FSegmentationAnnotationData):
+                _, _, _, color, point_list = annotation.get_data()
+                pen = QPen(color)
+                pen.setWidth(int(self.board_width * (image.width() // self.size)))
+                painter.setPen(pen)
+                qt_points = [QPointF(x, y) for x, y in point_list]
+                painter.drawPolygon(QPolygonF(qt_points))
         painter.end()
 
         return image.scaled(
@@ -340,13 +286,12 @@ class UImageGallery(QGraphicsView):
         if index not in self.widget_cache:
             return
         self.widget_cache[index].set_image(image)
-        #self.viewport().update()
 
     @pyqtSlot(int, bool)
     def handle_select_image(self, index: int, selected: bool):
         self.set_selected.add(index) if selected else self.set_selected.discard(index)
 
-    def filter_images(self, image_filter: dict[int, bool]):
+    def filter_images(self, image_filter: dict[int, bool], type_list: list[EAnnotationType]):
         if not image_filter or len(image_filter) < 0:
             return
         self.filtered_indexes.clear()
@@ -355,7 +300,8 @@ class UImageGallery(QGraphicsView):
         for index in range(len(self.annotation_data)):
             class_list = []
             for annotation in self.annotation_data[index].annotation_list:
-                class_list.append(annotation.class_id)
+                if annotation.get_annotation_type() in type_list:
+                    class_list.append(annotation.class_id)
             if ((set(class_list) & set(available_annotations) and index not in self.filtered_indexes)
                     or len(self.annotation_data[index].annotation_list) == 0):
                 self.filtered_indexes[index] = len(self.filtered_indexes)

@@ -131,7 +131,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         load_annotations: list[tuple] = list()
         for item in self._get_current_thumb_annotation_data():
             if isinstance(item, FDetectAnnotationData):
-                class_id, class_name, color, (x, y, width, height) = item.get_data()
+                object_id, class_id, class_name, color, (x, y, width, height) = item.get_data()
                 ann_box = self.add_annotation_box(
                     x,
                     y,
@@ -142,7 +142,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                 self.scene().addItem(ann_box)
                 load_annotations.append((len(load_annotations), ann_box))
             elif isinstance(item, FSegmentationAnnotationData):
-                class_id, class_name, color, obj_id, points_list = item.get_data()
+                object_id, class_id, class_name, color, points_list = item.get_data()
                 qt_points = [QPointF(x, y) for x, y in points_list]
                 ann_mask = self.add_annotation_mask(qt_points, (class_id, class_name, QColor(color)), True)
                 self.scene().addItem(ann_mask)
@@ -208,6 +208,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         )
 
         self._set_annotation_item(ann_mask)
+        self.scene().addItem(ann_mask)
         return ann_mask
 
     def add_annotation_box(self, x, y, width, height, class_data: tuple[int, str, QColor]) -> UAnnotationBox:
@@ -222,6 +223,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         )
 
         self._set_annotation_item(ann_box)
+        self.scene().addItem(ann_box)
         return ann_box
 
     def _set_annotation_item(self, annotation_item: UAnnotationItem):
@@ -237,9 +239,41 @@ class UAnnotationGraphicsView(QGraphicsView):
         annotation_item.connect_delete_signal(self.handle_on_delete_annotation_item)
 
         self.annotation_items.append(annotation_item)
-        self.scene().addItem(annotation_item)
 
         return annotation_item
+
+    def remake_box_to_mask(self, box: UAnnotationBox):
+        if not box or box not in self.annotation_items:
+            return
+
+        mask_points = [
+            box.rect().topLeft(),
+            box.rect().topRight(),
+            box.rect().bottomRight(),
+            box.rect().bottomLeft()
+        ]
+
+        index = self.annotation_items.index(box)
+        if self.annotation_items[index].scene():
+            self.annotation_items[index].scene().removeItem(self.annotation_items[index])
+
+        self.annotation_items[index] = UAnnotationMask(
+            mask_points,
+            (box.get_class_id(), box.get_class_name(), box.get_color()),
+            self.scale_factor,
+            True,
+            self.current_image
+        )
+        self._set_annotation_item(self.annotation_items[index])
+        self.scene().addItem(self.annotation_items[index])
+        self.annotation_items[index].setSelected(True)
+
+        self.commander.updated_annotation.emit(
+            self.get_current_thumb_index(),
+            index,
+            box.get_annotation_data(),
+            self.annotation_items[index].get_annotation_data()
+        )
 
     @pyqtSlot(object)
     def handle_on_select_annotation(self, annotation_item: object):
@@ -296,7 +330,7 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     def add_annotation_by_data(self, data: FAnnotationData):
         if isinstance(data, FDetectAnnotationData):
-            class_id, class_name, color, (x, y, width, height) = data.get_data()
+            object_id, class_id, class_name, color, (x, y, width, height) = data.get_data()
             annotation_box = self.add_annotation_box(
                 x,
                 y,

@@ -1,5 +1,6 @@
 import configparser
 import os.path
+import pathlib
 import shutil
 from typing import Optional
 
@@ -7,7 +8,8 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from neural_model import ULocalDetectYOLO, UBaseNeuralNet, URemoteNeuralNet
 from supporting.error_text import UErrorsText
-from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem
+from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem, FDetectAnnotationData, \
+    FSegmentationAnnotationData
 
 TASKS = "tasks"
 DATASETS = "datasets"
@@ -96,6 +98,8 @@ class UTrainProject:
         # Поток обработки нейросети
         self.model_thread: Optional[QThread] = None
         self.model_worker: Optional[UBaseNeuralNet] = None
+
+        self.image_extensions = [".jpg", ".jpeg", ".png"]
 
     def load_local_yolo(self, path: str):
         try:
@@ -404,12 +408,11 @@ class UTrainProject:
     ):
         if not os.path.exists(annotation_item.get_image_path()):
             return
+
         image_name = os.path.basename(annotation_item.get_image_path())
         image_dir = self._get_dir_path(dataset, dataset_type, IMAGES)
-        label_dir = self._get_dir_path(dataset, dataset_type, LABELS)
 
         target_image_path = os.path.join(image_dir, image_name).replace('\\', '/')
-        target_label_path = os.path.join(label_dir, os.path.splitext(image_name)[0] + ".txt").replace('\\', '/')
 
         ann_data = annotation_item.get_annotation_data()
         annotation_list = self._get_ref_to_annotation_dict(dataset_type).get(dataset, [])
@@ -423,10 +426,22 @@ class UTrainProject:
             new_ann_item = FAnnotationItem(ann_data, target_image_path, dataset)
             error = self.add_annotation(dataset, new_ann_item, dataset_type)
             print(error)
+
         # Запись аннотаций в файл
-        with open(target_label_path, "w") as save_file:
-            ann_lines = [str(ann_line) + '\n' for ann_line in ann_data]
-            save_file.writelines(ann_lines)
+        for annotation in ann_data:
+            if isinstance(annotation, FDetectAnnotationData):
+                label_dir = self._get_dir_path(dataset, dataset_type, LABELS)
+            elif isinstance(annotation, FSegmentationAnnotationData):
+                label_dir = self._get_dir_path(dataset, dataset_type, LABELS_SEGM)
+            else:
+                continue
+
+            pathlib.Path(label_dir).mkdir(parents=True, exist_ok=True)
+            target_label_path = os.path.join(label_dir, os.path.splitext(image_name)[0] + ".txt").replace('\\', '/')
+
+            with open(target_label_path, "w") as save_file:
+                ann_lines = [str(ann_line) + '\n' for ann_line in ann_data]
+                save_file.writelines(ann_lines)
 
     def create_dataset_dir(self, dataset_name: str, dataset_type: str = DATASETS):
         dataset = self.get_dataset_path(dataset_name, dataset_type)

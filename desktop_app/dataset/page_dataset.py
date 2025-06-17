@@ -15,46 +15,9 @@ from dataset.loader import UOverlayLoader, UThreadDatasetLoadAnnotations, UThrea
 from design.dialog_export import Ui_dialog_export
 from project import UTrainProject, RESERVED, DATASETS
 from supporting.custom_threads import UProgressThread
-from utility import UMessageBox, FAnnotationItem, FAnnotationClasses
+from utility import UMessageBox, FAnnotationItem, FAnnotationClasses, EAnnotationType
 
 DATASET_ALL = "All Annotations"
-
-class UThreadDisplayDataset(QThread):
-    signal_on_image_loaded = pyqtSignal(str, str, list)
-    signal_on_progress_changed = pyqtSignal(str, int, int)
-    signal_on_ended = pyqtSignal()
-    signal_on_error = pyqtSignal(str)
-
-    def __init__(self,
-                 classes: FAnnotationClasses,
-                 annotations: dict[str, list[FAnnotationItem]],
-                 show_dict: dict[int, bool],
-                 image_size: int = 200
-    ):
-        super().__init__()
-
-        self.annotations = annotations
-        self.size = image_size
-        self.ann_len = sum(len(ann) for ann in self.annotations.values())
-        self.classes = classes
-        self.show_dict = show_dict
-
-    def run(self):
-        indicator = 1
-        for dataset, annotation_data in self.annotations.items():
-            for index in range(len(annotation_data)):
-                data = self.annotations[dataset][index].get_annotation_data()
-                image_path = self.annotations[dataset][index].get_image_path()
-                annotation_list: list[tuple[int, int, int, int, int, QColor]] = list()
-                for annotation in data:
-                    color = self.classes.get_color(annotation.class_id) or QColor(Qt.gray)
-                    annotation_list.append(
-                        (annotation.class_id, annotation.X, annotation.Y, annotation.Width, annotation.Height, color)
-                    )
-                self.signal_on_image_loaded.emit(image_path, dataset, annotation_list)
-                indicator += 1
-                self.signal_on_progress_changed.emit(image_path, indicator, self.ann_len)
-        self.signal_on_ended.emit()
 
 class UDialogExport(QDialog, Ui_dialog_export):
     signal_done = pyqtSignal(str, list, object)
@@ -130,12 +93,12 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         # Дополнительные параметры
         self.filter_dict: dict[int, bool] = dict()
+        self.type_list: list[EAnnotationType] = list()
 
         # Дополнительные виджеты
         self.overlay: Optional[UOverlayLoader] = None
         self.thread_load_annotations: Optional[UThreadDatasetLoadAnnotations] = None
         self.thread_copy: Optional[UThreadDatasetCopy] = None
-        self.thread_display: Optional[UThreadDisplayDataset] = None
 
         self.thread_custom: Optional[UProgressThread] = None
 
@@ -155,6 +118,15 @@ class UPageDataset(QWidget, Ui_page_dataset):
             lambda: self.move_selected_dataset(self.list_datasets, self.project.get_datasets(), DATASETS, RESERVED)
         )
 
+        #Настройка выбора отображений аннотаций
+        self.combo_annotation_type.currentIndexChanged.connect(self.handle_on_type_changed)
+        self.combo_annotation_type.set_members({
+            "Все аннотации": [EAnnotationType.BoundingBox, EAnnotationType.Segmentation],
+            "Ограничительные рамки" : [EAnnotationType.BoundingBox],
+            "Маски" : [EAnnotationType.Segmentation],
+        })
+        self.combo_annotation_type.setCurrentIndex(0)
+
         # Привязка к спискам
         self.list_datasets.itemClicked.connect(self.on_item_current_dataset_selected)
         self.list_reserved.itemClicked.connect(self.on_item_reserved_selected)
@@ -173,12 +145,12 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.create_list_reserved()
         self.fill_filter_list()
         self.view_gallery.clear_scene()
-        self.view_gallery.filter_images(self.filter_dict)
+        self.view_gallery.filter_images(self.filter_dict, self.type_list)
 
     def on_changed_filter(self, class_id: int, selected: bool):
         if class_id in self.filter_dict:
             self.filter_dict[class_id] = selected
-        self.view_gallery.filter_images(self.filter_dict)
+        self.view_gallery.filter_images(self.filter_dict, self.type_list)
 
     def go_to_another_page(self, page_index: int):
         if isinstance(self.parent(), QStackedWidget):
@@ -190,7 +162,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
             list_annotations += list_a
         self.view_gallery.clear_scene()
         self.view_gallery.set_dataset_annotations(list_annotations)
-        self.view_gallery.filter_images(self.filter_dict)
+        self.view_gallery.filter_images(self.filter_dict, self.type_list)
 
     def add_dataset(self):
         path = QFileDialog.getExistingDirectory(self, "Выберите папку с датасетом", "")
@@ -287,6 +259,11 @@ class UPageDataset(QWidget, Ui_page_dataset):
             UMessageBox.show_error("Ошибка во время завершения потока удаления аннотаций!")
             return
 
+    @pyqtSlot()
+    def handle_on_type_changed(self):
+        self.type_list = self.combo_annotation_type.get_current_enum()
+        self.view_gallery.filter_images(self.filter_dict, self.type_list)
+
     def load_annotations(self, dataset_name: str):
         if self.thread_copy:
             self.thread_copy.deleteLater()
@@ -307,7 +284,6 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.thread_load_annotations.signal_warning.connect(UPageDataset.print_warning)
 
         self.thread_load_annotations.start()
-
 
     def end_add_dataset(self, datasets: list[str]):
         error = self.project.save()

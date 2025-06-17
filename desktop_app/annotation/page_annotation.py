@@ -453,21 +453,3 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 self.project.classes.get_name(class_id),
                 self.project.classes.get_color(class_id)
             )
-
-    """    def contextMenuEvent(self, event):
-            if len(self.available_classes) == 0 or self.commander is None:
-                return
-
-            menu = QMenu()
-            for class_d in self.available_classes:
-                action = UAnnotationScene.set_action(
-                    menu,
-                    str(class_d),
-                    class_d.Color
-                )
-                action.triggered.connect(
-                    lambda checked=False, index=class_d.Cid: self.commander.changed_class_annotate.emit(index)
-                )
-                menu.addAction(action)
-
-            menu.exec_(event.screenPos())"""

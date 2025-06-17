@@ -91,7 +91,7 @@ class Ui_page_dataset(object):
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
         self.label_4 = QtWidgets.QLabel(self.horizontalWidget)
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(8)
         self.label_4.setFont(font)
         self.label_4.setStyleSheet("QLabel {\n"
 "    padding: 0px 0px 0px 10px;\n"
@@ -101,7 +101,7 @@ class Ui_page_dataset(object):
         self.label_3 = QtWidgets.QLabel(self.horizontalWidget)
         self.label_3.setMaximumSize(QtCore.QSize(400, 16777215))
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(8)
         self.label_3.setFont(font)
         self.label_3.setStyleSheet("QLabel {\n"
 "    padding: 0px 0px 0px 10px;\n"
@@ -161,8 +161,16 @@ class Ui_page_dataset(object):
         self.button_add_dataset.setFont(font)
         self.button_add_dataset.setObjectName("button_add_dataset")
         self.verticalLayout.addWidget(self.button_add_dataset)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        spacerItem1 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         self.verticalLayout.addItem(spacerItem1)
+        self.combo_annotation_type = EnumComboBox(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.combo_annotation_type.setFont(font)
+        self.combo_annotation_type.setObjectName("combo_annotation_type")
+        self.verticalLayout.addWidget(self.combo_annotation_type)
+        spacerItem2 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.verticalLayout.addItem(spacerItem2)
         self.groupBox = QtWidgets.QGroupBox(self.verticalWidget1)
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -189,8 +197,8 @@ class Ui_page_dataset(object):
         self.button_delete_dataset.setObjectName("button_delete_dataset")
         self.verticalLayout_4.addWidget(self.button_delete_dataset)
         self.verticalLayout.addWidget(self.groupBox)
-        spacerItem2 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        self.verticalLayout.addItem(spacerItem2)
+        spacerItem3 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.verticalLayout.addItem(spacerItem3)
         self.groupBox_2 = QtWidgets.QGroupBox(self.verticalWidget1)
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -217,8 +225,8 @@ class Ui_page_dataset(object):
         self.button_delete_selected.setObjectName("button_delete_selected")
         self.verticalLayout_5.addWidget(self.button_delete_selected)
         self.verticalLayout.addWidget(self.groupBox_2)
-        spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem3)
+        spacerItem4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout.addItem(spacerItem4)
         self.button_export = QtWidgets.QPushButton(self.verticalWidget1)
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -257,6 +265,7 @@ class Ui_page_dataset(object):
         self.button_selected_to_annotate.setText(_translate("page_dataset", "Разметить выбранные изображения"))
         self.button_delete_selected.setText(_translate("page_dataset", "Удалить выбранные изображения"))
         self.button_export.setText(_translate("page_dataset", "Экспорт"))
+from dataset.dataset_widgets import EnumComboBox
 from dataset.image_gallery import UImageGallery
 from dataset.list_datasets import UListDataset
 from dataset.scroll_filter import UScrollFilter
