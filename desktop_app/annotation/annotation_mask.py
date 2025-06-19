@@ -290,7 +290,7 @@ class UAnnotationMask(UAnnotationItem):
         if change == QGraphicsItem.ItemSelectedHasChanged:
             if not self.scene():
                 return super().itemChange(change, value)
-            if self.isSelected():
+            if self.isSelected(): 
                 self.create_graphic_points()
             else:
                 self.clear_graphic_points()

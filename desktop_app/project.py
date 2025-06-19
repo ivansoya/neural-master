@@ -6,6 +6,7 @@ from typing import Optional
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
+from SAM2.sam2_net import USam2Net
 from neural_model import ULocalDetectYOLO, UBaseNeuralNet, URemoteNeuralNet
 from supporting.error_text import UErrorsText
 from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem, FDetectAnnotationData, \
@@ -99,6 +100,12 @@ class UTrainProject:
         self.model_thread: Optional[QThread] = None
         self.model_worker: Optional[UBaseNeuralNet] = None
 
+        # Поток SAM2
+        self.sam2_thread: Optional[QThread] = None
+        self.sam2_worker: Optional[USam2Net] = None
+
+        self.load_sam2('SAM2/sam2.1_b.pt')
+
         self.image_extensions = [".jpg", ".jpeg", ".png"]
 
     def load_local_yolo(self, path: str):
@@ -125,6 +132,18 @@ class UTrainProject:
 
             self.model_worker.connect_to_server()
             self.model_thread.start()
+        except Exception as error:
+            return str(error)
+
+    def load_sam2(self, path: str):
+        try:
+            self.sam2_thread = QThread()
+            self.sam2_worker = USam2Net(path)
+
+            self.sam2_worker.moveToThread(self.sam2_thread)
+            self.sam2_thread.finished.connect(self.sam2_worker.deleteLater)
+
+            self.sam2_thread.start()
         except Exception as error:
             return str(error)
 

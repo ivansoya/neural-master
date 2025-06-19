@@ -10,11 +10,15 @@ from PyQt5.QtGui import QColor, QPainter, QTransform, QFont, QPixmap, QIcon, QIm
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot, QPointF
 from cv2 import Mat
 
+from SAM2.sam2_net import USam2Net
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_item import UAnnotationItem
 from annotation.annotation_mask import UAnnotationMask
-from annotation.annotation_mode import EWorkMode, UDragAnnotationMode, UForceDragAnnotationMode, UBoxAnnotationMode, \
-    UBaseAnnotationMode, UMaskAnnotationMode
+from annotation.modes.abstract import EWorkMode, UBaseAnnotationMode
+from annotation.modes.sam2_annotate import USam2Annotation
+from annotation.modes.segmentation import UMaskAnnotationMode
+from annotation.modes.bounding_box import UBoxAnnotationMode
+from annotation.modes.viewer import UViewerMode, UForceDragAnnotationMode
 
 from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus, FSegmentationAnnotationData
 from commander import UAnnotationSignalHolder
@@ -47,9 +51,10 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.overlay: Optional[UAnnotationOverlayWidget] = None
 
         self.commander: Optional[UAnnotationSignalHolder] = None
+        self.sam2: Optional[USam2Net] = None
 
         self.annotate_mods: dict[EWorkMode, UBaseAnnotationMode] = dict()
-        self.current_work_mode = EWorkMode.DragMode
+        self.current_work_mode = EWorkMode.Viewer
 
     def get_selectable_matrix(self):
         if self.current_display_thumbnail is None:
@@ -66,7 +71,7 @@ class UAnnotationGraphicsView(QGraphicsView):
 
             return t_id, matrix
 
-    def set_commander(self, commander: UAnnotationSignalHolder):
+    def set_scene_parameters(self, commander: UAnnotationSignalHolder, sam2: USam2Net):
         if commander:
             self.commander = commander
             # Привзяка событий
@@ -74,10 +79,11 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.commander.selected_thumbnail.connect(self.display_image)
 
             self.annotate_mods: dict[EWorkMode, UBaseAnnotationMode] = {
-                EWorkMode.DragMode: UDragAnnotationMode(self, self.commander),
+                EWorkMode.Viewer: UViewerMode(self, self.commander),
                 EWorkMode.ForceDragMode: UForceDragAnnotationMode(self, self.commander),
                 EWorkMode.BoxAnnotationMode: UBoxAnnotationMode(self, self.commander),
                 EWorkMode.MaskAnnotationMode: UMaskAnnotationMode(self, self.commander),
+                EWorkMode.SAM2: USam2Annotation(sam2, self, self.commander),
             }
 
     def display_image(self, thumbnail: tuple[int, str, list[FAnnotationData]], thumb_status: int):
@@ -197,6 +203,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.setTransform(QTransform().scale(self.scale_factor, self.scale_factor))
         for item in self.annotation_items:
             item.set_draw_scale(self.scale_factor)
+        self.annotate_mods[self.current_work_mode].on_wheel_mouse(self.scale_factor)
 
     def add_annotation_mask(self, points_list: list[QPointF], class_data: tuple[int, str, QColor], closed: bool = False):
         ann_mask = UAnnotationMask(
@@ -227,7 +234,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         return ann_box
 
     def _set_annotation_item(self, annotation_item: UAnnotationItem):
-        if self.current_work_mode is EWorkMode.DragMode:
+        if self.current_work_mode is EWorkMode.Viewer:
             annotation_item.setAcceptedMouseButtons(Qt.AllButtons)
             annotation_item.setAcceptHoverEvents(True)
         elif self.current_work_mode in [EWorkMode.BoxAnnotationMode, EWorkMode.MaskAnnotationMode]:

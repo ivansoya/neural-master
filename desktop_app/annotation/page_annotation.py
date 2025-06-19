@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QFileDialog, QWidget, QDialog
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
 from PyQt5.QtCore import Qt, pyqtSlot
 
-from annotation.annotation_mode import EWorkMode
+from annotation.modes.abstract import EWorkMode
 from annotation.annotation_scene import UAnnotationBox
 from design.annotation_page import Ui_annotataion_page
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
@@ -48,8 +48,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         # Обработчик событий для сцены разметки
         self.annotate_commander = UAnnotationSignalHolder()
-        self.thumbnail_carousel.set_commander(self.annotate_commander)
-        self.annotation_scene.set_commander(self.annotate_commander)
 
         # Инициализация потоков
         self.overlay: Optional[UOverlayLoader] = None
@@ -86,14 +84,16 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         # Обработка события изменения режима работы
         self.annotate_commander.change_work_mode.connect(self.set_label_work_mode)
         self.button_drag_mode.clicked.connect(
-            lambda checked=False, mode=EWorkMode.DragMode.value: self.annotate_commander.change_work_mode.emit(mode)
+            lambda checked=False, mode=EWorkMode.Viewer.value: self.annotate_commander.change_work_mode.emit(mode)
         )
         self.button_detect_mode.clicked.connect(
             lambda checked=False, mode=EWorkMode.BoxAnnotationMode.value: self.annotate_commander.change_work_mode.emit(mode)
         )
         self.button_mask_mode.clicked.connect(
-            lambda checked=False, mode=EWorkMode.MaskAnnotationMode.value: self.annotate_commander.change_work_mode.emit(
-                mode)
+            lambda checked=False, mode=EWorkMode.MaskAnnotationMode.value: self.annotate_commander.change_work_mode.emit(mode)
+        )
+        self.button_sam2.clicked.connect(
+            lambda checked=False, mode=EWorkMode.SAM2.value: self.annotate_commander.change_work_mode.emit(mode)
         )
 
         self.annotate_commander.display_annotations.connect(self.handle_on_screen_loaded_annotations)
@@ -131,6 +131,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if self.project is None:
             return
         self._load_classes()
+        self.thumbnail_carousel.set_commander(self.annotate_commander)
+        self.annotation_scene.set_scene_parameters(self.annotate_commander, self.project.sam2_worker)
 
     def handle_on_updated_classes(self):
         self._load_classes()
@@ -417,7 +419,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     def handle_clicked_number_key(self, key_number: int):
         if key_number == int(Qt.Key_1):
-            self.annotate_commander.change_work_mode.emit(EWorkMode.DragMode.value)
+            self.annotate_commander.change_work_mode.emit(EWorkMode.Viewer.value)
         elif key_number == int(Qt.Key_2):
             self.annotate_commander.change_work_mode.emit(EWorkMode.BoxAnnotationMode.value)
         elif key_number == int(Qt.Key_3):
