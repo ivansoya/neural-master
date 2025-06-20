@@ -34,12 +34,12 @@ class UAnnotationSignalHolder(QWidget):
         super().__init__()
 
 class UGlobalSignalHolder(QObject):
-    ctrl_pressed = pyqtSignal(int)
-    ctrl_released = pyqtSignal(int)
-
     arrows_pressed = pyqtSignal(int)
     drop_pressed = pyqtSignal()
-    delete_pressed = pyqtSignal(int)
+
+    key_pressed = pyqtSignal(int)
+    key_hold = pyqtSignal(int)
+    key_released = pyqtSignal(int)
 
     classes_updated = pyqtSignal()
     loaded_images_to_annotate = pyqtSignal(list)
@@ -85,57 +85,25 @@ class UGlobalSignalHolder(QObject):
             if self.is_blocked is True:
                 return super().eventFilter(obj, event)
 
-            # Реализация обработки клавиш, в случае, если выбрана страница с разметкой
-            if self.status.value == ECommanderStatus.Annotation.value:
-                if event.key() == Qt.Key_Control:
-                    self.ctrl_pressed.emit(event.key())
-                    return True
+            self.current_key = event.key()
+            self.delay_timer.start()
+            if self.freq_timer.isActive():
+                self.freq_timer.stop()
 
-                if (event.key() == Qt.Key_Left or event.key() == Qt.Key_Right or
-                    event.key() == Qt.Key_A or event.key() == Qt.Key_D):
-                    self.current_key = event.key()
-                    self.arrows_pressed.emit(event.key())
-                    self.delay_timer.start()
-                    if self.freq_timer.isActive():
-                        self.freq_timer.stop()
-                    return True
-
-                if  Qt.Key_0 <= event.key() <= Qt.Key_9:
-                    self.number_key_pressed.emit(event.key())
-                    return True
-
-                if event.key() == Qt.Key_Space:
-                    self.command_key_pressed.emit(Qt.Key_Space)
-                    return True
-
-                if event.key() == Qt.Key_N:
-                    self.drop_pressed.emit()
-                    self.arrows_pressed.emit(Qt.Key_Right)
-                    self.delay_timer.start()
-                    if self.freq_timer.isActive():
-                        self.freq_timer.stop()
-                    return True
+            self.key_pressed.emit(event.key())
+            return True
 
         elif event.type() == QEvent.KeyRelease:
             if self.is_blocked is True:
                 return super().eventFilter(obj, event)
 
-            if self.status.value == ECommanderStatus.Annotation.value:
-                if event.key() == Qt.Key_Control:
-                    self.ctrl_released.emit(event.key())
-                    return True
+            self.key_released.emit(event.key())
+            if self.current_key == event().key():
+                self.freq_timer.stop()
+                self.delay_timer.stop()
+                self.current_key = -1
 
-                if (event.key() == Qt.Key_Left or event.key() == Qt.Key_Right or
-                    event.key() == Qt.Key_A or event.key() == Qt.Key_D):
-                    self.freq_timer.stop()
-                    self.delay_timer.stop()
-                    self.current_key = -1
-                    return True
-
-                if event.key() == Qt.Key_N:
-                    self.freq_timer.stop()
-                    self.delay_timer.stop()
-                    return True
+            return True
 
         return super().eventFilter(obj, event)
 
@@ -152,9 +120,11 @@ class UGlobalSignalHolder(QObject):
         return self.status
 
     def on_freq(self):
-        if (self.current_key == Qt.Key_Left or self.current_key == Qt.Key_Right or
+        if self.current_key != -1:
+            self.key_hold.emit(self.current_key)
+        """if (self.current_key == Qt.Key_Left or self.current_key == Qt.Key_Right or
             self.current_key == Qt.Key_A or self.current_key == Qt.Key_D):
             self.arrows_pressed.emit(self.current_key)
         elif self.current_key == Qt.Key_N:
             self.drop_pressed.emit()
-            self.arrows_pressed.emit(Qt.Key_Right)
+            self.arrows_pressed.emit(Qt.Key_Right)"""

@@ -71,6 +71,9 @@ class UAnnotationGraphicsView(QGraphicsView):
 
             return t_id, matrix
 
+    def get_current_mode(self):
+        return self.annotate_mods[self.current_work_mode]
+
     def set_scene_parameters(self, commander: UAnnotationSignalHolder, sam2: USam2Net):
         if commander:
             self.commander = commander
@@ -165,11 +168,16 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.current_image.fill(QColor(Qt.gray))
         self.annotate_scene.addItem(self.current_image)
 
-    def handle_drag_start_event(self, key: int):
+    def handle_on_key_press(self, key: int):
         if key == Qt.Key_Control:
             self.set_work_mode(EWorkMode.ForceDragMode.value)
+        if key == Qt.Key_Space:
+            self.hand
 
-    def handle_drag_end_event(self, key: int):
+    def handle_on_key_hold(self, key: int):
+        pass
+
+    def handle_on_key_release(self, key: int):
         if key == Qt.Key_Control:
             prev_mode = self.annotate_mods[self.current_work_mode].get_previous_mode()
             if prev_mode: self.set_work_mode(prev_mode.value)
