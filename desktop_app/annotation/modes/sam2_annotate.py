@@ -116,15 +116,19 @@ class USam2Annotation(UBaseAnnotationMode):
             point_lists = self.sam2.segment_with_points(matrix, to_net)
             self._add_polygons_from_mask(point_lists, image, current_class[2] if current_class else QColor(Qt.lightGray))
         else:
-            self.box_start_pos = cursor_pos_image
-            self.box = QGraphicsRectItem(image)
-            self.box.setPen(QPen(QColor(0, 255, 0), 2 * set_to_draw_scale(self.scene.scale_factor), Qt.SolidLine))
-            self.box.setBrush(QColor(0, 255, 0, 40))
-            self.scene.scene().addItem(self.box)
+            if event.button() == Qt.LeftButton:
+                if self.box:
+                    return
 
+                self.box_start_pos = cursor_pos_image
+                self.box = QGraphicsRectItem(image)
+                self.box.setRect(self.box_start_pos.x(), self.box_start_pos.y(), 1, 1)
+                self.box.setPen(QPen(QColor(0, 255, 0), 2 * set_to_draw_scale(self.scene.scale_factor), Qt.SolidLine))
+                self.box.setBrush(QColor(0, 255, 0, 40))
+                self.scene.scene().addItem(self.box)
 
     def on_move_mouse(self, event: QMouseEvent | None):
-        if event.button() == Qt.LeftButton and self.window and self.window.radio_box.isChecked():
+        if self.box:
             image = self.scene.get_image()
 
             if not image:
@@ -132,25 +136,25 @@ class USam2Annotation(UBaseAnnotationMode):
                 return
 
             cursor_pos_image = get_clamped_pos(self.scene, event.pos(), image)
-            if self.box:
-                rect = QRectF(self.box_start_pos, cursor_pos_image).normalized()
-                self.box.setRect(rect)
+
+            rect = QRectF(self.box_start_pos, cursor_pos_image).normalized()
+            self.box.setRect(rect)
 
     def on_release_mouse(self, event: QMouseEvent | None):
-        if event.button() == Qt.LeftButton and self.window and self.window.radio_box.isChecked():
+        if event.button() == Qt.LeftButton and self.box:
             image, current_class, (_, matrix) = self.scene.get_image(), self.scene.get_current_class(), self.scene.get_selectable_matrix()
 
-            if matrix is None or not image or not current_class or not self.window:
+            if matrix is None or not image or not current_class:
                 self._delete_box()
                 return
 
             points_lists = self.sam2.segment_with_box(
                 matrix,
                 (
-                    int(self.box.rect().center().x()),
-                    int(self.box.rect().center().y()),
-                    int(self.box.rect().width()),
-                    int(self.box.rect().height())
+                    int(self.box.rect().x()),
+                    int(self.box.rect().y()),
+                    int(self.box.rect().x() + self.box.rect().width()),
+                    int(self.box.rect().y() + self.box.rect().height())
                 ),
             )
 
