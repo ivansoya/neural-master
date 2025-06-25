@@ -49,11 +49,15 @@ class UBaseAnnotationMode(ABC):
         pass
 
     @abstractmethod
-    def on_key_press(self, event: QKeyEvent):
+    def on_key_press(self, key: int):
         pass
 
     @abstractmethod
-    def on_key_release(self, event: QKeyEvent):
+    def on_key_hold(self, key: int):
+        pass
+
+    @abstractmethod
+    def on_key_release(self, key: int):
         pass
 
     @abstractmethod

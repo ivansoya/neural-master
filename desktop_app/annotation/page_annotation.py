@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QFileDialog, QWidget, QDialog
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
 from PyQt5.QtCore import Qt, pyqtSlot
 
+from annotation.annotation_item import UAnnotationItem
 from annotation.modes.abstract import EWorkMode
 from annotation.annotation_scene import UAnnotationBox
 from design.annotation_page import Ui_annotataion_page
@@ -59,14 +60,15 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         self.commander.project_load_complete.connect(self.handle_on_load_project)
 
-        # Сигналы событий при нажатии на клавиши
-        self.commander.ctrl_pressed.connect(self.annotation_scene.handle_drag_start_event)
-        self.commander.ctrl_released.connect(self.annotation_scene.handle_drag_end_event)
-        self.commander.drop_pressed.connect(lambda: self.annotation_scene.clean_all_annotations(to_emit=True))
-        self.commander.number_key_pressed.connect(self.handle_clicked_number_key)
+        # Привязка событий нажатий клавиш к сцене
+        self.commander.key_pressed.connect(self.annotation_scene.handle_on_key_press)
+        self.commander.key_hold.connect(self.annotation_scene.handle_on_key_hold)
+        self.commander.key_released.connect(self.annotation_scene.handle_on_key_release)
 
-        self.commander.arrows_pressed.connect(self.thumbnail_carousel.select_thumbnail_by_arrow)
-        self.commander.drop_pressed.connect(self.thumbnail_carousel.set_thumbnail_dropped)
+        # Привязка событий нажатий клавиш к странице
+        self.commander.key_pressed.connect(self.handle_on_key_pressed)
+        self.commander.key_hold.connect(self.handle_on_key_hold)
+        self.commander.key_released.connect(self.handle_on_key_released)
 
         self.commander.loaded_images_to_annotate.connect(self.handle_on_annotation_data_get)
 
@@ -107,25 +109,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.list_current_annotations.item_selected.connect(self.handle_on_select_annotation_from_list)
 
         # Обработка событий, связанных с работой модели
-        self.commander.command_key_pressed.connect(self.handle_command_pressed)
         self.commander.model_loaded.connect(self.handle_on_load_model)
 
         #Обработка событий при изменении классов
         self.commander.classes_updated.connect(self.handle_on_updated_classes)
 
-        #self.commander.changed_class_annotate.connect(self.on_change_index_combobox)
-        #self.class_combobox.currentIndexChanged.connect(self.handle_changed_class_combobox_index)
-
-        #self.thumbnail_carousel.signal_thumbnail_select.connect(self.display_image)
-
         self.toggle_round_images.clicked.connect(self.toggle_roulette_visibility)
-
-        #self.commander.command_key_pressed.connect(self.annotate_on_button_pressed)
-
-        # self.button_load_dataset.clicked.connect(self.on_clicked_load_dataset)
-
-        # Изменение label для отображения количества размеченных и неразмеченных изображений
-        #self.commander.changed_annotation_status.connect(self.handle_changed_annotation_status)
 
     def handle_on_load_project(self):
         if self.project is None:
@@ -143,13 +132,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             if self.auto_annotate_checkbox.isChecked():
                 if status == EAnnotationStatus.NoAnnotation.value:
                     self._annotate_image()
-
-    @pyqtSlot(int)
-    def handle_command_pressed(self, key: int):
-        if (key == Qt.Key_Space and
-                self.thumbnail_carousel.get_current_thumbnail_status() != EAnnotationStatus.PerformingAnnotation and
-                self.project.model_worker and self.project.model_worker.is_running()):
-            self._annotate_image()
 
     def handle_on_load_model(self):
         self.auto_annotate_checkbox.setEnabled(True)
@@ -241,11 +223,11 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.commander.project_updated_datasets.emit()
 
     @pyqtSlot(list)
-    def handle_on_screen_loaded_annotations(self, annotations: list[tuple[int, UAnnotationBox]]):
-        self.list_current_annotations.clear_list_widget()
+    def handle_on_screen_loaded_annotations(self, annotations: list[tuple[int, UAnnotationItem]]):
+        self.list_current_annotations.clear_annotations()
         for index in range(len(annotations)):
             index, ann_item = annotations[index]
-            self.list_current_annotations.add_item(ann_item.get_class_name(), ann_item.get_color())
+            self.list_current_annotations.add_item(ann_item.get_annotation_data())
 
     @pyqtSlot(int, object)
     def handle_on_screen_added_annotations(self, index: int, annotation_data):
@@ -253,8 +235,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             return
         if index == self.annotation_scene.get_current_thumb_index():
             self.list_current_annotations.add_item(
-                annotation_data.get_class_name(),
-                QColor(annotation_data.get_color())
+                annotation_data
             )
         self.list_total_annotations.increase_class(
             annotation_data.get_id(),
@@ -271,7 +252,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.thumbnail_carousel.handle_on_getting_result_from_model(index, result_annotations)
 
         if index == self.annotation_scene.get_current_thumb_index():
-            self.list_current_annotations.clear_list_widget()
+            self.list_current_annotations.clear_annotations()
             self.annotation_scene.handle_get_result_from_model(result_annotations)
 
         for annotation in result_annotations:
@@ -284,15 +265,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 annotation.get_color()
             )
             if index == self.annotation_scene.get_current_thumb_index():
-                self.list_current_annotations.add_item(
-                    annotation.get_class_name(),
-                    QColor(annotation.get_color())
-                )
+                self.list_current_annotations.add_item(annotation)
 
     @pyqtSlot(int, int, object)
     def handle_on_screen_deleted_annotations(self, index_thumb: int, index_deleted: int, deleted_data: object):
         if index_thumb == self.annotation_scene.get_current_thumb_index():
-            self.list_current_annotations.remove_list_item(index_deleted)
+            self.list_current_annotations.remove_item(index_deleted)
         if isinstance(deleted_data, FAnnotationData):
             self.list_total_annotations.decrease_class(deleted_data.get_id())
 
@@ -309,8 +287,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if index_thumb == self.annotation_scene.get_current_thumb_index():
             self.list_current_annotations.update_item(
                 index_annotation,
-                updated_annotation.get_class_name(),
-                updated_annotation.get_color()
+                updated_annotation
             )
         if not isinstance(prev_annotation, FAnnotationData) or prev_annotation.get_id() == updated_annotation.get_id():
             return
@@ -323,14 +300,47 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             )
 
     @pyqtSlot(int)
+    def handle_on_key_pressed(self, key_number: int):
+        if key_number == int(Qt.Key_1):
+            self.annotate_commander.change_work_mode.emit(EWorkMode.Viewer.value)
+        elif key_number == int(Qt.Key_2):
+            self.annotate_commander.change_work_mode.emit(EWorkMode.BoxAnnotationMode.value)
+        elif key_number == int(Qt.Key_3):
+            self.annotate_commander.change_work_mode.emit(EWorkMode.MaskAnnotationMode.value)
+        elif key_number == int(Qt.Key_4):
+            self.annotate_commander.change_work_mode.emit(EWorkMode.SAM2.value)
+        elif key_number == int(Qt.LeftArrow) or key_number == int(Qt.Key_A):
+            self.thumbnail_carousel.select_thumbnail_by_direction("left")
+        elif key_number == int(Qt.RightArrow) or key_number == int(Qt.Key_D):
+            self.thumbnail_carousel.select_thumbnail_by_direction("right")
+        elif key_number == int(Qt.Key_N):
+            self._drop_current_thumbnail()
+        elif key_number == int(Qt.Key_Space):
+            self._annotate_image()
+        elif key_number == int(Qt.Key_Shift):
+            print("Нажат Shift!")
+            self.annotation_scene.set_work_mode(EWorkMode.ForceDragMode.value)
+
+    @pyqtSlot(int)
+    def handle_on_key_released(self, key_number: int):
+        if key_number == int(Qt.Key_Shift):
+            print("Отжат Shift!")
+            self.annotation_scene.set_work_mode(self.annotation_scene.get_current_mode().get_previous_mode())
+
+    @pyqtSlot(int)
+    def handle_on_key_hold(self, key_number: int):
+        if key_number == int(Qt.LeftArrow) or key_number == int(Qt.Key_A):
+            self.thumbnail_carousel.select_thumbnail_by_direction("left")
+        elif key_number == int(Qt.RightArrow) or key_number == int(Qt.Key_D):
+            self.thumbnail_carousel.select_thumbnail_by_direction("right")
+
+    @pyqtSlot(int)
     def handle_on_select_annotation_from_list(self, index: int):
         self.annotation_scene.select_annotation_by_index(index)
 
     @pyqtSlot(int, bool)
-    def handle_on_select_annotation(self, index: int, to_clear: bool):
-        if to_clear:
-            self.list_current_annotations.clearSelection()
-        self.list_current_annotations.select_item(index)
+    def handle_on_select_annotation(self, selected_index: int, to_select: bool):
+        self.list_current_annotations.select_item(selected_index, to_select)
 
     @pyqtSlot(str)
     def handle_print_image_name(self, image_path: str):
@@ -388,12 +398,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
         self.annotation_scene.center_on_selected()
 
-    def on_get_new_class(self, class_data: str):
-        item_t = QStandardItem(str(class_data))
-        item_t.setData(class_data, Qt.UserRole)
-        self.class_list_item_model.appendRow(item_t)
-        self.class_combobox.update()
-
     def set_label_work_mode(self, mode: int):
         self.selected_label.setText(str(mode))
 
@@ -417,14 +421,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.update_labels_by_status(prev, False)
         self.update_labels_by_status(current, True)
 
-    def handle_clicked_number_key(self, key_number: int):
-        if key_number == int(Qt.Key_1):
-            self.annotate_commander.change_work_mode.emit(EWorkMode.Viewer.value)
-        elif key_number == int(Qt.Key_2):
-            self.annotate_commander.change_work_mode.emit(EWorkMode.BoxAnnotationMode.value)
-        elif key_number == int(Qt.Key_3):
-            self.annotate_commander.change_work_mode.emit(EWorkMode.MaskAnnotationMode.value)
-
     def update_labels_by_status(self, status: EAnnotationStatus, to_increase: bool):
         value = 1 if to_increase is True else -1
         if status.value == EAnnotationStatus.Annotated.value:
@@ -441,6 +437,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         thumb_id, matrix = self.annotation_scene.get_selectable_matrix()
         if thumb_id is None or matrix is None:
             return
+        if self.thumbnail_carousel.get_current_thumbnail_status() == EAnnotationStatus.PerformingAnnotation:
+            return
         if self.project.model_worker and self.project.model_worker.is_running():
             self.project.model_worker.add_to_queue(
                 thumb_id,
@@ -455,3 +453,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 self.project.classes.get_name(class_id),
                 self.project.classes.get_color(class_id)
             )
+
+    def _drop_current_thumbnail(self):
+        self.annotation_scene.clean_all_annotations(to_emit=True)
+        self.thumbnail_carousel.set_thumbnail_dropped()
+        self.thumbnail_carousel.select_thumbnail_by_direction("right")

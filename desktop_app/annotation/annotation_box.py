@@ -219,15 +219,12 @@ class UAnnotationBox(UAnnotationItem):
                 self.paint_text(painter, self.get_resize_handles()['top_left'])
 
     def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemSelectedHasChanged:
+            self.signal_holder.select_event.emit(self, self.isSelected())
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            scene = self.scene()
-            if scene is not None:
-                scene.clearSelection()
-            self.setSelected(True)
-            self.signal_holder.select_event.emit(self)
             for name, handle in self.get_resize_handles().items():
                 if name in ['top_line', 'bottom_line', 'right_line', 'left_line']:
                     expanded_handle = handle.adjusted(-self.get_line_scaled(), -self.get_line_scaled(),

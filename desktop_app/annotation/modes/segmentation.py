@@ -87,10 +87,13 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
     def on_press_mouse(self, event: QMouseEvent):
         pass
 
-    def on_key_release(self, event: QKeyEvent):
+    def on_key_release(self, key: int):
         return
 
-    def on_key_press(self, event: QKeyEvent):
+    def on_key_hold(self, key: int):
+        return
+
+    def on_key_press(self, key: int):
         return
 
     def on_select_item(self, item: UAnnotationItem):

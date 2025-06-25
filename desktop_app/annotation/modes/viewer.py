@@ -81,8 +81,8 @@ class UViewerMode(UBaseAnnotationMode):
     def on_release_mouse(self, event):
         return
 
-    def on_key_press(self, event):
-        if event.key() == Qt.Key_Shift:
+    def on_key_press(self, key: int):
+        if key == Qt.Key_Alt:
             selected = [ item for item in self.scene.scene().selectedItems() if isinstance(item, UAnnotationMask)]
             if len(selected) > 0:
                 self.last_mask = max(selected, key=lambda item: item.zValue())
@@ -92,13 +92,16 @@ class UViewerMode(UBaseAnnotationMode):
             if self.last_mask:
                 self.mask_adding_point_mode = True
                 QApplication.setOverrideCursor(Qt.CrossCursor)
-        if event.key() == Qt.Key_Delete:
+        if key == Qt.Key_Delete:
             selected = [ item for item in self.scene.scene().selectedItems() if isinstance(item, UAnnotationItem)]
             for item in selected:
                 self.scene.handle_on_delete_annotation_item(item)
 
-    def on_key_release(self, event):
-        if event.key() == Qt.Key_Shift and self.mask_adding_point_mode:
+    def on_key_hold(self, key: int):
+        return
+
+    def on_key_release(self, key: int):
+        if key == Qt.Key_Alt and self.mask_adding_point_mode:
             QApplication.restoreOverrideCursor()
             self.mask_adding_point_mode = False
             self.last_mask = None
@@ -164,10 +167,13 @@ class UForceDragAnnotationMode(UBaseAnnotationMode):
     def on_release_mouse(self, event):
         return
 
-    def on_key_release(self, event: QKeyEvent):
+    def on_key_release(self, key: int):
         return
 
-    def on_key_press(self, event: QKeyEvent):
+    def on_key_press(self, key: int):
+        return
+
+    def on_key_hold(self, key: int):
         return
 
     def on_select_item(self, item: UAnnotationItem):

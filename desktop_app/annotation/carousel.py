@@ -317,29 +317,23 @@ class UThumbnailCarousel(QGraphicsView):
         self.x_position = 0
         self.y_position = 0
 
-    def select_thumbnail_by_arrow(self, arrow: int):
+    # direction: left или right
+    def select_thumbnail_by_direction(self, direction: str):
+        if not self.thumbnails:
+            return
+
         if self.current_selected is None:
-            if len(self.thumbnails) <= 0:
-                # код для ошибки
-                return
-            else:
-                self.select_thumbnail(self.thumbnails[0])
+            self.select_thumbnail(self.thumbnails[0])
+            return
 
         index = self.current_selected.get_index()
         if index < 0 or index >= len(self.thumbnails):
-            # код для ошибки
             return
 
-        if arrow == Qt.Key_Right or arrow == Qt.Key_D:
-            if index >= len(self.thumbnails) - 1:
-                return
-            else:
-                self.select_thumbnail(self.thumbnails[index + 1])
-        if arrow == Qt.Key_Left or arrow == Qt.Key_A:
-            if index <= 0:
-                return
-            else:
-                self.select_thumbnail(self.thumbnails[index - 1])
+        if direction == 'left' and index > 0:
+            self.select_thumbnail(self.thumbnails[index - 1])
+        elif direction == 'right' and index < len(self.thumbnails) - 1:
+            self.select_thumbnail(self.thumbnails[index + 1])
 
     def add_thumbnail(self, thumbnail: UAnnotationThumbnail):
         thumbnail.setTransformationMode(Qt.SmoothTransformation)

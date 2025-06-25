@@ -5,11 +5,7 @@ from PyQt5.QtWidgets import QScrollArea, QWidget, QLabel, QHBoxLayout, QListWidg
     QListWidgetItem, QVBoxLayout, QComboBox, QPushButton
 from PyQt5.QtCore import Qt, pyqtSignal
 
-from annotation.annotation_item import UAnnotationItem
-from annotation.annotation_mask import UAnnotationMask
 from annotation.annotation_scene import UAnnotationBox, UAnnotationGraphicsView
-from utility import FAnnotationData, FDetectAnnotationData, FSegmentationAnnotationData
-
 
 class UHorizontalScrollArea(QScrollArea):
     def __init__(self, parent=None):
@@ -30,13 +26,13 @@ class UHorizontalScrollArea(QScrollArea):
             super().wheelEvent(event)  # Передаем обработку другим компонентам, если нужно
 
 class UColorLabel(QLabel):
-    def __init__(self, color: QColor = None, parent=None):
+    def __init__(self, color: QColor, parent=None):
         super().__init__(parent)
         self.color = color
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.fillRect(self.rect(), self.color if self.color else QColor(Qt.lightGray))
+        painter.fillRect(self.rect(), self.color)
         super().paintEvent(event)
 
     def update_color(self, color: QColor):
@@ -52,64 +48,60 @@ class UListAnnotationWidget(QListWidget):
 
         self.setSelectionMode(QListWidget.ExtendedSelection)
 
-        self.widgets: list[UListAnnotationItem] = list()
+    def select_item(self, index: int):
+        if not (0 <= index < self.count()):
+            return
+        found_item = self.item(index)
+        found_item.setSelected(not found_item.isSelected())
 
-    def on_item_clicked(self, item: QListWidgetItem):
+    def clear_list_widget(self):
+        while self.count() > 0:
+            item = self.takeItem(0)
+            widget = self.itemWidget(item)
+            if widget:
+                widget.deleteLater()
+            del item
+
+    def remove_list_item(self, index: int):
+        if index < 0 or index >= self.count():
+            return
+        item = self.item(index)
+        widget = self.itemWidget(item)
+        if widget:
+            widget.deleteLater()
+        self.takeItem(index)
+        del item
+        self._update_item_indexes()
+
+    def update_item(self, index: int, name: str, color: QColor):
+        if not (0 <= index < self.count()):
+            return
+
+        widget = self.itemWidget(self.item(index))
+        if isinstance(widget, UListAnnotationItem):
+            widget.set_name(name)
+            widget.set_color(color)
+
+    def add_item(self, name: str, color: QColor):
+        annotation_widget = UListAnnotationItem(self.count(), name, color)
+        item = QListWidgetItem(self)
+        item.setSizeHint(annotation_widget.sizeHint())
+        self.setItemWidget(item, annotation_widget)
+
+    def on_item_clicked(self, item):
         widget = self.itemWidget(item)
         if isinstance(widget, UListAnnotationItem):
-            self.item_selected.emit(self.widgets.index(widget))
+            index_clicked = self.row(item)
+            self.item_selected.emit(index_clicked)
 
-    def add_item(self, annotation_data: FAnnotationData):
-        item = UListAnnotationItem(self.count() + 1, annotation_data)
-        list_item = QListWidgetItem()
-        list_item.setSizeHint(item.sizeHint())
-        self.addItem(list_item)
-        self.setItemWidget(list_item, item)
-
-        self.widgets.append(item)
-
-    def clear_annotations(self):
-        self.clear()
-        self.widgets.clear()
-
-    def select_item(self, index: int, to_select: bool):
-        if not 0 <= index < len(self.widgets):
-            return
-
-        self.item(index).setSelected(to_select)
-
-    def update_item(self, index: int, annotation_data: FAnnotationData):
-        if not 0 <= index < len(self.widgets):
-            return
-
-        self.widgets[index].set_data(annotation_data)
-
-    def remove_item(self, index: int):
-        if not 0 <= index < len(self.widgets):
-            return
-
-        widget_to_remove = self.widgets[index]
-
-        for i in range(self.count()):
-            item = self.item(i)
-            widget = self.itemWidget(item)
-            if widget == widget_to_remove:
-                self.takeItem(i)  # удаляет и сам виджет из списка
-                break
-
-        del self.widgets[index]
-        self._recalculate_indexes()
-
-    def _recalculate_indexes(self):
-        for i in range(self.count()):
-            item = self.item(i)
-            widget = self.itemWidget(item)
+    def _update_item_indexes(self):
+        for index in range(self.count()):
+            widget = self.itemWidget(self.item(index))
             if isinstance(widget, UListAnnotationItem):
-                widget.set_index(i + 1)
-
+                widget.set_index(index)
 
 class UListAnnotationItem(QWidget):
-    def __init__(self, index: int, annotation_data: FAnnotationData):
+    def __init__(self, index: int, name: str, color: QColor):
         super().__init__()
         self.index = index
 
@@ -118,45 +110,37 @@ class UListAnnotationItem(QWidget):
         index_font.setPointSize(10)
         self.index_label.setFont(index_font)
 
-        self.color_label = UColorLabel()
+        self.color_label = UColorLabel(color)
         self.color_label.setFixedSize(30, 12)
 
-        self.name_label = QLabel()
+        self.name_label = QLabel(name)
         name_font = QFont()
         name_font.setPointSize(10)
         self.name_label.setFont(name_font)
-
-        self.type_label = QLabel()
-        self.type_label.setFont(name_font)
-
-        self.set_data(annotation_data)
 
         layout = QHBoxLayout()
         layout.addWidget(self.index_label)
         layout.addWidget(self.color_label)
         layout.addWidget(self.name_label)
-        layout.addWidget(self.type_label)
         layout.addStretch()
-        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setContentsMargins(5, 2, 5, 2)
         self.setLayout(layout)
 
-    def set_data(self, annotation: FAnnotationData):
-        if isinstance(annotation, FDetectAnnotationData):
-            self.type_label.setText('бокс')
-        elif isinstance(annotation, FSegmentationAnnotationData):
-            self.type_label.setText('маска')
-        else:
-            self.type_label.setText('неизвестно')
-
-        self.name_label.setText(annotation.get_class_name())
-        self.color_label.update_color(QColor(annotation.get_color()))
+    def set_name(self, name: str):
+        self.name_label.setText(f"{name}")
 
     def set_index(self, index: int):
         self.index = index
-        self.index_label.setText(str(self.index))
+        self.index_label.setText(f"{self.index + 1}\t")
+
+    def get_name(self):
+        return self.name_label.text()
 
     def get_index(self):
         return self.index
+
+    def set_color(self, color: QColor):
+        self.color_label.update_color(color)
 
 
 class UListClassCounts(QListWidget):

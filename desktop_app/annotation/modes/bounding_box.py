@@ -35,11 +35,7 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
     def end_mode(self, change_mode: EWorkMode):
         if self.mode is change_mode or change_mode is EWorkMode.ForceDragMode:
             return
-        elif change_mode is EWorkMode.GettingResultsMode:
-            if self.current_rect:
-                self.current_rect.delete_item()
-        else:
-            self._clean_rect()
+        self._delete_current()
         for annotation in self.scene.get_annotations():
             annotation.enable_selection()
 
@@ -84,7 +80,7 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
             return
 
         if self.current_rect.get_square() < 25:
-            self.current_rect.delete_item()
+            self._delete_current()
             return
         if self.commander:
             self.scene.emit_commander_to_add(self.current_rect.get_annotation_data())
@@ -92,10 +88,13 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
             self._clean_rect()
             self.commander.change_work_mode.emit(EWorkMode.Viewer.value)
 
-    def on_key_release(self, event: QKeyEvent):
+    def on_key_release(self, key: int):
         return
 
-    def on_key_press(self, event: QKeyEvent):
+    def on_key_hold(self, key: int):
+        pass
+
+    def on_key_press(self, key: int):
         return
 
     def on_select_item(self, item: UAnnotationItem):
@@ -111,6 +110,14 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
 
     def on_wheel_mouse(self, scale: float):
         return
+
+    def _delete_current(self):
+        if self.current_rect:
+            self.current_rect.delete_item()
+            if self.current_rect in self.scene.get_annotations() and self.current_rect.scene():
+                self.scene.scene().removeItem(self.current_rect)
+                self.scene.get_annotations().remove(self.current_rect)
+        self._clean_rect()
 
     def _clean_rect(self):
         self.current_rect = None

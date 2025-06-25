@@ -81,10 +81,10 @@ class UGlobalSignalHolder(QObject):
         self.is_blocked = False
 
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.KeyPress:
-            if self.is_blocked is True:
-                return super().eventFilter(obj, event)
+        if self.is_blocked is True:
+            return super().eventFilter(obj, event)
 
+        if event.type() == QEvent.KeyPress:
             self.current_key = event.key()
             self.delay_timer.start()
             if self.freq_timer.isActive():
@@ -94,11 +94,8 @@ class UGlobalSignalHolder(QObject):
             return True
 
         elif event.type() == QEvent.KeyRelease:
-            if self.is_blocked is True:
-                return super().eventFilter(obj, event)
-
             self.key_released.emit(event.key())
-            if self.current_key == event().key():
+            if self.current_key == event.key():
                 self.freq_timer.stop()
                 self.delay_timer.stop()
                 self.current_key = -1

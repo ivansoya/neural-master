@@ -168,19 +168,17 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.current_image.fill(QColor(Qt.gray))
         self.annotate_scene.addItem(self.current_image)
 
+    @pyqtSlot(int)
     def handle_on_key_press(self, key: int):
-        if key == Qt.Key_Control:
-            self.set_work_mode(EWorkMode.ForceDragMode.value)
-        if key == Qt.Key_Space:
-            self.hand
+        self.annotate_mods[self.current_work_mode].on_key_press(key)
 
+    @pyqtSlot(int)
     def handle_on_key_hold(self, key: int):
-        pass
+        self.annotate_mods[self.current_work_mode].on_key_hold(key)
 
+    @pyqtSlot(int)
     def handle_on_key_release(self, key: int):
-        if key == Qt.Key_Control:
-            prev_mode = self.annotate_mods[self.current_work_mode].get_previous_mode()
-            if prev_mode: self.set_work_mode(prev_mode.value)
+        self.annotate_mods[self.current_work_mode].on_key_release(key)
 
     @pyqtSlot(int)
     def handle_image_move_to_model(self, index: int):
@@ -262,10 +260,10 @@ class UAnnotationGraphicsView(QGraphicsView):
             return
 
         mask_points = [
-            box.rect().topLeft(),
-            box.rect().topRight(),
-            box.rect().bottomRight(),
-            box.rect().bottomLeft()
+            QPointF(box.x(), box.y()),
+            QPointF(box.x() + box.width(), box.y()),
+            QPointF(box.x() + box.width(), box.y() + box.height()),
+            QPointF(box.x(), box.y() + box.height()),
         ]
 
         index = self.annotation_items.index(box)
@@ -290,15 +288,15 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.annotation_items[index].get_annotation_data()
         )
 
-    @pyqtSlot(object)
-    def handle_on_select_annotation(self, annotation_item: object):
-        if not isinstance(annotation_item, UAnnotationItem):
+    @pyqtSlot(object, bool)
+    def handle_on_select_annotation(self, annotation: UAnnotationItem, to_select: bool):
+        if not isinstance(annotation, UAnnotationItem):
             return
-        to_clear = True if isinstance(annotation_item, UAnnotationBox) else False
+
         try:
-            index = self.annotation_items.index(annotation_item)
+            selected_index = self.annotation_items.index(annotation)
             if self.commander:
-                self.commander.selected_annotation.emit(index, to_clear)
+                self.commander.selected_annotation.emit(selected_index, to_select)
         except Exception as error:
             print(str(error))
 
@@ -454,21 +452,6 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.annotate_mods[self.current_work_mode].on_release_mouse(event)
 
         return super().mouseReleaseEvent(event)
-
-    def keyPressEvent(self, event):
-        if self.is_model_annotating:
-            return
-        if self.annotate_mods[self.current_work_mode].on_key_press(event):
-            return
-        else:
-            return super().keyPressEvent(event)
-
-    def keyReleaseEvent(self, event):
-        if self.is_model_annotating:
-            return
-        self.annotate_mods[self.current_work_mode].on_key_release(event)
-
-        return super().keyReleaseEvent(event)
 
     def get_current_thumb_index(self) -> int:
         thumb_index, *_ = self.current_display_thumbnail

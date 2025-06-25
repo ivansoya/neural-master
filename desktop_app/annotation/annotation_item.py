@@ -9,7 +9,7 @@ from utility import EAnnotationType
 
 
 class UAnnotationSignal(QObject):
-    select_event = pyqtSignal(object)
+    select_event = pyqtSignal(object, bool)
     # объект маски, предыдущая дата, текущая дата
     update_event = pyqtSignal(object, object, object)
     delete_event = pyqtSignal(object)
@@ -153,7 +153,7 @@ class UAnnotationItem(QGraphicsItem):
 
         self.update()
 
-    def connect_selected_signal(self, func: Callable[[object], None]):
+    def connect_selected_signal(self, func: Callable[[object, bool], None]):
         self.signal_holder.select_event.connect(func)
 
     def connect_update_signal(self, func: Callable[[object, object, object], None]):

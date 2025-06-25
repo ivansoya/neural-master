@@ -162,10 +162,10 @@ class USam2Annotation(UBaseAnnotationMode):
             self._add_polygons_from_mask(points_lists, image, current_class[2] if current_class else QColor(0, 180, 0))
         pass
 
-    def on_key_press(self, event: QKeyEvent):
-        if event.key() == Qt.Key_Escape:
+    def on_key_press(self, key: int):
+        if key == Qt.Key_Escape:
             pass
-        elif event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return:
+        elif key == Qt.Key_Enter or key == Qt.Key_Return:
             class_data = self.scene.get_current_class()
 
             if len(self.polygons) == 0 or class_data is None:
@@ -177,7 +177,7 @@ class USam2Annotation(UBaseAnnotationMode):
                     class_data,
                     True
                 )
-                self.scene.emit_commander_to_add(mask.get_annotation_data())
+                self.scene.emit_commander_to_add(mask.get_annotation_data(), mask)
 
             self._clear_polygons()
             self._clear_points()
@@ -185,7 +185,10 @@ class USam2Annotation(UBaseAnnotationMode):
                 self.window.clear_window()
             return True
 
-    def on_key_release(self, event: QKeyEvent):
+    def on_key_hold(self, key: int):
+        pass
+
+    def on_key_release(self, key: int):
         pass
 
     def on_select_item(self, item: UAnnotationItem):

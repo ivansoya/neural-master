@@ -294,7 +294,7 @@ class UAnnotationMask(UAnnotationItem):
                 self.create_graphic_points()
             else:
                 self.clear_graphic_points()
-            self.signal_holder.select_event.emit(self)
+            self.signal_holder.select_event.emit(self, self.isSelected())
 
         return super().itemChange(change, value)
 
