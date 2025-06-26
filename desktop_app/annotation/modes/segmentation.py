@@ -75,12 +75,10 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
                     class_data
                 )
                 self.current_mask.disable_selection()
-                self.current_mask.create_graphic_points()
             else:
                 if self.current_mask.fix_point():
                     self.scene.emit_commander_to_add(self.current_mask.get_annotation_data())
 
-                    self.current_mask.clear_graphic_points()
                     self.current_mask.setSelected(False)
                     self.current_mask = None
 

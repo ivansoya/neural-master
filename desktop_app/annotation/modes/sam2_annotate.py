@@ -52,13 +52,16 @@ class USam2Annotation(UBaseAnnotationMode):
             return
         self.prev_mode = prev_mode
 
+        self.scene.scene().clearSelection()
+        for annotation in self.scene.get_annotations():
+            annotation.disable_selection()
+
         if not self.window:
             self.window = USam2ParametersWindow(self.scene)
             self.window.move(0, 0)
             self.window.show()
 
             self.window.get_event_value_changed().connect(self._handle_on_slider_value_changed)
-
 
     def end_mode(self, mode: EWorkMode):
         if mode in [EWorkMode.SAM2, EWorkMode.ForceDragMode]:
@@ -72,6 +75,11 @@ class USam2Annotation(UBaseAnnotationMode):
             self.window = None
 
         self.box_start_pos = None
+        self._clear_points()
+        self._clear_polygons()
+
+        for annotation in self.scene.get_annotations():
+            annotation.enable_selection()
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.prev_mode
@@ -115,6 +123,7 @@ class USam2Annotation(UBaseAnnotationMode):
 
             point_lists = self.sam2.segment_with_points(matrix, to_net)
             self._add_polygons_from_mask(point_lists, image, current_class[2] if current_class else QColor(Qt.lightGray))
+            self.window.show_parameters()
         else:
             if event.button() == Qt.LeftButton:
                 if self.box:
@@ -160,11 +169,14 @@ class USam2Annotation(UBaseAnnotationMode):
 
             self._delete_box()
             self._add_polygons_from_mask(points_lists, image, current_class[2] if current_class else QColor(0, 180, 0))
+            if self.window:
+                self.window.show_parameters()
         pass
 
     def on_key_press(self, key: int):
         if key == Qt.Key_Escape:
-            pass
+            self.scene.set_work_mode(EWorkMode.Viewer.value)
+            return True
         elif key == Qt.Key_Enter or key == Qt.Key_Return:
             class_data = self.scene.get_current_class()
 
@@ -177,7 +189,7 @@ class USam2Annotation(UBaseAnnotationMode):
                     class_data,
                     True
                 )
-                self.scene.emit_commander_to_add(mask.get_annotation_data(), mask)
+                self.scene.emit_commander_to_add(mask.get_annotation_data())
 
             self._clear_polygons()
             self._clear_points()
@@ -208,8 +220,6 @@ class USam2Annotation(UBaseAnnotationMode):
 
     def _clear_items(self, items: list):
         for item in items:
-            if item.parentItem():
-                item.setParentItem(None)
             if item.scene():
                 item.scene().removeItem(item)
         items.clear()
@@ -268,17 +278,19 @@ class USam2ParametersWindow(QDialog, Ui_Dialog):
         self.slider_approximation.setSingleStep(1)
         self.slider_approximation.setValue(10)
 
+        self._hide_show(True)
+
         self.slider_approximation.valueChanged.connect(self.handle_slider_value_changed)
+
+    def show_parameters(self):
+        self._hide_show(False)
 
     def clear_window(self):
         self.label_count.setText(str(0))
         self.label_approximation.setText(str(1.0))
         self.slider_approximation.setValue(10)
 
-        self.label_count.hide()
-        self.label_approximation.hide()
-        self.slider_approximation.hide()
-        self.button_make_polygons.hide()
+        self._hide_show(True)
 
     def set_polygons_count(self, count: int):
         self.label_count.setText(str(count))
@@ -306,6 +318,22 @@ class USam2ParametersWindow(QDialog, Ui_Dialog):
 
     def mouseReleaseEvent(self, event):
         self.offset = None
+
+    def _hide_show(self, to_hide: bool = True):
+        if to_hide:
+            self.label_count.hide()
+            self.label_approximation.hide()
+            self.slider_approximation.hide()
+            self.button_make_polygons.hide()
+            self.label_ap_text.hide()
+            self.label_polygon.hide()
+        else:
+            self.label_count.show()
+            self.label_approximation.show()
+            self.slider_approximation.show()
+            self.button_make_polygons.show()
+            self.label_ap_text.show()
+            self.label_polygon.show()
 
 class USam2Point(QGraphicsEllipseItem):
     def __init__(self, color: QColor, size: float, scale: float, position: QPointF, parent=None):
