@@ -74,6 +74,9 @@ class UAnnotationItem(QGraphicsItem):
     def delete_item(self):
         pass
 
+    def set_class_data(self, class_data: tuple[int, str, QColor]):
+        self.class_id, self.class_name, self.color = class_data
+
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedChange:
             if value:

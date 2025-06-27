@@ -8,7 +8,7 @@ from PyQt5.QtGui import QPainter, QPen, QBrush, QPixmap, QColor, QImage, QPolygo
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QWidget, QGraphicsPixmapItem, QGraphicsProxyWidget, \
     QGraphicsObject
 
-from utility import FAnnotationItem, FDetectAnnotationData, FSegmentationAnnotationData, EAnnotationType
+from utility import FAnnotationItem, FDetectAnnotationData, FPolygonAnnotationData, EAnnotationType
 
 
 class UGraphicsGalleryItem(QGraphicsObject):
@@ -81,7 +81,7 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
                     width,
                     height
                 )
-            elif isinstance(annotation, FSegmentationAnnotationData):
+            elif isinstance(annotation, FPolygonAnnotationData):
                 _, _, _, color, point_list = annotation.get_data()
                 pen = QPen(color)
                 pen.setWidth(int(self.board_width * (image.width() // self.size)))

@@ -13,14 +13,14 @@ from cv2 import Mat
 from SAM2.sam2_net import USam2Net
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_item import UAnnotationItem
-from annotation.annotation_mask import UAnnotationMask
+from annotation.annotation_polygon import UAnnotationPolygon
 from annotation.modes.abstract import EWorkMode, UBaseAnnotationMode
 from annotation.modes.sam2_annotate import USam2Annotation
 from annotation.modes.segmentation import UMaskAnnotationMode
 from annotation.modes.bounding_box import UBoxAnnotationMode
 from annotation.modes.viewer import UViewerMode, UForceDragAnnotationMode
 
-from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus, FSegmentationAnnotationData
+from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus, FPolygonAnnotationData
 from commander import UAnnotationSignalHolder
 
 class UAnnotationGraphicsView(QGraphicsView):
@@ -150,7 +150,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                 )
                 self.scene().addItem(ann_box)
                 load_annotations.append((len(load_annotations), ann_box))
-            elif isinstance(item, FSegmentationAnnotationData):
+            elif isinstance(item, FPolygonAnnotationData):
                 object_id, class_id, class_name, color, points_list = item.get_data()
                 qt_points = [QPointF(x, y) for x, y in points_list]
                 ann_mask = self.add_annotation_mask(qt_points, (class_id, class_name, QColor(color)), True)
@@ -212,7 +212,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.annotate_mods[self.current_work_mode].on_wheel_mouse(self.scale_factor)
 
     def add_annotation_mask(self, points_list: list[QPointF], class_data: tuple[int, str, QColor], closed: bool = False):
-        ann_mask = UAnnotationMask(
+        ann_mask = UAnnotationPolygon(
             points_list[:],
             class_data,
             self.scale_factor,
@@ -270,7 +270,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         if self.annotation_items[index].scene():
             self.annotation_items[index].scene().removeItem(self.annotation_items[index])
 
-        self.annotation_items[index] = UAnnotationMask(
+        self.annotation_items[index] = UAnnotationPolygon(
             mask_points,
             (box.get_class_id(), box.get_class_name(), box.get_color()),
             self.scale_factor,

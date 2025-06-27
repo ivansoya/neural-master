@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
 from annotation.annotation_box import UAnnotationBox
 from commander import UAnnotationSignalHolder
 from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses, FAnnotationItem, FDetectAnnotationData, \
-    FSegmentationAnnotationData
+    FPolygonAnnotationData
 
 
 class ImageLoaderThread(QThread):
@@ -155,7 +155,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
                 )
                 painter.drawRect(scaled_rect)
 
-            elif isinstance(ann_data, FSegmentationAnnotationData):
+            elif isinstance(ann_data, FPolygonAnnotationData):
                 points_list = [QPointF(x * scale, y * scale) for x, y in ann_data.get_points_list()]
                 painter.setRenderHint(QPainter.Antialiasing, True)
                 painter.drawPolygon(points_list)

@@ -10,7 +10,7 @@ from SAM2.sam2_net import USam2Net
 from neural_model import ULocalDetectYOLO, UBaseNeuralNet, URemoteNeuralNet
 from supporting.error_text import UErrorsText
 from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem, FDetectAnnotationData, \
-    FSegmentationAnnotationData
+    FPolygonAnnotationData
 
 TASKS = "tasks"
 DATASETS = "datasets"
@@ -450,7 +450,7 @@ class UTrainProject:
         for annotation in ann_data:
             if isinstance(annotation, FDetectAnnotationData):
                 label_dir = self._get_dir_path(dataset, dataset_type, LABELS)
-            elif isinstance(annotation, FSegmentationAnnotationData):
+            elif isinstance(annotation, FPolygonAnnotationData):
                 label_dir = self._get_dir_path(dataset, dataset_type, LABELS_SEGM)
             else:
                 continue

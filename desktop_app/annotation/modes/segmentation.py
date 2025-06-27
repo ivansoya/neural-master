@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QMouseEvent, QKeyEvent
 
 from annotation.annotation_item import UAnnotationItem
-from annotation.annotation_mask import UAnnotationMask
+from annotation.annotation_polygon import UAnnotationPolygon
 from annotation.modes.abstract import UBaseAnnotationMode, EWorkMode
 from commander import UAnnotationSignalHolder
 from supporting.functions import get_clamped_pos
@@ -20,7 +20,7 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         self.scene = scene
         self.commander = commander
 
-        self.current_mask: Optional[UAnnotationMask] = None
+        self.current_mask: Optional[UAnnotationPolygon] = None
 
         self.mode = EWorkMode.MaskAnnotationMode
         self.previous_mode: Optional[EWorkMode] = None
@@ -46,8 +46,6 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
             annotation.enable_selection()
 
     def refresh(self):
-        if self.current_mask:
-            self.current_mask.clear_graphic_points()
         self.current_mask = None
 
     def get_previous_mode(self) -> EWorkMode | None:
@@ -80,6 +78,7 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
                     self.scene.emit_commander_to_add(self.current_mask.get_annotation_data())
 
                     self.current_mask.setSelected(False)
+                    self.current_mask.change_points_visibility(False)
                     self.current_mask = None
 
     def on_press_mouse(self, event: QMouseEvent):

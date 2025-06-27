@@ -227,16 +227,27 @@ class UAnnotationBox(UAnnotationItem):
         if event.button() == Qt.LeftButton:
             for name, handle in self.get_resize_handles().items():
                 if name in ['top_line', 'bottom_line', 'right_line', 'left_line']:
-                    expanded_handle = handle.adjusted(-self.get_line_scaled(), -self.get_line_scaled(),
-                                                      self.get_line_scaled(), self.get_line_scaled())
+                    expanded_handle = handle.adjusted(
+                        -self.get_line_scaled(), -self.get_line_scaled(),
+                        self.get_line_scaled(), self.get_line_scaled()
+                    )
                 else:
                     expanded_handle = handle
+
                 if expanded_handle.contains(event.pos()):
                     self.resizing = True
                     self.active_handle = name
                     break
-            if self.resizing is False and self.rect().contains(event.pos()):
+
+            if not self.resizing and self.rect().contains(event.pos()):
+                if event.modifiers() & Qt.ControlModifier:
+                    self.setSelected(not self.isSelected())
+                else:
+                    if self.scene():
+                        self.scene().clearSelection()
+                    self.setSelected(True)
                 super().mousePressEvent(event)
+
             self.prev_data = self.get_annotation_data()
         else:
             super().mousePressEvent(event)

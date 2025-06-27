@@ -8,7 +8,7 @@ from PyQt5.QtGui import QPainter, QColor, QPixmap
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
 
 from project import UTrainProject, DATASETS, RESERVED, LABELS_SEGM, LABELS, IMAGES
-from utility import FAnnotationItem, FAnnotationData, FDetectAnnotationData, FSegmentationAnnotationData
+from utility import FAnnotationItem, FAnnotationData, FDetectAnnotationData, FPolygonAnnotationData
 
 
 class UOverlayLoader(QWidget):
@@ -274,7 +274,7 @@ class UThreadDatasetLoadAnnotations(QThread):
                             y = int(float(values[i + 1]) * height_res)
                             point_list.append((x, y))
 
-                        ann_list.append(FSegmentationAnnotationData(
+                        ann_list.append(FPolygonAnnotationData(
                             point_list,
                             line_count,
                             id_class,

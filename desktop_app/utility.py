@@ -264,9 +264,9 @@ class FDetectAnnotationData(FAnnotationData):
         return not self == other
 
 
-class FSegmentationAnnotationData(FAnnotationData):
-    def __init__(self, points_list: list[tuple[float, float]], object_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
-        super().__init__(object_id, class_id, class_name, color, res_w, res_h)
+class FPolygonAnnotationData(FAnnotationData):
+    def __init__(self, points_list: list[tuple[float, float]], annotation_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
+        super().__init__(annotation_id, class_id, class_name, color, res_w, res_h)
         self.points_list = points_list
 
     def serialize(self, class_id: int = None) -> str:
@@ -283,7 +283,7 @@ class FSegmentationAnnotationData(FAnnotationData):
         return self.serialize()
 
     def copy(self):
-        return FSegmentationAnnotationData(
+        return FPolygonAnnotationData(
             self.points_list[:],
             *self._copy_init_args()
         )
@@ -315,7 +315,7 @@ class FSegmentationAnnotationData(FAnnotationData):
         return QRectF(QPointF(min_x, min_y), QPointF(max_x, max_y))
 
     def __eq__(self, other):
-        if not isinstance(other, FSegmentationAnnotationData):
+        if not isinstance(other, FPolygonAnnotationData):
             return self is other
         return (
                 super().__eq__(other) and
@@ -324,7 +324,6 @@ class FSegmentationAnnotationData(FAnnotationData):
 
     def __ne__(self, other):
         return not self == other
-
 
 class FAnnotationItem:
     def __init__(self, ann_list: list[FAnnotationData], image_path: str, dataset_name: str | None):

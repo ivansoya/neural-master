@@ -6,9 +6,9 @@ from PyQt5.QtWidgets import QScrollArea, QWidget, QLabel, QHBoxLayout, QListWidg
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from annotation.annotation_item import UAnnotationItem
-from annotation.annotation_mask import UAnnotationMask
+from annotation.annotation_polygon import UAnnotationPolygon
 from annotation.annotation_scene import UAnnotationBox, UAnnotationGraphicsView
-from utility import FAnnotationData, FDetectAnnotationData, FSegmentationAnnotationData
+from utility import FAnnotationData, FDetectAnnotationData, FPolygonAnnotationData
 
 
 class UHorizontalScrollArea(QScrollArea):
@@ -143,7 +143,7 @@ class UListAnnotationItem(QWidget):
     def set_data(self, annotation: FAnnotationData):
         if isinstance(annotation, FDetectAnnotationData):
             self.type_label.setText('бокс')
-        elif isinstance(annotation, FSegmentationAnnotationData):
+        elif isinstance(annotation, FPolygonAnnotationData):
             self.type_label.setText('маска')
         else:
             self.type_label.setText('неизвестно')

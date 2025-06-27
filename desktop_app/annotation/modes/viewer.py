@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QApplication, QMenu, QGraphicsView
 
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_item import UAnnotationItem
-from annotation.annotation_mask import UAnnotationMask
+from annotation.annotation_polygon import UAnnotationPolygon
 from annotation.modes.abstract import UBaseAnnotationMode, EWorkMode
 from commander import UAnnotationSignalHolder, UGlobalSignalHolder
 from supporting.functions import get_clamped_pos
@@ -24,7 +24,7 @@ class UViewerMode(UBaseAnnotationMode):
         self.previous_mode: Optional[EWorkMode] = None
 
         self.mask_adding_point_mode = False
-        self.last_mask: Optional[UAnnotationMask] = None
+        self.last_mask: Optional[UAnnotationPolygon] = None
 
     def start_mode(self, prev_mode):
         for annotation in self.scene.get_annotations():
@@ -83,7 +83,7 @@ class UViewerMode(UBaseAnnotationMode):
 
     def on_key_press(self, key: int):
         if key == Qt.Key_Alt:
-            selected = [ item for item in self.scene.scene().selectedItems() if isinstance(item, UAnnotationMask)]
+            selected = [item for item in self.scene.scene().selectedItems() if isinstance(item, UAnnotationPolygon)]
             if len(selected) > 0:
                 self.last_mask = max(selected, key=lambda item: item.zValue())
             else:
