@@ -67,12 +67,6 @@ class UAnnotationBox(UAnnotationItem):
         self.prepareGeometryChange()
         self._rect = new_rect
 
-    def set_draw_scale(self, scale: float):
-        if scale > 1:
-            self.draw_scale = 1
-        else:
-            self.draw_scale = 1 / scale
-
     def get_resize_handles(self):
         rect = self.rect()
         line_width = int(self.line_width * self.draw_scale)

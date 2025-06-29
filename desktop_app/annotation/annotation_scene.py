@@ -13,6 +13,7 @@ from cv2 import Mat
 from SAM2.sam2_net import USam2Net
 from annotation.annotation_box import UAnnotationBox
 from annotation.annotation_item import UAnnotationItem
+from annotation.annotation_mask import UAnnotationMask
 from annotation.annotation_polygon import UAnnotationPolygon
 from annotation.modes.abstract import EWorkMode, UBaseAnnotationMode
 from annotation.modes.sam2_annotate import USam2Annotation
@@ -153,7 +154,7 @@ class UAnnotationGraphicsView(QGraphicsView):
             elif isinstance(item, FPolygonAnnotationData):
                 object_id, class_id, class_name, color, points_list = item.get_data()
                 qt_points = [QPointF(x, y) for x, y in points_list]
-                ann_mask = self.add_annotation_mask(qt_points, (class_id, class_name, QColor(color)), True)
+                ann_mask = self.add_annotation_polygon(qt_points, (class_id, class_name, QColor(color)), True)
                 self.scene().addItem(ann_mask)
                 load_annotations.append((len(load_annotations), ann_mask))
             else:
@@ -211,7 +212,20 @@ class UAnnotationGraphicsView(QGraphicsView):
             item.set_draw_scale(self.scale_factor)
         self.annotate_mods[self.current_work_mode].on_wheel_mouse(self.scale_factor)
 
-    def add_annotation_mask(self, points_list: list[QPointF], class_data: tuple[int, str, QColor], closed: bool = False):
+    def add_annotation_mask(self, polygons: list[UAnnotationPolygon], class_data: tuple[int, str, QColor], annotation_id: int):
+        ann_mask = UAnnotationMask(
+            polygons,
+            class_data,
+            self.scale_factor,
+            annotation_id,
+            self.current_image
+        )
+
+        self._set_annotation_item(ann_mask)
+        self.scene().addItem(ann_mask)
+        return ann_mask
+
+    def add_annotation_polygon(self, points_list: list[QPointF], class_data: tuple[int, str, QColor], closed: bool = False):
         ann_mask = UAnnotationPolygon(
             points_list[:],
             class_data,
@@ -241,11 +255,9 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     def _set_annotation_item(self, annotation_item: UAnnotationItem):
         if self.current_work_mode is EWorkMode.Viewer:
-            annotation_item.setAcceptedMouseButtons(Qt.AllButtons)
-            annotation_item.setAcceptHoverEvents(True)
-        elif self.current_work_mode in [EWorkMode.BoxAnnotationMode, EWorkMode.MaskAnnotationMode]:
-            annotation_item.setAcceptedMouseButtons(Qt.NoButton)
-            annotation_item.setAcceptHoverEvents(False)
+            annotation_item.change_activity_mode(True)
+        else:
+            annotation_item.change_activity_mode(False)
 
         annotation_item.connect_selected_signal(self.handle_on_select_annotation)
         annotation_item.connect_update_signal(self.handle_on_update_annotation)

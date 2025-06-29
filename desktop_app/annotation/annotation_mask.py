@@ -10,23 +10,25 @@ from utility import FPolygonAnnotationData, FDetectAnnotationData
 class UAnnotationMask(UAnnotationItem):
     def __init__(
             self,
+            polygons: list[UAnnotationPolygon],
             class_data: tuple[int, str, QColor],
             scale: float,
             annotation_id: int,
             parent=None
     ):
+        self.polygons: list[UAnnotationPolygon] = polygons
+
         super().__init__(class_data, scale, parent)
 
         self.annotation_id = annotation_id
-
-        self.polygons: list[UAnnotationPolygon] = []
+        [polygon.set_mask(self) for polygon in self.polygons]
 
         self.setFlag(QGraphicsItem.ItemIsMovable, False)
         self.setFlag(QGraphicsItem.ItemIsSelectable, False)
 
         # переменны для отображения
-        self.padding = 6
-        self.border_width = 4
+        self.padding = 2
+        self.border_width = 2
 
     def add_polygon(self, polygon: UAnnotationPolygon):
         polygon.set_class_data(
@@ -40,6 +42,16 @@ class UAnnotationMask(UAnnotationItem):
         if polygon in self.polygons:
             self.polygons.remove(polygon)
         return polygon
+
+    def on_update_polygon(self, polygon: UAnnotationPolygon, prev_data: list[QPointF], current_data: list[QPointF]):
+        self.signal_holder.update_event.emit(self, None, self.get_annotation_data())
+
+    def on_delete_polygon(self, polygon: UAnnotationPolygon):
+        if polygon in self.polygons:
+            if polygon.scene():
+                polygon.scene().removeItem(polygon)
+            self.polygons.remove(polygon)
+        self.signal_holder.update_event.emit(self, None, self.get_annotation_data())
 
     def delete_item(self):
         self.polygons.clear()
@@ -55,6 +67,15 @@ class UAnnotationMask(UAnnotationItem):
 
     def height(self):
         return self.rect().height()
+
+    def set_draw_scale(self, scale: float):
+        for polygon in self.polygons:
+            polygon.set_draw_scale(scale)
+        super().set_draw_scale(scale)
+
+    def change_activity_mode(self, status: bool):
+        for polygon in self.polygons:
+            polygon.change_activity_mode(status)
 
     def boundingRect(self) -> QRectF:
         if not self.polygons:
@@ -109,17 +130,18 @@ class UAnnotationMask(UAnnotationItem):
 
         any_selected = any(polygon.isSelected() for polygon in self.polygons)
 
-        rect_draw = self.rect().adjusted(-self.padding, -self.padding, self.padding, self.padding)
+        scaled_padding = self.padding * self.draw_scale
+        rect_draw = self.rect().adjusted(-scaled_padding, -scaled_padding, scaled_padding, scaled_padding)
 
-        pen = QPen(self.color if any_selected else QColor(self.color.red(), self.color.green(), self.color.blue(), 100))
-        pen.setWidth(self.border_width)
-        pen.setStyle(Qt.SolidLine if any_selected else Qt.DashLine)
+        pen = QPen(QColor(self.color.red(), self.color.green(), self.color.blue(), 100) if any_selected else self.color)
+        pen.setWidth(int(self.border_width * self.draw_scale))
+        pen.setStyle(Qt.DashLine if any_selected else Qt.SolidLine)
 
         painter.setPen(pen)
         painter.setBrush(Qt.NoBrush)
         painter.drawRect(rect_draw)
 
         if any_selected:
-            self.paint_text(painter, rect_draw.topLeft() - QPointF(0, self.padding))
+            self.paint_text(painter, rect_draw.topLeft() - QPointF(0, scaled_padding))
 
 

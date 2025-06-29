@@ -74,6 +74,10 @@ class UAnnotationItem(QGraphicsItem):
     def delete_item(self):
         pass
 
+    def change_activity_mode(self, status: bool):
+        self.setAcceptedMouseButtons(Qt.NoButton if status is True else Qt.AllButtons)
+        self.setAcceptHoverEvents(status)
+
     def set_class_data(self, class_data: tuple[int, str, QColor]):
         self.class_id, self.class_name, self.color = class_data
 

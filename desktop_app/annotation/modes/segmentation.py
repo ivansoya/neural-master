@@ -1,6 +1,6 @@
 from typing import Optional, TYPE_CHECKING
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QMouseEvent, QKeyEvent
 
 from annotation.annotation_item import UAnnotationItem
@@ -20,7 +20,8 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         self.scene = scene
         self.commander = commander
 
-        self.current_mask: Optional[UAnnotationPolygon] = None
+        self.polygons: list[UAnnotationPolygon] = list()
+        self.current_polygon: Optional[UAnnotationPolygon] = None
 
         self.mode = EWorkMode.MaskAnnotationMode
         self.previous_mode: Optional[EWorkMode] = None
@@ -36,27 +37,24 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
     def end_mode(self, change_mode: EWorkMode):
         if change_mode in [EWorkMode.ForceDragMode, EWorkMode.MaskAnnotationMode]:
             return
-        elif change_mode is EWorkMode.GettingResultsMode:
-            if self.current_mask:
-                self.current_mask.delete_item()
         else:
-            if self.current_mask and not self.current_mask.is_closed():
-                self.current_mask.delete_item()
+            self._clear_scene()
         for annotation in self.scene.get_annotations():
             annotation.enable_selection()
 
     def refresh(self):
-        self.current_mask = None
+        self.polygons.clear()
+        self.current_polygon = None
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
 
     def on_move_mouse(self, event: QMouseEvent):
         image = self.scene.get_image()
-        if not self.current_mask or not image:
+        if not self.current_polygon or not image:
             return
 
-        self.current_mask.move(get_clamped_pos(self.scene, event.pos(), image))
+        self.current_polygon.move(get_clamped_pos(self.scene, event.pos(), image))
         self.scene.scene().update()
 
     def on_release_mouse(self, event: QMouseEvent):
@@ -66,20 +64,14 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
 
         if event.button() == Qt.LeftButton:
             cursor_pos_image = get_clamped_pos(self.scene, event.pos(), image)
-            if not self.current_mask:
+            if not self.current_polygon:
                 self.scene.scene().clearSelection()
-                self.current_mask = self.scene.add_annotation_mask(
-                    [cursor_pos_image],
-                    class_data
-                )
-                self.current_mask.disable_selection()
+                self.current_polygon = self._add_polygon_to_scene(cursor_pos_image, class_data)
             else:
-                if self.current_mask.fix_point():
-                    self.scene.emit_commander_to_add(self.current_mask.get_annotation_data())
-
-                    self.current_mask.setSelected(False)
-                    self.current_mask.change_points_visibility(False)
-                    self.current_mask = None
+                if self.current_polygon.fix_point():
+                    self.current_polygon.setSelected(False)
+                    self.current_polygon.change_points_visibility(False)
+                    self.current_polygon = None
 
     def on_press_mouse(self, event: QMouseEvent):
         pass
@@ -91,6 +83,21 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         return
 
     def on_key_press(self, key: int):
+        class_data = self.scene.get_current_class()
+        if not class_data:
+            return
+
+        if key == Qt.Key_Enter or key == Qt.Key_Return:
+            closed_polygons = [polygon for polygon in self.polygons if polygon.is_closed()]
+            if len(closed_polygons) == 1:
+                pass
+            elif len(closed_polygons) > 1:
+                mask = self.scene.add_annotation_mask(closed_polygons, class_data, 1)
+                self.scene.emit_commander_to_add(mask.get_annotation_data())
+                [self.scene.scene().removeItem(polygon) for polygon in self.polygons if polygon not in self.polygons]
+                self.polygons.clear()
+            else:
+                return
         return
 
     def on_select_item(self, item: UAnnotationItem):
@@ -99,9 +106,32 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
     def on_update_item(self, item: UAnnotationItem, prev: FAnnotationData, curr: FAnnotationData):
         return
 
-    def on_delete_item(self, mask: UAnnotationItem):
-        if self.current_mask is mask:
-            self.current_mask = None
+    def on_delete_item(self, polygon):
+        if polygon in self.polygons:
+            self.polygons.remove(polygon)
 
     def on_wheel_mouse(self, scale: float):
         return
+
+    def _clear_scene(self):
+        if len(self.polygons) == 0:
+            return
+        [self.scene.scene().removeItem(polygon) for polygon in self.polygons if polygon and polygon.scene()]
+        self.polygons.clear()
+        self.current_polygon = None
+
+    def _add_polygon_to_scene(self, start_point: QPointF, class_data) -> UAnnotationPolygon:
+        new_polygon = UAnnotationPolygon(
+            [start_point],
+            class_data,
+            1 / self.scene.scale_factor,
+            False,
+            self.scene.get_image(),
+            None
+        )
+        new_polygon.disable_selection()
+        self.scene.scene().addItem(new_polygon)
+        self.polygons.append(new_polygon)
+
+        return new_polygon
+

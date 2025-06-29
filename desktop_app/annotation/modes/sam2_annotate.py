@@ -184,7 +184,7 @@ class USam2Annotation(UBaseAnnotationMode):
                 return
 
             for polygon in self.polygons:
-                mask = self.scene.add_annotation_mask(
+                mask = self.scene.add_annotation_polygon(
                     polygon.get_points(),
                     class_data,
                     True

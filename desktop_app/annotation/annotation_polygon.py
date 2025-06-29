@@ -268,20 +268,20 @@ class UAnnotationPolygon(UAnnotationItem):
         if not 0 <= index < len(self.graphic_points):
             return
 
-        prev_data = self.get_annotation_data()
+        prev_data = self.get_points() if self.mask else self.get_annotation_data()
 
         if 0 <= index < len(self.graphic_points):
             graph_delete = self.graphic_points.pop(index)
             self.scene().removeItem(graph_delete)
 
         if (len(self.graphic_points) <= 2 and self.closed) or len(self.graphic_points) == 0:
-            self.signal_holder.delete_event.emit(self)
+            self.on_delete_event()
             return
 
         for index in range(len(self.graphic_points)):
             self.graphic_points[index].set_index(index)
 
-        self.signal_holder.update_event.emit(self, prev_data, self.get_annotation_data())
+        self.on_update_event(prev_data, self.get_points() if self.mask else self.get_annotation_data())
         self._check_point_start()
         self.scene().update()
 
@@ -463,6 +463,19 @@ class UAnnotationPolygon(UAnnotationItem):
 
     def is_closed(self):
         return self.closed
+
+    def on_delete_event(self):
+        if self.mask:
+            self.mask.on_delete_polygon(self)
+        else:
+            self.signal_holder.delete_event.emit(self)
+
+    def on_update_event(self, prev_data: FAnnotationData | list[QPointF], current_data: FAnnotationData | list[QPointF]):
+        if self.mask:
+            self.mask.on_update_polygon(self, prev_data, current_data)
+        else:
+            self.signal_holder.update_event.emit(self, prev_data, current_data)
+
 
     def _check_point_to_fix(self, check_point: QPointF):
         def rect_with_center(point_t):
