@@ -11,7 +11,7 @@ from ultralytics import YOLO
 
 from PyQt5.QtCore import QThread, pyqtSignal, QObject, pyqtSlot, QTimer
 
-from utility import FAnnotationClasses, FDetectAnnotationData, FAnnotationData
+from utility import FAnnotationClasses, FAnnotationData
 
 
 class UBaseNeuralNet(QObject):
@@ -86,7 +86,7 @@ class ULocalDetectYOLO(UBaseNeuralNet):
 
     def process_image(self, image: np.ndarray):
         results = self.model(image)[0]  # Первый кадр
-        detections: list[FDetectAnnotationData] = list()
+        detections: list[FAnnotationData] = list()
         count = 1
         for box in results.boxes:
             x, y, width, height = box.xywh[0].tolist()
@@ -96,12 +96,10 @@ class ULocalDetectYOLO(UBaseNeuralNet):
             res_h, res_w = image.shape[:2]
             class_name = self.classes.get_name(class_id)
             class_color = self.classes.get_color(class_id)
-            detect_data = FDetectAnnotationData(
-                int(x - width /2),
-                int(y - height / 2),
-                int(width),
-                int(height),
+            detect_data = FAnnotationData(
                 count,
+                [x - width /2, y - height / 2, width, height],
+                [],
                 class_id,
                 "Unresolved" if class_name is None else class_name,
                 QColor("#606060") if class_color is None else class_color,
@@ -180,7 +178,7 @@ class URemoteNeuralNet(UBaseNeuralNet):
             return []
 
     def _process_detection_results(self, response: str):
-        annotation_data: list[FDetectAnnotationData] = list()
+        annotation_data: list[FAnnotationData] = list()
         json_data = json.loads(response)
         if json_data:
             detections = json_data.get("detections", [])
@@ -194,12 +192,11 @@ class URemoteNeuralNet(UBaseNeuralNet):
                     class_id = object_d['class_id']
                     class_color = self.classes.get_color(class_id)
                     class_name = self.classes.get_name(class_id)
-                    ann_data = FDetectAnnotationData(
-                        int(object_d['x'] - object_d['width'] / 2),
-                        int(object_d['y'] - object_d['height'] / 2),
-                        int(object_d['width']),
-                        int(object_d['height']),
+                    ann_data = FAnnotationData(
                         detect_num,
+                        [object_d['x'] - object_d['width'] / 2, object_d['y'] - object_d['height'] / 2,
+                        object_d['width'], object_d['height']],
+                        [],
                         class_id,
                         "Unresolved" if class_name is None else class_name,
                         QColor("#606060") if class_color is None else class_color,

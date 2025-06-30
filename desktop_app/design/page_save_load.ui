@@ -75,14 +75,16 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="button_skip_creation">
+        <widget class="QPushButton" name="button_coco_test">
          <property name="font">
           <font>
            <pointsize>12</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
           </font>
          </property>
          <property name="text">
-          <string>Перейти на страницу аннотаций без проекта</string>
+          <string>Загрузить COCO</string>
          </property>
         </widget>
        </item>

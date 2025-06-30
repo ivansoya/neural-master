@@ -20,8 +20,9 @@ from annotation.modes.sam2_annotate import USam2Annotation
 from annotation.modes.segmentation import UMaskAnnotationMode
 from annotation.modes.bounding_box import UBoxAnnotationMode
 from annotation.modes.viewer import UViewerMode, UForceDragAnnotationMode
+from supporting.functions import get_points_from_flat_cords
 
-from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus, FPolygonAnnotationData, UMessageBox
+from utility import FAnnotationData, EAnnotationStatus, UMessageBox, EAnnotationType
 from commander import UAnnotationSignalHolder
 
 class UAnnotationGraphicsView(QGraphicsView):
@@ -145,23 +146,29 @@ class UAnnotationGraphicsView(QGraphicsView):
 
         load_annotations: list[tuple] = list()
         for item in self._get_current_thumb_annotation_data():
-            if isinstance(item, FDetectAnnotationData):
-                object_id, class_id, class_name, color, (x, y, width, height) = item.get_data()
+            if not isinstance(item, FAnnotationData):
+                continue
+            if item.get_annotation_type() is EAnnotationType.BoundingBox:
+                bbox = item.get_bbox()
                 ann_box = self.add_annotation_box(
-                    x,
-                    y,
-                    width,
-                    height,
-                    (class_id, class_name, QColor(color))
+                    bbox[0],
+                    bbox[1],
+                    bbox[2],
+                    bbox[3],
+                    (item.get_class_id(), item.get_class_name(), QColor(item.get_color()))
                 )
-                self.scene().addItem(ann_box)
                 load_annotations.append((len(load_annotations), ann_box))
-            elif isinstance(item, FPolygonAnnotationData):
-                object_id, class_id, class_name, color, points_list = item.get_data()
-                qt_points = [QPointF(x, y) for x, y in points_list]
-                ann_mask = self.add_annotation_polygon(qt_points, (class_id, class_name, QColor(color)), True)
-                self.scene().addItem(ann_mask)
-                load_annotations.append((len(load_annotations), ann_mask))
+            elif item.get_annotation_type() is EAnnotationType.Segmentation:
+                points = item.get_segmentation()
+                if len(points) == 0:
+                    continue
+                qt_points = get_points_from_flat_cords(points[0])
+                ann_polygon = self.add_annotation_polygon(
+                    qt_points,
+                    (item.get_class_id(), item.get_class_name(), QColor(item.get_color())),
+                    True
+                )
+                load_annotations.append((len(load_annotations), ann_polygon))
             else:
                 continue
         if self.commander:

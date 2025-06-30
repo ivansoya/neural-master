@@ -38,9 +38,10 @@ def convert_to_coco(annotations_old_format: dict[str, list[FAnnotationItem]], cl
                 annotations.append({
                     "id": annotation_id,
                     "image_id": image_id,
-                    "category_id": ann_data.get_id() + 1,
+                    "category_id": ann_data.get_class_id() + 1,
                     "bbox": ann_data.get_bbox(),
                     "segmentation": ann_data.get_segmentation(),
+                    "area": ann_data.get_area(),
                     "iscrowd": 0
                 })
                 annotation_id += 1
@@ -68,3 +69,53 @@ def build_coco_json(images: dict, annotations: dict, categories: dict):
 def save_coco_json(path, coco_dict):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(coco_dict, f, ensure_ascii=False, indent=2)
+
+def load_coco_json(path):
+    with open(path, "r", encoding="utf-8") as f:
+        coco = json.load(f)
+
+    try:
+        validate_coco_structure(coco)
+        return coco["info"], coco["licenses"], coco["annotations"], coco["images"], coco["categories"]
+    except Exception as error:
+        print(error)
+        return False
+
+def validate_coco_structure(coco: dict):
+    check_required_keys(coco, ["info", "licenses", "images", "annotations", "categories"], "COCO JSON")
+
+    # Проверка изображений
+    for i, image in enumerate(coco["images"]):
+        check_required_keys(
+            image,
+            ["id", "file_name", "dataset", "width", "height"],
+            f"images[{i}]"
+        )
+
+    # Проверка аннотаций
+    for i, ann in enumerate(coco["annotations"]):
+        check_required_keys(
+            ann,
+            ["id", "image_id", "category_id", "bbox", "area", "iscrowd", "segmentation"],
+            f"annotations[{i}]"
+        )
+
+        # Дополнительная проверка формата разметок
+        if not isinstance(ann["bbox"], list) or len(ann["bbox"]) != 4:
+            raise ValueError(f"annotations[{i}]['bbox'] должен быть списком из 4 чисел")
+
+        if not isinstance(ann["segmentation"], list):
+            raise ValueError(f"annotations[{i}]['segmentation'] должен быть списком списков")
+
+    # Проверка классов
+    for i, cat in enumerate(coco["categories"]):
+        check_required_keys(
+            cat,
+            ["id", "name", "supercategory", "color"],
+            f"categories[{i}]"
+        )
+
+def check_required_keys(obj, required_keys, context=""):
+    for key in required_keys:
+        if key not in obj:
+            raise ValueError(f"В {context} нет ключа '{key}'")

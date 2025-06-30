@@ -31,7 +31,7 @@ def distance_to_center(point: QPointF, line: QLineF) -> float:
 
     return ((center.x() - point.x()) ** 2 + (center.y() - point.y()) ** 2) ** 0.5
 
-def polygon_area(points: list[tuple[float, float]]):
+def segmentation_area_tuples(points: list[tuple[float, float]]):
     if len(points) < 3:
         return 0.0
 
@@ -43,3 +43,45 @@ def polygon_area(points: list[tuple[float, float]]):
         area += x0 * y1 - x1 * y0
 
     return abs(area) / 2.0
+
+def segmentation_area(points: list[list[float]]):
+
+    def polygon_area(coords: list[float]) -> float:
+        if len(coords) < 6:
+            return 0.0  # не полигон
+        x = coords[::2]
+        y = coords[1::2]
+        n = len(x)
+        area = 0.0
+        for i in range(n):
+            j = (i + 1) % n
+            area += x[i] * y[j] - x[j] * y[i]
+        return abs(area) / 2.0
+
+    if not points:
+        return 0.0
+
+    return sum(polygon_area(poly) for poly in points)
+
+def from_polygons_to_bbox(points: list[list[float]]) -> list[float]:
+    all_x = []
+    all_y = []
+
+    for poly in points:
+        all_x.extend(poly[::2])
+        all_y.extend(poly[1::2])
+
+    x_min, x_max = min(all_x), max(all_x)
+    y_min, y_max = min(all_y), max(all_y)
+
+    width = x_max - x_min
+    height = y_max - y_min
+
+    return [x_min, y_min, width, height]
+
+def get_points_from_flat_cords(cords: list[float]) -> list[QPointF]:
+    return [
+        QPointF(cords[i], cords[i + 1])
+        for i in range(0, len(cords), 2)
+    ]
+

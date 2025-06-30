@@ -38,12 +38,14 @@ class Ui_page_load_dataset(object):
         self.button_create_train_project.setFont(font)
         self.button_create_train_project.setObjectName("button_create_train_project")
         self.verticalLayout_6.addWidget(self.button_create_train_project)
-        self.button_skip_creation = QtWidgets.QPushButton(page_load_dataset)
+        self.button_coco_test = QtWidgets.QPushButton(page_load_dataset)
         font = QtGui.QFont()
         font.setPointSize(12)
-        self.button_skip_creation.setFont(font)
-        self.button_skip_creation.setObjectName("button_skip_creation")
-        self.verticalLayout_6.addWidget(self.button_skip_creation)
+        font.setBold(True)
+        font.setWeight(75)
+        self.button_coco_test.setFont(font)
+        self.button_coco_test.setObjectName("button_coco_test")
+        self.verticalLayout_6.addWidget(self.button_coco_test)
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_6.addItem(spacerItem2)
         self.horizontalLayout_2.addLayout(self.verticalLayout_6)
@@ -59,7 +61,7 @@ class Ui_page_load_dataset(object):
         page_load_dataset.setWindowTitle(_translate("page_load_dataset", "Главная страница"))
         self.button_load_train_project.setText(_translate("page_load_dataset", "Загрузить тренировочный проект"))
         self.button_create_train_project.setText(_translate("page_load_dataset", "Создать тренировочный проект"))
-        self.button_skip_creation.setText(_translate("page_load_dataset", "Перейти на страницу аннотаций без проекта"))
+        self.button_coco_test.setText(_translate("page_load_dataset", "Загрузить COCO"))
 
 
 if __name__ == "__main__":

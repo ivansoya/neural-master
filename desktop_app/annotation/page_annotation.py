@@ -238,7 +238,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 annotation_data
             )
         self.list_total_annotations.increase_class(
-            annotation_data.get_id(),
+            annotation_data.get_class_id(),
             annotation_data.get_class_name(),
             annotation_data.get_color()
         )
@@ -247,7 +247,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def handle_get_results_from_model_thread(self, index: int, result_annotations: list):
         current_annotations = self.thumbnail_carousel.get_annotation_data_by_index(index) or []
         for annotation in current_annotations:
-            self.list_total_annotations.decrease_class(annotation.get_id())
+            self.list_total_annotations.decrease_class(annotation.get_class_id())
 
         self.thumbnail_carousel.handle_on_getting_result_from_model(index, result_annotations)
 
@@ -260,7 +260,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 continue
 
             self.list_total_annotations.increase_class(
-                annotation.get_id(),
+                annotation.get_class_id(),
                 annotation.get_class_name(),
                 annotation.get_color()
             )
@@ -272,7 +272,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if index_thumb == self.annotation_scene.get_current_thumb_index():
             self.list_current_annotations.remove_item(index_deleted)
         if isinstance(deleted_data, FAnnotationData):
-            self.list_total_annotations.decrease_class(deleted_data.get_id())
+            self.list_total_annotations.decrease_class(deleted_data.get_class_id())
 
     @pyqtSlot(int, int, object, object)
     def handle_on_screen_updated_annotations(
@@ -289,12 +289,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 index_annotation,
                 updated_annotation
             )
-        if not isinstance(prev_annotation, FAnnotationData) or prev_annotation.get_id() == updated_annotation.get_id():
+        if not isinstance(prev_annotation, FAnnotationData) or prev_annotation.get_class_id() == updated_annotation.get_class_id():
             return
         else:
-            self.list_total_annotations.decrease_class(prev_annotation.get_id())
+            self.list_total_annotations.decrease_class(prev_annotation.get_class_id())
             self.list_total_annotations.increase_class(
-                updated_annotation.get_id(),
+                updated_annotation.get_class_id(),
                 updated_annotation.get_class_name(),
                 updated_annotation.get_color()
             )
@@ -377,7 +377,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 )
                 for annotation in ann_data:
                     self.list_total_annotations.increase_class(
-                        annotation.get_id(),
+                        annotation.get_class_id(),
                         annotation.get_class_name(),
                         annotation.get_color()
                     )

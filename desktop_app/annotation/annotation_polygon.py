@@ -6,13 +6,13 @@ from PyQt5.QtWidgets import QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsIte
 
 from annotation.annotation_item import UAnnotationItem
 from supporting.functions import clamp, distance_to_line, distances_sum, distance_to_center
-from utility import FPolygonAnnotationData, FAnnotationData
+from utility import FAnnotationData
 
 
 class UAnnotationPoint(QGraphicsRectItem):
     def __init__(self, index: int, cords: QPointF, size: float, scale: float, parent=None,):
         super().__init__(parent)
-        self.mask = parent if isinstance(parent, UAnnotationPolygon) else None
+        self.polygon = parent if isinstance(parent, UAnnotationPolygon) else None
 
         self.setFlag(QGraphicsRectItem.ItemIsMovable, False)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, False)
@@ -32,7 +32,7 @@ class UAnnotationPoint(QGraphicsRectItem):
         self.setZValue(10)
 
         self.last_pos = cords
-        self.prev_data = self.mask.get_annotation_data() if self.mask else None
+        self.prev_data = self.polygon.get_annotation_data() if self.polygon else None
 
     def change_interactive_mode(self, is_interactive: bool):
         self.setFlag(QGraphicsRectItem.ItemIsMovable, is_interactive)
@@ -66,19 +66,19 @@ class UAnnotationPoint(QGraphicsRectItem):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
-            if self.mask:
-                self.mask.remove_point(self.index)
+            if self.polygon:
+                self.polygon.remove_point(self.index)
                 return
         elif event.button() == Qt.LeftButton:
             self.last_pos = self.pos()
-            if self.mask:
-                self.prev_data = self.mask.get_annotation_data()
+            if self.polygon:
+                self.prev_data = self.polygon.get_annotation_data()
         event.accept()
 
     def mouseMoveEvent(self, event):
-        new_pos = self.mask.mapToParent(self.mapToParent(event.pos()))
+        new_pos = self.polygon.mapToParent(self.mapToParent(event.pos()))
 
-        image = self.mask.parentItem() if self.mask else None
+        image = self.polygon.parentItem() if self.polygon else None
         if image:
             image_rect = image.boundingRect()
 
@@ -97,11 +97,11 @@ class UAnnotationPoint(QGraphicsRectItem):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            if self.last_pos != self.pos() and self.mask:
-                self.mask.emit_update_event(self.mask, self.prev_data, self.mask.get_annotation_data())
+            if self.last_pos != self.pos() and self.polygon:
+                self.polygon.emit_update_event(self.polygon, self.prev_data, self.polygon.get_annotation_data())
 
     def clear(self):
-        self.mask = None
+        self.polygon = None
 
 class UAnnotationPointStart(UAnnotationPoint):
     def __init__(self, index: int, cords: QPointF, size: float, scale: float, parent=None):
@@ -124,7 +124,7 @@ class UAnnotationPointStart(UAnnotationPoint):
             point.pos(),
             point.size,
             point.draw_scale,
-            point.mask
+            point.polygon
         )
         return new_point
 
@@ -196,8 +196,17 @@ class UAnnotationPolygon(UAnnotationItem):
 
         self.previous_data: Optional[FAnnotationData] = None
 
-    def get_bbox(self) -> tuple[float, float, float, float]:
-        return self.rect().x(), self.rect().y(), self.rect().width(), self.rect().height()
+    def get_bbox(self) -> list[float]:
+        x_list = [point.x() for point in self.graphic_points]
+        y_list = [point.y() for point in self.graphic_points]
+
+        if len(x_list) < 3 or len(y_list) < 3:
+            return []
+
+        x_min, x_max = min(x_list), max(x_list)
+        y_min, y_max = min(y_list), max(y_list)
+
+        return [x_min, y_min, x_max - x_min, y_max - y_min]
 
     def get_area(self) -> float:
         return self.rect().width() * self.rect().height()
@@ -436,14 +445,15 @@ class UAnnotationPolygon(UAnnotationItem):
     def get_annotation_data(self):
         if not self.closed or self.parentItem() is None:
             return None
-        return FPolygonAnnotationData(
-            [(point.x(), point.y()) for point in self.graphic_points],
+        return FAnnotationData(
             1,
+            self.get_bbox(),
+            [coord for point in self.graphic_points for coord in (point.x(), point.y())],
             self.class_id,
             self.class_name,
             self.color,
-            self.parentItem().boundingRect().width(),
-            self.parentItem().boundingRect().height()
+            self.mask.parentItem().boundingRect().width() if self.mask else self.parentItem().boundingRect().width(),
+            self.mask.parentItem().boundingRect().height() if self.mask else self.parentItem().boundingRect().height(),
         )
 
     def x(self):

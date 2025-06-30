@@ -8,7 +8,8 @@ from PyQt5.QtGui import QPainter, QColor, QPixmap
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
 
 from project import UTrainProject, DATASETS, RESERVED, LABELS_SEGM, LABELS, IMAGES
-from utility import FAnnotationItem, FAnnotationData, FDetectAnnotationData, FPolygonAnnotationData
+from supporting.functions import from_polygons_to_bbox
+from utility import FAnnotationItem, FAnnotationData
 
 
 class UOverlayLoader(QWidget):
@@ -245,12 +246,10 @@ class UThreadDatasetLoadAnnotations(QThread):
                         class_name = self.project.classes.get_name(id_class)
 
                         ann_list.append(
-                            FDetectAnnotationData(
-                                int(x - width // 2),
-                                int(y - height // 2),
-                                width,
-                                height,
+                            FAnnotationData(
                                 line_count,
+                                [int(x - width // 2), int(y - height // 2), width, height],
+                                [],
                                 id_class,
                                 class_name,
                                 color,
@@ -265,23 +264,24 @@ class UThreadDatasetLoadAnnotations(QThread):
                         if len(values) < 7 or len(values) % 2 == 0:
                             continue
 
-                        point_list: list[tuple[float, float]] = list()
                         id_class = int(values[0])
                         color = self.project.classes.get_color(id_class)
                         class_name = self.project.classes.get_name(id_class)
-                        for i in range(1, len(values), 2):
-                            x = int(float(values[i]) * width_res)
-                            y = int(float(values[i + 1]) * height_res)
-                            point_list.append((x, y))
+                        point_list = [
+                            float(values[i]) * width_res if i % 2 == 1 else float(values[i]) * height_res
+                            for i in range(1, len(values))
+                        ]
 
-                        ann_list.append(FPolygonAnnotationData(
-                            point_list,
-                            line_count,
-                            id_class,
-                            class_name,
-                            color,
-                            width_res,
-                            height_res
+                        ann_list.append(
+                            FAnnotationData(
+                                line_count,
+                                from_polygons_to_bbox([point_list]),
+                                [point_list],
+                                id_class,
+                                class_name,
+                                color,
+                                width_res,
+                                height_res
                         ))
                 else:
                     return "Error"

@@ -54,8 +54,8 @@ class UExportWorker(QObject):
             for image in self.image_data[dataset]:
                 class_strings = list()
                 for annotation in image.get_annotation_data():
-                    if self.class_refactor and annotation.get_id() in self.class_refactor:
-                        class_id, _ = self.class_refactor[annotation.get_id()]
+                    if self.class_refactor and annotation.get_class_id() in self.class_refactor:
+                        class_id, _ = self.class_refactor[annotation.get_class_id()]
                         if class_id is not None:
                             class_strings.append(annotation.serialize(class_id) + '\n')
 

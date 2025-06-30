@@ -4,6 +4,7 @@ from typing import Optional
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QFileDialog, QDialog, QMessageBox
 
+from coco_project.coco_project import UCocoProject
 from dataset.loader import UThreadDatasetLoadAnnotations, UOverlayLoader
 from commander import UGlobalSignalHolder
 from design.page_save_load import Ui_page_load_dataset
@@ -25,7 +26,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
 
         self.button_create_train_project.clicked.connect(self.create_project)
         self.button_load_train_project.clicked.connect(self.load_project)
-        self.button_skip_creation.clicked.connect(lambda: self.go_to_another_page(2))
+        self.button_coco_test.clicked.connect(self.handle_coco_test)
 
     def go_to_another_page(self, page_index = 1):
         if isinstance(self.parent(), QStackedWidget):
@@ -81,6 +82,16 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
 
         dialog_create_project.exec()
         pass
+
+    def handle_coco_test(self):
+        coco = UCocoProject()
+
+        file_path, _ = QFileDialog.getOpenFileName(self, "Открыть существующий проект", "*.json", "Все файлы (*)")
+        if not file_path:
+            QDialogCreateProject.show_error("Ошибка! Невозможно открыть проект!")
+            return
+
+        coco.load_from_json(file_path)
 
     def unlock_commander(self):
         self.commander.set_block(False)

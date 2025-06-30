@@ -9,8 +9,8 @@ from PyQt5.QtWidgets import (
 
 from annotation.annotation_box import UAnnotationBox
 from commander import UAnnotationSignalHolder
-from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses, FAnnotationItem, FDetectAnnotationData, \
-    FPolygonAnnotationData
+from supporting.functions import get_points_from_flat_cords
+from utility import FAnnotationData, EAnnotationStatus, FAnnotationClasses, FAnnotationItem, EAnnotationType
 
 
 class ImageLoaderThread(QThread):
@@ -145,18 +145,24 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
             res_w, _ = ann_data.get_resolution()
             scale = float(self.width()) / res_w
-            if isinstance(ann_data, FDetectAnnotationData):
-                rect = ann_data.get_rect_to_draw()
+            if not isinstance(ann_data, FAnnotationData):
+                continue
+            if ann_data.get_annotation_type() is EAnnotationType.BoundingBox:
+                bbox = ann_data.get_bbox()
                 scaled_rect = QRect(
-                    int(rect.x() * scale),
-                    int(rect.y() * scale),
-                    int(rect.width() * scale),
-                    int(rect.height() * scale),
+                    int(bbox[0] * scale),
+                    int(bbox[1] * scale),
+                    int(bbox[2] * scale),
+                    int(bbox[3] * scale),
                 )
                 painter.drawRect(scaled_rect)
 
-            elif isinstance(ann_data, FPolygonAnnotationData):
-                points_list = [QPointF(x * scale, y * scale) for x, y in ann_data.get_points_list()]
+            elif ann_data.get_annotation_type() is EAnnotationType.Segmentation:
+                seg_info = ann_data.get_segmentation()
+                if len(seg_info) == 0:
+                    continue
+                cords_scaled = [cord * scale for cord in seg_info[0]]
+                points_list = get_points_from_flat_cords(cords_scaled)
                 painter.setRenderHint(QPainter.Antialiasing, True)
                 painter.drawPolygon(points_list)
 

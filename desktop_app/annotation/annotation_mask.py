@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QGraphicsItem
 
 from annotation.annotation_item import UAnnotationItem
 from annotation.annotation_polygon import UAnnotationPolygon
-from utility import FPolygonAnnotationData, FDetectAnnotationData
+from utility import FAnnotationItem, FAnnotationData
 
 
 class UAnnotationMask(UAnnotationItem):
@@ -100,32 +100,27 @@ class UAnnotationMask(UAnnotationItem):
         if not self.polygons:
             return QRectF()
 
-        min_x = float('inf')
-        max_x = float('-inf')
-        min_y = float('inf')
-        max_y = float('-inf')
+        x_cords = [point.x() for polygon in self.polygons for point in polygon.get_points()]
+        y_cords = [point.y() for polygon in self.polygons for point in polygon.get_points()]
 
-        for poly in self.polygons:
-            for point in poly.get_points():
-                min_x = min(min_x, point.x())
-                max_x = max(max_x, point.x())
-                min_y = min(min_y, point.y())
-                max_y = max(max_y, point.y())
-
-        if min_x == float('inf') or min_y == float('inf'):
-            return QRectF()
+        min_x, max_x = min(x_cords), max(x_cords)
+        min_y, max_y = min(y_cords), max(y_cords)
 
         return QRectF(QPointF(min_x, min_y), QPointF(max_x, max_y))
 
-    def get_annotation_data(self) -> FDetectAnnotationData:
+    def get_segmentation(self) -> list:
+        return [
+                    [coord for point in polygon.get_points() for coord in (point.x(), point.y())]
+                    for polygon in self.polygons
+               ]
+
+    def get_annotation_data(self) -> FAnnotationData:
         box = self.rect()
         parent_bounds = self.parentItem().boundingRect() if self.parentItem() else QRectF()
-        return FDetectAnnotationData(
-            box.x(),
-            box.y(),
-            box.width(),
-            box.height(),
+        return FAnnotationData(
             self.annotation_id,
+            [box.x(), box.y(), box.width(), box.height()],
+            self.get_segmentation(),
             self.class_id,
             self.class_name,
             self.color,

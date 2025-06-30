@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from annotation.annotation_item import UAnnotationItem
 from annotation.annotation_polygon import UAnnotationPolygon
 from annotation.annotation_scene import UAnnotationBox, UAnnotationGraphicsView
-from utility import FAnnotationData, FDetectAnnotationData, FPolygonAnnotationData
+from utility import FAnnotationData, EAnnotationType
 
 
 class UHorizontalScrollArea(QScrollArea):
@@ -141,9 +141,11 @@ class UListAnnotationItem(QWidget):
         self.setLayout(layout)
 
     def set_data(self, annotation: FAnnotationData):
-        if isinstance(annotation, FDetectAnnotationData):
+        if annotation.get_annotation_type() is EAnnotationType.BoundingBox:
             self.type_label.setText('бокс')
-        elif isinstance(annotation, FPolygonAnnotationData):
+        elif annotation.get_annotation_type() is EAnnotationType.Segmentation:
+            self.type_label.setText('полигон')
+        elif annotation.get_annotation_type() is EAnnotationType.Mask:
             self.type_label.setText('маска')
         else:
             self.type_label.setText('неизвестно')

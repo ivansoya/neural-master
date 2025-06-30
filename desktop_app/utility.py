@@ -13,7 +13,7 @@ import random
 
 from PyQt5.QtWidgets import QMessageBox
 
-from supporting.functions import clamp, polygon_area
+from supporting.functions import clamp, segmentation_area
 
 GColorList = [
     QColor(255, 0, 0),
@@ -42,7 +42,8 @@ class EImagesType(Enum):
 class EAnnotationType(Enum):
     BoundingBox = 1
     Segmentation = 2
-    NoType = 3
+    Mask = 3
+    NoType = 4
 
 class FAnnotationClasses:
     class FClassData:
@@ -132,32 +133,54 @@ class FAnnotationClasses:
         return QColor.fromHsv(hue, saturation, value)
 
 class FAnnotationData:
-    def __init__(self, object_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
+    def __init__(
+            self,
+            object_id: int,
+            bbox: list[float],
+            segmentation: list,
+            class_id: int,
+            class_name: str,
+            color: QColor,
+            res_w = 1920,
+            res_h = 1400
+    ):
+        if len(segmentation) >= 2:
+            self.type = EAnnotationType.Mask
+        elif len(segmentation) == 1:
+            self.type = EAnnotationType.Segmentation
+        elif len(bbox) == 4:
+            self.type = EAnnotationType.BoundingBox
+        else:
+            self.type = EAnnotationType.NoType
+
         self.object_id = object_id
+        self.bbox = bbox
+        self.segmentation = segmentation
+
         self.class_id = class_id
         self.class_name = class_name
         self.color = color
+
         self.w_resolution = res_w
         self.h_resolution = res_h
 
-    @abstractmethod
     def clamp_cords(self):
-        pass
+        return
 
-    @abstractmethod
     def get_bbox(self) -> list[float]:
-        pass
+        return self.bbox
 
-    @abstractmethod
-    def get_area(self) -> float:
-        pass
-
-    @abstractmethod
     def get_segmentation(self) -> list:
-        pass
+        return self.segmentation
+
+    def get_area(self) -> float:
+        if self.type is EAnnotationType.BoundingBox and len(self.bbox) == 4:
+            return self.bbox[2] * self.bbox[3]
+        else:
+            return segmentation_area(self.segmentation)
 
     def _copy_init_args(self):
-        return self.object_id, self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
+        return self.object_id, self.bbox, self.segmentation, self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
 
     def copy(self):
         return FAnnotationData(*self._copy_init_args())
@@ -168,17 +191,17 @@ class FAnnotationData:
     def serialize(self, class_id: int) -> str:
         return f"Объект аннотации не инициализирован!"
 
-    def update_data(self, data):
-        pass
+    def update_data(self, data: 'FAnnotationData'):
+        self.object_id = data.object_id
+        self.bbox = data.bbox
+        self.segmentation = data.segmentation
 
-    def get_data(self):
-        pass
+        self.class_id = data.class_id
+        self.class_name = data.class_name
+        self.color = data.color
 
-    def get_rect_to_draw(self):
-        return QRect()
-
-    def get_polygon_to_draw(self):
-        pass
+        self.w_resolution = data.w_resolution
+        self.h_resolution = data.h_resolution
 
     def get_color(self):
         return self.color
@@ -189,189 +212,29 @@ class FAnnotationData:
     def get_object_id(self):
         return self.object_id
 
-    def get_id(self):
+    def get_class_id(self):
         return self.class_id
 
     def get_resolution(self):
         return self.w_resolution, self.h_resolution
 
-    def get_annotation_type(self):
-        return EAnnotationType.NoType
+    def get_annotation_type(self) -> EAnnotationType:
+        return self.type
 
     def __eq__(self, other):
-        if not isinstance(other, FAnnotationData):
-            return self is other
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+
         return (
+                self.type == other.type and
                 self.object_id == other.object_id and
+                self.bbox == other.bbox and
+                self.segmentation == other.segmentation and
                 self.class_id == other.class_id and
                 self.class_name == other.class_name and
                 self.color == other.color and
                 self.w_resolution == other.w_resolution and
                 self.h_resolution == other.h_resolution
-        )
-
-    def __ne__(self, other):
-        return not self == other
-
-class FDetectAnnotationData(FAnnotationData):
-    def __init__(self, x, y, width, height, object_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
-        super().__init__(object_id, class_id, class_name, color, res_w, res_h)
-        self.X = x
-        self.Y = y
-        self.Width = width
-        self.Height = height
-
-    def _clamp_bbox(self):
-        self.X = max(0, self.X)
-        self.Y = max(0, self.Y)
-        self.Width = min(self.Width, self.w_resolution - self.X)
-        self.Height = min(self.Height, self.h_resolution - self.Y)
-
-    def clamp_cords(self):
-        self._clamp_bbox()
-
-    def get_bbox(self) -> tuple[float, float, float, float]:
-        return self.X, self.Y, self.Width, self.Height
-
-    def get_area(self) -> float:
-        return self.Width * self.Height
-
-    def get_segmentation(self) -> list:
-        return []
-
-    def serialize(self, class_id: int = None) -> str:
-        self._clamp_bbox()
-        serialized_class_id = self.class_id if class_id is None else class_id
-
-        x_center = (self.X + self.Width / 2) / self.w_resolution
-        y_center = (self.Y + self.Height / 2) / self.h_resolution
-        width = self.Width / self.w_resolution
-        height = self.Height / self.h_resolution
-
-        return f"{serialized_class_id} {x_center} {y_center} {width} {height}"
-
-    def __str__(self):
-        return self.serialize()
-
-    def get_annotation_type(self):
-        return EAnnotationType.BoundingBox
-
-    def copy(self):
-        return FDetectAnnotationData(
-            self.X,
-            self.Y,
-            self.Width,
-            self.Height,
-            *self._copy_init_args()
-        )
-
-    def get_data(self):
-        return (self.object_id, self.class_id, self.class_name, self.color,
-                (self.X, self.Y, self.Width, self.Height))
-
-    def update_data(self, data: tuple[int, int, str, QColor, tuple[int, int, int, int]]):
-        self.object_id, self.class_id, self.class_name, color, (self.X, self.Y, self.Width, self.Height) = data
-        self.color = QColor(color)
-
-    def get_rect_to_draw(self):
-        top_left = QPoint(int(self.X), int(self.Y))
-        bottom_right = QPoint(int(self.X + self.Width), int(self.Y + self.Height))
-        return QRect(top_left, bottom_right)
-
-    def __eq__(self, other):
-        if not isinstance(other, FDetectAnnotationData):
-            return self is other
-        return (
-                super().__eq__(other) and
-                self.X == other.X and
-                self.Y == other.Y and
-                self.Width == other.Width and
-                self.Height == other.Height
-        )
-
-    def __ne__(self, other):
-        return not self == other
-
-
-class FPolygonAnnotationData(FAnnotationData):
-    def __init__(self, points_list: list[tuple[float, float]], annotation_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
-        super().__init__(annotation_id, class_id, class_name, color, res_w, res_h)
-        self.points_list = points_list
-
-    def clamp_cords(self):
-        self.points_list = [
-            (clamp(x, 0, self.w_resolution), clamp(y, 0, self.h_resolution))
-            for x, y in self.points_list
-        ]
-
-    def get_bbox(self) -> list[float]:
-        x_list, y_list = [], []
-        for x, y in self.points_list:
-            x_list.append(x)
-            y_list.append(y)
-
-        x_min, x_max = clamp(min(x_list), 0, self.w_resolution), clamp(max(x_list), 0, self.w_resolution)
-        y_min, y_max = clamp(min(y_list), 0, self.h_resolution), clamp(max(y_list), 0, self.h_resolution)
-
-        return [x_min, y_min, x_max - x_min, y_max - y_min]
-
-    def get_area(self) -> float:
-        return polygon_area(self.points_list)
-
-    def get_segmentation(self) -> list:
-        return [[coord for point in self.points_list for coord in point]]
-
-    def serialize(self, class_id: int = None) -> str:
-        points_str = " ".join(
-            f"{clamp(x, 0, self.w_resolution) / self.w_resolution} {clamp(y, 0, self.h_resolution) / self.h_resolution}"
-            for x, y in self.points_list
-        )
-
-        serialized_class_id = self.class_id if class_id is None else class_id
-
-        return f"{serialized_class_id} {points_str}"
-
-    def __str__(self):
-        return self.serialize()
-
-    def copy(self):
-        return FPolygonAnnotationData(
-            self.points_list[:],
-            *self._copy_init_args()
-        )
-
-    def get_annotation_type(self):
-        return EAnnotationType.Segmentation
-
-    def get_data(self):
-        return self.object_id, self.class_id, self.class_name, self.color, self.points_list
-
-    def get_points_list(self):
-        return self.points_list
-
-    def get_polygon_to_draw(self):
-        return QPolygonF([QPointF(x, y) for x, y in self.points_list])
-
-    def update_data(self, data: tuple[int, int, str, QColor, list[tuple[float, float]]]):
-        self.object_id, self.class_id, self.class_name, color, list_points = data
-        self.color = QColor(color)
-        self.points_list = list_points[:]
-
-    def get_rect_to_draw(self):
-        min_x, min_y, max_x, max_y = self.w_resolution, self.h_resolution, 0, 0
-        for x, y in self.points_list:
-            min_x = min(min_x, x)
-            min_y = min(min_y, y)
-            max_x = max(max_x, x)
-            max_y = max(max_y, y)
-        return QRectF(QPointF(min_x, min_y), QPointF(max_x, max_y))
-
-    def __eq__(self, other):
-        if not isinstance(other, FPolygonAnnotationData):
-            return self is other
-        return (
-                super().__eq__(other) and
-                self.points_list == other.points_list
         )
 
     def __ne__(self, other):

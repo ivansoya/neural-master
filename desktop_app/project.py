@@ -9,8 +9,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from SAM2.sam2_net import USam2Net
 from neural_model import ULocalDetectYOLO, UBaseNeuralNet, URemoteNeuralNet
 from supporting.error_text import UErrorsText
-from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem, FDetectAnnotationData, \
-    FPolygonAnnotationData
+from utility import FAnnotationClasses, FAnnotationData, FAnnotationItem, EAnnotationType
 
 TASKS = "tasks"
 DATASETS = "datasets"
@@ -448,12 +447,12 @@ class UTrainProject:
 
         # Запись аннотаций в файл
         for annotation in ann_data:
-            if isinstance(annotation, FDetectAnnotationData):
-                label_dir = self._get_dir_path(dataset, dataset_type, LABELS)
-            elif isinstance(annotation, FPolygonAnnotationData):
-                label_dir = self._get_dir_path(dataset, dataset_type, LABELS_SEGM)
-            else:
+            if not isinstance(annotation, FAnnotationData):
                 continue
+            if annotation.get_annotation_type() is EAnnotationType.BoundingBox:
+                label_dir = self._get_dir_path(dataset, dataset_type, LABELS)
+            else:
+                label_dir = self._get_dir_path(dataset, dataset_type, LABELS_SEGM)
 
             pathlib.Path(label_dir).mkdir(parents=True, exist_ok=True)
             target_label_path = os.path.join(label_dir, os.path.splitext(image_name)[0] + ".txt").replace('\\', '/')

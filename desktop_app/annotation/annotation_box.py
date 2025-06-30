@@ -5,7 +5,7 @@ from PyQt5.QtGui import QColor, QBrush, QCursor, QPainterPath, QFontMetricsF, QF
 from PyQt5.QtWidgets import QGraphicsRectItem, QApplication, QGraphicsPixmapItem, QGraphicsItem
 
 from annotation.annotation_item import UAnnotationItem
-from utility import FDetectAnnotationData
+from utility import FAnnotationData
 
 
 class UAnnotationBox(UAnnotationItem):
@@ -111,12 +111,10 @@ class UAnnotationBox(UAnnotationItem):
 
     def get_annotation_data(self):
         try:
-            return FDetectAnnotationData(
-                int(self.x()),
-                int(self.y()),
-                int(self.width()),
-                int(self.height()),
+            return FAnnotationData(
                 1,
+                [self.x(), self.y(), self.width(), self.height()],
+                [],
                 int(self.class_id),
                 str(self.class_name),
                 QColor(self.color),

@@ -8,7 +8,8 @@ from PyQt5.QtGui import QPainter, QPen, QBrush, QPixmap, QColor, QImage, QPolygo
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QWidget, QGraphicsPixmapItem, QGraphicsProxyWidget, \
     QGraphicsObject
 
-from utility import FAnnotationItem, FDetectAnnotationData, FPolygonAnnotationData, EAnnotationType
+from supporting.functions import get_points_from_flat_cords
+from utility import FAnnotationItem, EAnnotationType, FAnnotationData
 
 
 class UGraphicsGalleryItem(QGraphicsObject):
@@ -70,24 +71,30 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
         painter.setRenderHint(QPainter.Antialiasing)
 
         for annotation in self.annotation_data.annotation_list:
-            if isinstance(annotation, FDetectAnnotationData):
-                _, _, _, color, (x, y, width, height) = annotation.get_data()
-                pen = QPen(color)
+            if not isinstance(annotation, FAnnotationData):
+                continue
+            if annotation.get_annotation_type() is EAnnotationType.BoundingBox:
+                bbox = annotation.get_bbox()
+                pen = QPen(annotation.get_color())
                 pen.setWidth(int(self.board_width * (image.width() // self.size)))
                 painter.setPen(pen)
                 painter.drawRect(
-                    int(max(0, x)),
-                    int(max(0, y)),
-                    width,
-                    height
+                    int(max(0, int(bbox[0]))),
+                    int(max(0, int(bbox[1]))),
+                    int(bbox[2]),
+                    int(bbox[3])
                 )
-            elif isinstance(annotation, FPolygonAnnotationData):
-                _, _, _, color, point_list = annotation.get_data()
-                pen = QPen(color)
+            elif annotation.get_annotation_type() is EAnnotationType.Segmentation:
+                pen = QPen(annotation.get_color())
+                point_list = annotation.get_segmentation()
+                if len(point_list) == 0:
+                    continue
+
                 pen.setWidth(int(self.board_width * (image.width() // self.size)))
                 painter.setPen(pen)
-                qt_points = [QPointF(x, y) for x, y in point_list]
+                qt_points = get_points_from_flat_cords(point_list[0])
                 painter.drawPolygon(QPolygonF(qt_points))
+
         painter.end()
 
         return image.scaled(
