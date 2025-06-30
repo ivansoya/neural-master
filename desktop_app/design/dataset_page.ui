@@ -486,6 +486,18 @@ margin: 0px;
           </spacer>
          </item>
          <item>
+          <widget class="QPushButton" name="button_to_coco">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Создать COCO Json</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="button_export">
            <property name="font">
             <font>

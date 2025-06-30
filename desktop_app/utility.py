@@ -1,4 +1,5 @@
 import os.path
+from abc import abstractmethod
 from typing import Optional
 
 import yaml
@@ -12,7 +13,7 @@ import random
 
 from PyQt5.QtWidgets import QMessageBox
 
-from supporting.functions import clamp
+from supporting.functions import clamp, polygon_area
 
 GColorList = [
     QColor(255, 0, 0),
@@ -139,6 +140,22 @@ class FAnnotationData:
         self.w_resolution = res_w
         self.h_resolution = res_h
 
+    @abstractmethod
+    def clamp_cords(self):
+        pass
+
+    @abstractmethod
+    def get_bbox(self) -> list[float]:
+        pass
+
+    @abstractmethod
+    def get_area(self) -> float:
+        pass
+
+    @abstractmethod
+    def get_segmentation(self) -> list:
+        pass
+
     def _copy_init_args(self):
         return self.object_id, self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
 
@@ -210,6 +227,18 @@ class FDetectAnnotationData(FAnnotationData):
         self.Width = min(self.Width, self.w_resolution - self.X)
         self.Height = min(self.Height, self.h_resolution - self.Y)
 
+    def clamp_cords(self):
+        self._clamp_bbox()
+
+    def get_bbox(self) -> tuple[float, float, float, float]:
+        return self.X, self.Y, self.Width, self.Height
+
+    def get_area(self) -> float:
+        return self.Width * self.Height
+
+    def get_segmentation(self) -> list:
+        return []
+
     def serialize(self, class_id: int = None) -> str:
         self._clamp_bbox()
         serialized_class_id = self.class_id if class_id is None else class_id
@@ -268,6 +297,29 @@ class FPolygonAnnotationData(FAnnotationData):
     def __init__(self, points_list: list[tuple[float, float]], annotation_id: int, class_id: int, class_name: str, color: QColor, res_w = 1920, res_h = 1400):
         super().__init__(annotation_id, class_id, class_name, color, res_w, res_h)
         self.points_list = points_list
+
+    def clamp_cords(self):
+        self.points_list = [
+            (clamp(x, 0, self.w_resolution), clamp(y, 0, self.h_resolution))
+            for x, y in self.points_list
+        ]
+
+    def get_bbox(self) -> list[float]:
+        x_list, y_list = [], []
+        for x, y in self.points_list:
+            x_list.append(x)
+            y_list.append(y)
+
+        x_min, x_max = clamp(min(x_list), 0, self.w_resolution), clamp(max(x_list), 0, self.w_resolution)
+        y_min, y_max = clamp(min(y_list), 0, self.h_resolution), clamp(max(y_list), 0, self.h_resolution)
+
+        return [x_min, y_min, x_max - x_min, y_max - y_min]
+
+    def get_area(self) -> float:
+        return polygon_area(self.points_list)
+
+    def get_segmentation(self) -> list:
+        return [[coord for point in self.points_list for coord in point]]
 
     def serialize(self, class_id: int = None) -> str:
         points_str = " ".join(

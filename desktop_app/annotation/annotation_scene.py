@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QAction, QApplication,
-    QVBoxLayout, QWidget, QHBoxLayout, QLabel, QListWidget, QListWidgetItem
+    QVBoxLayout, QWidget, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMessageBox
 )
 from PyQt5.QtGui import QColor, QPainter, QTransform, QFont, QPixmap, QIcon, QImage
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot, QPointF
@@ -21,7 +21,7 @@ from annotation.modes.segmentation import UMaskAnnotationMode
 from annotation.modes.bounding_box import UBoxAnnotationMode
 from annotation.modes.viewer import UViewerMode, UForceDragAnnotationMode
 
-from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus, FPolygonAnnotationData
+from utility import FAnnotationData, FDetectAnnotationData, EAnnotationStatus, FPolygonAnnotationData, UMessageBox
 from commander import UAnnotationSignalHolder
 
 class UAnnotationGraphicsView(QGraphicsView):
@@ -57,6 +57,8 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.annotate_mods: dict[EWorkMode, UBaseAnnotationMode] = dict()
         self.current_work_mode = EWorkMode.Viewer
 
+        self.message_box: Optional[QMessageBox] = None
+
     def get_selectable_matrix(self):
         if self.current_display_thumbnail is None:
             return None, None
@@ -91,6 +93,9 @@ class UAnnotationGraphicsView(QGraphicsView):
             }
 
     def display_image(self, thumbnail: tuple[int, str, list[FAnnotationData]], thumb_status: int):
+        if self.check_work_done() is False:
+            return
+
         self.annotate_mods[self.current_work_mode].refresh()
         self.annotate_scene.clear()
         self.annotation_items.clear()
@@ -340,13 +345,12 @@ class UAnnotationGraphicsView(QGraphicsView):
         if annotation.scene():
             self.annotate_scene.removeItem(annotation)
 
-        annotation.delete_item()
-
         if annotation.signal_holder:
             annotation.signal_holder.disconnect()
             annotation.signal_holder.deleteLater()
 
         self.annotation_items.remove(annotation)
+        self.scene().update()
 
     def emit_commander_to_add(self, annotation_data: FAnnotationData):
         if self.commander:
@@ -380,6 +384,9 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.current_image = image
 
     def set_work_mode(self, mode: int):
+        if mode == self.current_work_mode.value or self.check_work_done() is False:
+            return
+
         new_work_mode = EWorkMode(mode)
         self.annotate_mods[self.current_work_mode].end_mode(new_work_mode)
         self.annotate_mods[new_work_mode].start_mode(self.current_work_mode)
@@ -464,6 +471,20 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.annotate_mods[self.current_work_mode].on_release_mouse(event)
 
         return super().mouseReleaseEvent(event)
+
+    def check_work_done(self):
+        if self.annotate_mods[self.current_work_mode].is_work_done():
+            return True
+
+        if self.message_box is None:
+            self.message_box = QMessageBox()
+            self.message_box.setIcon(QMessageBox.Warning)
+            self.message_box.setWindowTitle("Предупреждение!")
+            self.message_box.setText("Завершите работу!")
+            self.message_box.setStandardButtons(QMessageBox.Ok)
+            self.message_box.show()
+            self.message_box.finished.connect(lambda _: setattr(self, 'message_box', None))
+        return False
 
     def get_current_thumb_index(self) -> int:
         thumb_index, *_ = self.current_display_thumbnail

@@ -29,6 +29,10 @@ class UBaseAnnotationMode(ABC):
         pass
 
     @abstractmethod
+    def is_work_done(self) -> bool:
+        pass
+
+    @abstractmethod
     def get_previous_mode(self) -> EWorkMode | None:
         pass
 

@@ -30,3 +30,16 @@ def distance_to_center(point: QPointF, line: QLineF) -> float:
     center = QPointF((line.x1() + line.x2()) / 2, (line.y1() + line.y2()) / 2)
 
     return ((center.x() - point.x()) ** 2 + (center.y() - point.y()) ** 2) ** 0.5
+
+def polygon_area(points: list[tuple[float, float]]):
+    if len(points) < 3:
+        return 0.0
+
+    area = 0.0
+    n = len(points)
+    for i in range(n):
+        x0, y0 = points[i]
+        x1, y1 = points[(i + 1) % n]
+        area += x0 * y1 - x1 * y0
+
+    return abs(area) / 2.0

@@ -227,6 +227,12 @@ class Ui_page_dataset(object):
         self.verticalLayout.addWidget(self.groupBox_2)
         spacerItem4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem4)
+        self.button_to_coco = QtWidgets.QPushButton(self.verticalWidget1)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.button_to_coco.setFont(font)
+        self.button_to_coco.setObjectName("button_to_coco")
+        self.verticalLayout.addWidget(self.button_to_coco)
         self.button_export = QtWidgets.QPushButton(self.verticalWidget1)
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -264,6 +270,7 @@ class Ui_page_dataset(object):
         self.button_move_selected_to_reserved.setText(_translate("page_dataset", "Резервировать выбранное"))
         self.button_selected_to_annotate.setText(_translate("page_dataset", "Разметить выбранные изображения"))
         self.button_delete_selected.setText(_translate("page_dataset", "Удалить выбранные изображения"))
+        self.button_to_coco.setText(_translate("page_dataset", "Создать COCO Json"))
         self.button_export.setText(_translate("page_dataset", "Экспорт"))
 from dataset.dataset_widgets import EnumComboBox
 from dataset.image_gallery import UImageGallery

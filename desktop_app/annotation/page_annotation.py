@@ -318,13 +318,11 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         elif key_number == int(Qt.Key_Space):
             self._annotate_image()
         elif key_number == int(Qt.Key_Shift):
-            print("Нажат Shift!")
             self.annotation_scene.set_work_mode(EWorkMode.ForceDragMode.value)
 
     @pyqtSlot(int)
     def handle_on_key_released(self, key_number: int):
         if key_number == int(Qt.Key_Shift):
-            print("Отжат Shift!")
             self.annotation_scene.set_work_mode(self.annotation_scene.get_current_mode().get_previous_mode())
 
     @pyqtSlot(int)

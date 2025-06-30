@@ -74,8 +74,20 @@ class UAnnotationItem(QGraphicsItem):
     def delete_item(self):
         pass
 
+    @abstractmethod
+    def get_bbox(self) -> tuple[float, float, float, float]:
+        pass
+
+    @abstractmethod
+    def get_segmentation(self) -> list:
+        pass
+
+    @abstractmethod
+    def get_area(self) -> float:
+        pass
+
     def change_activity_mode(self, status: bool):
-        self.setAcceptedMouseButtons(Qt.NoButton if status is True else Qt.AllButtons)
+        self.setAcceptedMouseButtons(Qt.AllButtons if status is True else Qt.NoButton)
         self.setAcceptHoverEvents(status)
 
     def set_class_data(self, class_data: tuple[int, str, QColor]):

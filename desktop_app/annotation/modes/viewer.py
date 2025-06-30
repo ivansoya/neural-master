@@ -45,6 +45,9 @@ class UViewerMode(UBaseAnnotationMode):
         self.last_mask = None
         return
 
+    def is_work_done(self) -> bool:
+        return True
+
     def on_move_mouse(self, event):
         return
 
@@ -95,7 +98,7 @@ class UViewerMode(UBaseAnnotationMode):
         if key == Qt.Key_Delete:
             selected = [ item for item in self.scene.scene().selectedItems() if isinstance(item, UAnnotationItem)]
             for item in selected:
-                self.scene.handle_on_delete_annotation_item(item)
+                item.delete_item()
 
     def on_key_hold(self, key: int):
         return
@@ -157,6 +160,9 @@ class UForceDragAnnotationMode(UBaseAnnotationMode):
 
     def refresh(self):
         return
+
+    def is_work_done(self) -> bool:
+        return True
 
     def on_move_mouse(self, event):
         return

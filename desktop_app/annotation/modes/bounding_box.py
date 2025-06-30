@@ -46,6 +46,9 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         self._clean_rect()
         return
 
+    def is_work_done(self) -> bool:
+        return True if not self.current_rect else False
+
     def on_press_mouse(self, event):
         if not (self.scene.get_image() and self.scene.get_current_class()):
             return

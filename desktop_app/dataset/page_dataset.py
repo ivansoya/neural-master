@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QWidget, QStackedWidget, QListWidget, QFileDialog, Q
     QApplication, QDialog
 from sympy.codegen.ast import continue_
 
+from coco_project.coco_json import convert_to_coco, build_coco_json, save_coco_json
 from commander import UGlobalSignalHolder, ECommanderStatus
 from design.dataset_page import Ui_page_dataset
 from dataset.list_datasets import UItemDataset, UListDataset
@@ -110,6 +111,8 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.button_reset_selected.clicked.connect(self.handle_on_click_button_clear_all_selections)
         self.button_delete_selected.clicked.connect(self.handle_on_click_button_delete_annotations)
         self.button_export.clicked.connect(self.handle_on_button_export_clicked)
+
+        self.button_to_coco.clicked.connect(self.handle_on_click_to_coco)
 
         self.list_datasets.signal_on_item_clicked.connect(self.move_annotations_to_gallery)
         self.list_reserved.signal_on_item_clicked.connect(self.move_annotations_to_gallery)
@@ -224,6 +227,14 @@ class UPageDataset(QWidget, Ui_page_dataset):
     @pyqtSlot()
     def handle_on_click_button_choose_all(self):
         self.view_gallery.set_all_selected()
+
+    @pyqtSlot()
+    def handle_on_click_to_coco(self):
+        images, annotations, categories = convert_to_coco(self.project.get_current_annotations(), self.project.classes.class_dict)
+
+        coco_json = build_coco_json(images, annotations, categories)
+
+        save_coco_json(self.project.path + f"/{self.project.name}.json", coco_json)
 
     @pyqtSlot()
     def handle_on_click_button_clear_all_selections(self):

@@ -89,6 +89,9 @@ class USam2Annotation(UBaseAnnotationMode):
         self._clear_points()
         pass
 
+    def is_work_done(self) -> bool:
+        return True if len(self.polygons) == 0 and len(self.points) == 0 else False
+
     def on_press_mouse(self, event: QMouseEvent | None):
         image, current_class = self.scene.get_image(), self.scene.get_current_class()
 

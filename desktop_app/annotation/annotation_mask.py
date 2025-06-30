@@ -28,7 +28,7 @@ class UAnnotationMask(UAnnotationItem):
 
         # переменны для отображения
         self.padding = 2
-        self.border_width = 2
+        self.border_width = 1
 
     def add_polygon(self, polygon: UAnnotationPolygon):
         polygon.set_class_data(
@@ -43,6 +43,11 @@ class UAnnotationMask(UAnnotationItem):
             self.polygons.remove(polygon)
         return polygon
 
+    def on_select_polygon(self, polygon: UAnnotationPolygon, is_selected: bool):
+        selected_count = sum([poly.isSelected() for poly in self.polygons])
+        print(f"Сработал сигнал выделения полигона, {selected_count}")
+        self.signal_holder.select_event.emit(self, True if selected_count > 0 else False)
+
     def on_update_polygon(self, polygon: UAnnotationPolygon, prev_data: list[QPointF], current_data: list[QPointF]):
         self.signal_holder.update_event.emit(self, None, self.get_annotation_data())
 
@@ -51,7 +56,11 @@ class UAnnotationMask(UAnnotationItem):
             if polygon.scene():
                 polygon.scene().removeItem(polygon)
             self.polygons.remove(polygon)
-        self.signal_holder.update_event.emit(self, None, self.get_annotation_data())
+        if len(self.polygons) == 0:
+            self.signal_holder.delete_event.emit(self)
+        else:
+            self.signal_holder.update_event.emit(self, None, self.get_annotation_data())
+        self.update()
 
     def delete_item(self):
         self.polygons.clear()

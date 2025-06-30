@@ -46,6 +46,9 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         self.polygons.clear()
         self.current_polygon = None
 
+    def is_work_done(self) -> bool:
+        return True if len(self.polygons) == 0 else False
+
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
 
@@ -95,9 +98,12 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
                 mask = self.scene.add_annotation_mask(closed_polygons, class_data, 1)
                 self.scene.emit_commander_to_add(mask.get_annotation_data())
                 [self.scene.scene().removeItem(polygon) for polygon in self.polygons if polygon not in self.polygons]
+                mask.change_activity_mode(True)
                 self.polygons.clear()
             else:
                 return
+        elif key == Qt.Key_Escape:
+            self._clear_scene()
         return
 
     def on_select_item(self, item: UAnnotationItem):

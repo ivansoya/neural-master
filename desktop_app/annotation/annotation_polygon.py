@@ -196,6 +196,12 @@ class UAnnotationPolygon(UAnnotationItem):
 
         self.previous_data: Optional[FAnnotationData] = None
 
+    def get_bbox(self) -> tuple[float, float, float, float]:
+        return self.rect().x(), self.rect().y(), self.rect().width(), self.rect().height()
+
+    def get_area(self) -> float:
+        return self.rect().width() * self.rect().height()
+
     def update_point(self, index: int, new_pos: QPointF):
         if not (0 <= index < len(self.graphic_points)):
             return
@@ -320,7 +326,7 @@ class UAnnotationPolygon(UAnnotationItem):
             if not self.scene():
                 return super().itemChange(change, value)
             self.change_points_visibility(self.isSelected())
-            self.signal_holder.select_event.emit(self, self.isSelected())
+            self.on_select_event(self.isSelected())
 
         return super().itemChange(change, value)
 
@@ -390,14 +396,14 @@ class UAnnotationPolygon(UAnnotationItem):
             return
 
         scaled_line_width = int(self.line_width * self.draw_scale)
-        painter.setPen(QPen(self.color, scaled_line_width))
+        painter.setPen(QPen(Qt.NoPen) if self.mask and self.closed and not self.isSelected() else QPen(self.color, scaled_line_width))
         fill_color = QColor(self.color)
         fill_color.setAlpha(100)
         if self.is_closed():
             brush = QBrush(Qt.NoBrush) if self.isSelected() else QBrush(fill_color, Qt.SolidPattern)
             painter.setBrush(brush)
             painter.drawPolygon(self.get_polygon())
-            if self.isSelected():
+            if not self.mask and self.isSelected():
                 self.paint_text(painter, self.rect().topLeft() - QPointF(self.points_size, self.points_size * 1.5))
         else:
             painter.setBrush(Qt.NoBrush)
@@ -414,7 +420,7 @@ class UAnnotationPolygon(UAnnotationItem):
 
     def delete_item(self):
         self.move_point = None
-        self.graphic_points.clear()
+        self.on_delete_event()
 
     """def clear_graphic_points(self):
         for point in self.graphic_points:
@@ -476,6 +482,11 @@ class UAnnotationPolygon(UAnnotationItem):
         else:
             self.signal_holder.update_event.emit(self, prev_data, current_data)
 
+    def on_select_event(self, is_selected: bool):
+        if self.mask:
+            self.mask.on_select_polygon(self, is_selected)
+        else:
+            self.signal_holder.select_event.emit(self, is_selected)
 
     def _check_point_to_fix(self, check_point: QPointF):
         def rect_with_center(point_t):
