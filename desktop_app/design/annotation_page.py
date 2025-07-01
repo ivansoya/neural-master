@@ -335,7 +335,7 @@ class Ui_annotataion_page(object):
         self.button_add_to_project.setText(_translate("annotataion_page", "Добавить в проект"))
 from annotation.annotation_scene import UAnnotationGraphicsView, UClassSelectorList
 from annotation.carousel import UThumbnailCarousel
-from custom_widgets import UListAnnotationWidget, UListClassCounts
+from supporting.custom_widgets import UListAnnotationWidget, UListClassCounts
 
 
 if __name__ == "__main__":

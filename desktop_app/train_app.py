@@ -4,13 +4,14 @@ from typing import Optional
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
+from coco.coco_project import UCocoProject
 from dataset.export_thread import UExportWorker
 from design.train_app import Ui_TrainApp
 from commander import UGlobalSignalHolder, ECommanderStatus
 from annotation.page_annotation import UPageAnnotation
 from stats.page_classes import UPageClasses
 from dataset.page_dataset import UPageDataset
-from page_load_create import UPageLoader
+from load.page_load_create import UPageLoader
 from page_model import UPageModel
 from project import UTrainProject
 from utility import UMessageBox
@@ -21,7 +22,7 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         super().__init__()
         self.setupUi(self)
 
-        self.project = UTrainProject()
+        self.project = UCocoProject()
 
         self.global_signal_holder = UGlobalSignalHolder()
         QApplication.instance().installEventFilter(self.global_signal_holder)

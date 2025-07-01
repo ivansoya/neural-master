@@ -95,6 +95,9 @@ QPushButton:pressed {
          </item>
          <item>
           <widget class="QLabel" name="label">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="font">
             <font>
              <pointsize>12</pointsize>
@@ -106,7 +109,11 @@ QPushButton:pressed {
           </widget>
          </item>
          <item>
-          <widget class="UListDataset" name="list_reserved"/>
+          <widget class="UListDataset" name="list_reserved">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -369,6 +376,9 @@ margin: 0px;
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <item>
              <widget class="QPushButton" name="button_move_dataset_to_reserved">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="font">
                <font>
                 <pointsize>10</pointsize>
@@ -435,6 +445,9 @@ margin: 0px;
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <item>
              <widget class="QPushButton" name="button_move_selected_to_reserved">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="font">
                <font>
                 <pointsize>10</pointsize>
@@ -487,6 +500,9 @@ margin: 0px;
          </item>
          <item>
           <widget class="QPushButton" name="button_to_coco">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>

@@ -1,10 +1,10 @@
 import json
 import os
 
+from coco.coco_utility import UAnnotationClass
 from utility import FAnnotationItem, FAnnotationClasses
 
-
-def convert_to_coco(annotations_old_format: dict[str, list[FAnnotationItem]], classes: dict[int, FAnnotationClasses.FClassData]):
+def cfg_convert_to_coco(annotations_old_format: dict[str, list[FAnnotationItem]], classes: dict[int, FAnnotationClasses.FClassData]):
     images, annotations, categories = [], [], []
     image_id, annotation_id = 1, 1
 
@@ -50,16 +50,57 @@ def convert_to_coco(annotations_old_format: dict[str, list[FAnnotationItem]], cl
 
     return images, annotations, categories
 
-def build_coco_json(images: dict, annotations: dict, categories: dict):
+def make_coco_json(
+        annotations: dict[str, list[FAnnotationItem]],
+        classes: dict[int, UAnnotationClass],
+        info: dict,
+        licenses: list
+):
+    images, converted_annotations, categories = [], [], []
+
+    for class_id, ann_class in classes.items():
+        categories.append({
+            "id": class_id,
+            "name": ann_class.name,
+            "supercategory": ann_class.super_category,
+            "color": ann_class.color.name(),
+        })
+
+    for dataset, ann_list in annotations.items():
+        for ann_item in ann_list:
+            image_name = os.path.basename(ann_item.get_image_path())
+            data = ann_item.get_annotation_data()
+            if data is None or len(data) == 0:
+                continue
+
+            image_width, image_height = data[0].get_resolution()
+
+            images.append({
+                "id": ann_item.get_image_id(),
+                "file_name": image_name,
+                "width": image_width,
+                "height": image_height,
+                "dataset": dataset
+            })
+
+            for ann_data in data:
+                ann_data.clamp_cords()
+                converted_annotations.append({
+                    "id": ann_data.get_annotation_id(),
+                    "image_id": ann_item.get_image_id(),
+                    "category_id": ann_data.get_class_id(),
+                    "bbox": ann_data.get_bbox(),
+                    "segmentation": ann_data.get_segmentation(),
+                    "area": ann_data.get_area(),
+                    "iscrowd": 0
+                })
+
+    return build_coco_json(images, converted_annotations, categories, info, licenses)
+
+def build_coco_json(images: list, annotations: list, categories: list, info: dict, licenses: list):
     coco = {
-        "info": {
-            "name": "Varan-Master",
-            "description": "Varan",
-            "version": "0.1",
-            "author": "Ivan",
-            "year": 2025
-        },
-        "licenses": [],
+        "info": info,
+        "licenses": licenses,
         "images": images,
         "annotations": annotations,
         "categories": categories
@@ -78,8 +119,7 @@ def load_coco_json(path):
         validate_coco_structure(coco)
         return coco["info"], coco["licenses"], coco["annotations"], coco["images"], coco["categories"]
     except Exception as error:
-        print(error)
-        return False
+        return str(error)
 
 def validate_coco_structure(coco: dict):
     check_required_keys(coco, ["info", "licenses", "images", "annotations", "categories"], "COCO JSON")

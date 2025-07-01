@@ -170,7 +170,7 @@ class UGalleryImageLoader(QObject):
 
     def create_widgets(self):
         for index in self.indexes_to_load:
-            if not (0 <= index <= len(self.gallery.annotation_data)):
+            if not (0 <= index < len(self.gallery.annotation_data)):
                 continue
             widget_gallery = UGraphicsAnnotationGalleryItem(
                 self.gallery.annotation_data[index],

@@ -11,6 +11,7 @@ from ultralytics import YOLO
 
 from PyQt5.QtCore import QThread, pyqtSignal, QObject, pyqtSlot, QTimer
 
+from coco.coco_utility import UAnnotationClass
 from utility import FAnnotationClasses, FAnnotationData
 
 
@@ -18,7 +19,7 @@ class UBaseNeuralNet(QObject):
     signal_on_added = pyqtSignal(int)
     signal_on_result = pyqtSignal(int, list)
 
-    def __init__(self, classes: FAnnotationClasses):
+    def __init__(self, classes: dict[int, UAnnotationClass]):
         super().__init__()
         self.model = None
         self.classes = classes
@@ -77,7 +78,7 @@ class UBaseNeuralNet(QObject):
         self.running = False
 
 class ULocalDetectYOLO(UBaseNeuralNet):
-    def __init__(self, model_path, classes: FAnnotationClasses):
+    def __init__(self, model_path, classes: dict[int, UAnnotationClass]):
         super().__init__(classes)
         self.load_model(model_path)
 
@@ -94,8 +95,8 @@ class ULocalDetectYOLO(UBaseNeuralNet):
             #conf = box.conf
 
             res_h, res_w = image.shape[:2]
-            class_name = self.classes.get_name(class_id)
-            class_color = self.classes.get_color(class_id)
+            class_name = self.classes.get(class_id, "unknown")
+            class_color = self.classes.get(class_id, None)
             detect_data = FAnnotationData(
                 count,
                 [x - width /2, y - height / 2, width, height],
@@ -113,7 +114,7 @@ class ULocalDetectYOLO(UBaseNeuralNet):
 
 
 class URemoteNeuralNet(UBaseNeuralNet):
-    def __init__(self, classes: FAnnotationClasses, ip_address: str, port: int):
+    def __init__(self, classes: dict[int, UAnnotationClass], ip_address: str, port: int):
         super().__init__(classes)
         self.server_ip = ip_address
         self.server_port = port
@@ -190,8 +191,8 @@ class URemoteNeuralNet(UBaseNeuralNet):
                 detect_num = 1
                 for i, object_d in enumerate(detections):
                     class_id = object_d['class_id']
-                    class_color = self.classes.get_color(class_id)
-                    class_name = self.classes.get_name(class_id)
+                    class_color = self.classes.get(class_id, None)
+                    class_name = self.classes.get(class_id, None)
                     ann_data = FAnnotationData(
                         detect_num,
                         [object_d['x'] - object_d['width'] / 2, object_d['y'] - object_d['height'] / 2,

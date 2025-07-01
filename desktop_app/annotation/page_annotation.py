@@ -8,11 +8,12 @@ from PyQt5.QtCore import Qt, pyqtSlot
 from annotation.annotation_item import UAnnotationItem
 from annotation.modes.abstract import EWorkMode
 from annotation.annotation_scene import UAnnotationBox
+from coco.coco_project import UCocoProject
 from design.annotation_page import Ui_annotataion_page
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
 from annotation.carousel import UAnnotationThumbnail
 from design.diag_create_dataset import Ui_diag_create_dataset
-from dataset.loader import UOverlayLoader
+from supporting.overlay_widget import UOverlayLoader
 from project import UTrainProject, UMergeAnnotationThread, DATASETS
 from utility import EAnnotationStatus, UMessageBox, FAnnotationData, FAnnotationItem
 
@@ -31,7 +32,7 @@ class UTextInputDialog(QDialog, Ui_diag_create_dataset):
 
 
 class UPageAnnotation(QWidget, Ui_annotataion_page):
-    def __init__(self, commander: UGlobalSignalHolder, project: UTrainProject):
+    def __init__(self, commander: UGlobalSignalHolder, project: UCocoProject):
         super().__init__()
         self.setupUi(self)
 
@@ -193,7 +194,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         if len(list_nones) != 0:
             dialog = UTextInputDialog()
             self.commander.set_block(True)
-            dialog.combo_choose_dataset.addItems(self.project.get_datasets())
+            dialog.combo_choose_dataset.addItems(self.project.get_annotations().keys())
             dialog.combo_choose_dataset.currentTextChanged.connect(
                 lambda selected_item: dialog.lineedit_dataset_name.setText(selected_item)
             )
@@ -445,11 +446,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     def _load_classes(self):
         self.list_class_selector.clear()
-        for class_id in self.project.classes.get_all_ids():
+        annotation_classes = self.project.get_classes()
+        for class_id in annotation_classes.keys():
             self.list_class_selector.add_class(
                 class_id,
-                self.project.classes.get_name(class_id),
-                self.project.classes.get_color(class_id)
+                annotation_classes[class_id].name if class_id in annotation_classes else "Unresolved",
+                QColor(annotation_classes[class_id].color) if class_id in annotation_classes else QColor(Qt.lightGray)
             )
 
     def _drop_current_thumbnail(self):

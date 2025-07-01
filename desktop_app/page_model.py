@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QFileDialog
 
+from coco.coco_project import UCocoProject
 from commander import UGlobalSignalHolder
 from design.model_page import Ui_page_model
 from neural_model import URemoteNeuralNet
@@ -8,7 +9,7 @@ from utility import UMessageBox
 
 
 class UPageModel(QWidget, Ui_page_model):
-    def __init__(self, commander: UGlobalSignalHolder, project: UTrainProject):
+    def __init__(self, commander: UGlobalSignalHolder, project: UCocoProject):
         super().__init__()
         self.setupUi(self)
 

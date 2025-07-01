@@ -12,6 +12,7 @@ from PyQt5.QtGui import QColor, QPolygonF
 import random
 
 from PyQt5.QtWidgets import QMessageBox
+from sympy import andre
 
 from supporting.functions import clamp, segmentation_area
 
@@ -135,7 +136,7 @@ class FAnnotationClasses:
 class FAnnotationData:
     def __init__(
             self,
-            object_id: int,
+            annotation_id: int,
             bbox: list[float],
             segmentation: list,
             class_id: int,
@@ -153,7 +154,7 @@ class FAnnotationData:
         else:
             self.type = EAnnotationType.NoType
 
-        self.object_id = object_id
+        self.annotation_id = annotation_id
         self.bbox = bbox
         self.segmentation = segmentation
 
@@ -180,7 +181,7 @@ class FAnnotationData:
             return segmentation_area(self.segmentation)
 
     def _copy_init_args(self):
-        return self.object_id, self.bbox, self.segmentation, self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
+        return self.annotation_id, self.bbox, self.segmentation, self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
 
     def copy(self):
         return FAnnotationData(*self._copy_init_args())
@@ -192,7 +193,7 @@ class FAnnotationData:
         return f"Объект аннотации не инициализирован!"
 
     def update_data(self, data: 'FAnnotationData'):
-        self.object_id = data.object_id
+        self.annotation_id = data.annotation_id
         self.bbox = data.bbox
         self.segmentation = data.segmentation
 
@@ -209,11 +210,14 @@ class FAnnotationData:
     def get_class_name(self):
         return self.class_name
 
-    def get_object_id(self):
-        return self.object_id
+    def get_annotation_id(self):
+        return self.annotation_id
 
     def get_class_id(self):
         return self.class_id
+
+    def set_class_id(self, class_id: int):
+        self.class_id = class_id
 
     def get_resolution(self):
         return self.w_resolution, self.h_resolution
@@ -226,13 +230,7 @@ class FAnnotationData:
             return NotImplemented
 
         return (
-                self.type == other.type and
-                self.object_id == other.object_id and
-                self.bbox == other.bbox and
-                self.segmentation == other.segmentation and
-                self.class_id == other.class_id and
-                self.class_name == other.class_name and
-                self.color == other.color and
+                self.annotation_id == other.annotation_id and
                 self.w_resolution == other.w_resolution and
                 self.h_resolution == other.h_resolution
         )
@@ -241,15 +239,17 @@ class FAnnotationData:
         return not self == other
 
 class FAnnotationItem:
-    def __init__(self, ann_list: list[FAnnotationData], image_path: str, dataset_name: str | None):
+    def __init__(self, ann_list: list[FAnnotationData], image_path: str, image_id: int, dataset_name: str | None):
         self.annotation_list = ann_list
         self.image_path = image_path
         self.dataset: Optional[str] = dataset_name
+        self.image_id = image_id
 
     def copy(self):
         return self.__class__(
             [annotation.copy() for annotation in self.annotation_list],
             str(self.image_path),
+            self.image_id,
             str(self.dataset)
         )
 
@@ -266,14 +266,28 @@ class FAnnotationItem:
     def get_dataset_name(self):
         return self.dataset
 
+    def get_image_id(self):
+        return self.image_id
+
+    def set_image_id(self, image_id: int):
+        self.image_id = image_id
+
     def set_dataset_name(self, dataset_name: str):
         self.dataset = dataset_name
+
+    def set_image_path(self, image_path: str):
+        self.image_path = image_path
 
     def __eq__(self, other):
         if not isinstance(other, FAnnotationItem):
             return self is other
         else:
-            return self.image_path == other.get_image_path() and self.dataset == other.get_dataset_name()
+            return (self.get_image_id() == other.get_image_id() and
+                    self.image_path == other.get_image_path() and
+                    self.dataset == other.get_dataset_name())
+
+    def __ne__(self, other):
+        return not self == other
 
 
 class UMessageBox:
@@ -303,3 +317,14 @@ class UMessageBox:
         msg_box.setText(message)
         msg_box.setStandardButtons(QMessageBox.Ok)
         msg_box.exec_()
+
+    @staticmethod
+    def ask_confirmation(message: str, title: str = "Подтверждение") -> bool:
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Question)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
+        result = msg_box.exec_()
+        return result == QMessageBox.Yes

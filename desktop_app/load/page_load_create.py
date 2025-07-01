@@ -4,8 +4,9 @@ from typing import Optional
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QFileDialog, QDialog, QMessageBox
 
-from coco_project.coco_project import UCocoProject
-from dataset.loader import UThreadDatasetLoadAnnotations, UOverlayLoader
+from coco.coco_project import UCocoProject
+from dataset.loader import UThreadDatasetLoadAnnotations
+from supporting.overlay_widget import UOverlayLoader
 from commander import UGlobalSignalHolder
 from design.page_save_load import Ui_page_load_dataset
 from design.window_create_project import Ui_window_create_project
@@ -14,7 +15,7 @@ from utility import UMessageBox
 
 
 class UPageLoader(QWidget, Ui_page_load_dataset):
-    def __init__(self, commander: UGlobalSignalHolder, project: UTrainProject):
+    def __init__(self, commander: UGlobalSignalHolder, project: UCocoProject):
         super().__init__()
         self.setupUi(self)
 
@@ -24,9 +25,11 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
         self.thread_load: Optional[UThreadDatasetLoadAnnotations] = None
         self.overlay: Optional[UOverlayLoader] = None
 
-        self.button_create_train_project.clicked.connect(self.create_project)
+        #self.button_create_train_project.clicked.connect(self.create_project)
+        self.button_create_train_project.setEnabled(False)
+        self.button_coco_test.setEnabled(False)
+
         self.button_load_train_project.clicked.connect(self.load_project)
-        self.button_coco_test.clicked.connect(self.handle_coco_test)
 
     def go_to_another_page(self, page_index = 1):
         if isinstance(self.parent(), QStackedWidget):
@@ -36,44 +39,27 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
             self.parent().setCurrentIndex(page_index)
 
     def load_project(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Открыть существующий проект", "*.cfg", "Все файлы (*)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Загрузить проект COCO",
+            "",
+            "JSON файлы (*.json);;Все файлы (*)"
+        )
         if not file_path:
-            QDialogCreateProject.show_error("Ошибка! Невозможно открыть проект!")
             return
 
-        error = self.project.load(file_path)
+        if not os.path.isfile(file_path):
+            QDialogCreateProject.show_error("Ошибка! Указанный файл не существует!")
+            return
+
+        error = self.project.load_from_json(file_path)
         if error:
             QDialogCreateProject.show_error(error)
             return
         else:
-            if self.overlay or (self.thread_load and self.thread_load.isRunning()):
-                QDialogCreateProject.show_error("Невозможно загрузить датасеты. Уже идет загрузка датасетов!")
-                return
+            UMessageBox.show_ok("Проект успешно загружен!")
+            self.commander.project_load_complete.emit()
 
-            self.overlay = UOverlayLoader(self)
-
-            self.thread_load = UThreadDatasetLoadAnnotations(self.project)
-
-            self.thread_load.signal_start_dataset.connect(self.overlay.update_label_dataset)
-            self.thread_load.signal_loaded_label.connect(self.overlay.update_progress)
-            self.thread_load.signal_end_load.connect(self.on_end_load)
-            self.thread_load.signal_error.connect(self.on_error_load)
-            self.thread_load.signal_warning.connect(
-                lambda error_str:UMessageBox.show_warning(error_str)
-            )
-
-            self.thread_load.start()
-
-    def on_error_load(self, dataset: str, error: str):
-        self.project.remove_all_annotations_from_dataset(dataset)
-        UMessageBox.show_error(error)
-
-        self.overlay = UOverlayLoader.delete_overlay(self.overlay)
-
-    def on_end_load(self, datasets: list[str]):
-        self.overlay = UOverlayLoader.delete_overlay(self.overlay)
-        self.commander.project_load_complete.emit()
-        UMessageBox.show_ok("Датасеты загружены!")
 
     def create_project(self):
         self.commander.set_block(True)
@@ -100,7 +86,7 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
 class QDialogCreateProject(QDialog, Ui_window_create_project):
     on_end = pyqtSignal()
 
-    def __init__(self, project : UTrainProject, parent = None):
+    def __init__(self, project : UCocoProject, parent = None):
         super().__init__(parent)
         self.setupUi(self)
 

@@ -1,4 +1,7 @@
+import colorsys
+
 from PyQt5.QtCore import QPointF, QLineF
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QGraphicsView
 
 
@@ -84,4 +87,18 @@ def get_points_from_flat_cords(cords: list[float]) -> list[QPointF]:
         QPointF(cords[i], cords[i + 1])
         for i in range(0, len(cords), 2)
     ]
+
+def rstrip(path_string: str) -> str:
+    return path_string.strip().replace('\\', '/')
+
+def get_distinct_color(index: int, total_classes: int = 100, saturation=0.65, value=0.95) -> QColor:
+    """
+    Возвращает цвет в формате (R, G, B) для заданного класса.
+
+    - Цвета равномерно распределены по кругу.
+    - Соседние цвета отличаются по оттенку.
+    """
+    hue = (index * 1.0 / total_classes) % 1.0  # циклический проход по кругу
+    r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
+    return QColor(int(r * 255), int(g * 255), int(b * 255))
 
