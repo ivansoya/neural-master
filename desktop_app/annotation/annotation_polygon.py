@@ -163,6 +163,7 @@ class UAnnotationPolygon(UAnnotationItem):
             self,
             list_points: list[QPointF],
             class_data: tuple[int, str, QColor],
+            annotation_id: int,
             scale: float = 1.0,
             closed = False,
             parent = None,
@@ -170,15 +171,17 @@ class UAnnotationPolygon(UAnnotationItem):
     ):
         self.graphic_points: list[UAnnotationPoint] = list()
 
-        super().__init__(class_data, scale, parent)
+        super().__init__(class_data, annotation_id, scale, parent)
 
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
 
         self.points_size: int = 8
         self.line_width: int = 2
 
+        self.annotation_id = annotation_id
+
         self.closed: bool = closed
-        self.mask = None
+        self.mask = mask
 
         for i, pt in enumerate(list_points):
             if not self.closed and i == 0:
@@ -208,23 +211,13 @@ class UAnnotationPolygon(UAnnotationItem):
 
         return [x_min, y_min, x_max - x_min, y_max - y_min]
 
+    def get_segmentation(self) -> list:
+        return [
+                    [coord for point in self.graphic_points for coord in (point.x(), point.y())]
+               ]
+
     def get_area(self) -> float:
         return self.rect().width() * self.rect().height()
-
-    def update_point(self, index: int, new_pos: QPointF):
-        if not (0 <= index < len(self.graphic_points)):
-            return
-
-        parent = self.parentItem()
-        if isinstance(parent, QGraphicsPixmapItem):
-            max_x = parent.boundingRect().width()
-            max_y = parent.boundingRect().height()
-
-            new_pos.setX(clamp(new_pos.x(), 0, max_x))
-            new_pos.setY(clamp(new_pos.y(), 0, max_y))
-
-        self.graphic_points[index].setPos(new_pos)
-        self.update()
 
     def add_point(self, pos: QPointF):
         ret = self._check_between_points(pos)
@@ -242,13 +235,16 @@ class UAnnotationPolygon(UAnnotationItem):
         for point in self.graphic_points[index_p2 + 1:]:
             point.set_index(point.get_index() + 1)
 
-        self.signal_holder.update_event.emit(self, prev_data, self.get_annotation_data())
+        self.on_update_event(prev_data, self.get_annotation_data())
 
     def move(self, new_point: QPointF):
         self.move_point = QPointF(new_point)
 
     def set_mask(self, mask):
         self.mask = mask
+
+    def set_annotation_id(self, new_id: int):
+        self.annotation_id = new_id
 
     def fix_point(self) -> bool:
         ret = self._check_point_to_fix(self.move_point)
@@ -283,7 +279,7 @@ class UAnnotationPolygon(UAnnotationItem):
         if not 0 <= index < len(self.graphic_points):
             return
 
-        prev_data = self.get_points() if self.mask else self.get_annotation_data()
+        prev_data = self.get_annotation_data()
 
         if 0 <= index < len(self.graphic_points):
             graph_delete = self.graphic_points.pop(index)
@@ -296,7 +292,7 @@ class UAnnotationPolygon(UAnnotationItem):
         for index in range(len(self.graphic_points)):
             self.graphic_points[index].set_index(index)
 
-        self.on_update_event(prev_data, self.get_points() if self.mask else self.get_annotation_data())
+        self.on_update_event(prev_data, self.get_annotation_data())
         self._check_point_start()
         self.scene().update()
 
@@ -370,7 +366,7 @@ class UAnnotationPolygon(UAnnotationItem):
         if event.button() == Qt.LeftButton:
             current_data = self.get_annotation_data()
             if self.previous_data and self.previous_data != current_data:
-                self.signal_holder.update_event.emit(self, self.previous_data, current_data)
+                self.on_update_event(self.previous_data, current_data)
             self.previous_data = None
 
     def keyPressEvent(self, event):
@@ -397,8 +393,19 @@ class UAnnotationPolygon(UAnnotationItem):
             point.setVisible(to_show)
             point.change_interactive_mode(to_show)
 
+    def enable_selection(self):
+        super().enable_selection()
+        for point in self.graphic_points:
+            point.change_interactive_mode(True)
+
+    def disable_selection(self):
+        super().disable_selection()
+        for point in self.graphic_points:
+            point.change_interactive_mode(False)
+
     def turn_off_signal_holder(self):
-        self.signal_holder.disconnect()
+        if self.signal_holder:
+            self.signal_holder.disconnect_all()
 
     def paint(self, painter, option, widget = ...):
         if len(self.graphic_points) == 0:
@@ -445,16 +452,36 @@ class UAnnotationPolygon(UAnnotationItem):
     def get_annotation_data(self):
         if not self.closed or self.parentItem() is None:
             return None
-        return FAnnotationData(
-            1,
-            self.get_bbox(),
-            [coord for point in self.graphic_points for coord in (point.x(), point.y())],
-            self.class_id,
-            self.class_name,
-            self.color,
-            self.mask.parentItem().boundingRect().width() if self.mask else self.parentItem().boundingRect().width(),
-            self.mask.parentItem().boundingRect().height() if self.mask else self.parentItem().boundingRect().height(),
-        )
+        if self.mask :
+            return self.get_points()
+        else:
+            return FAnnotationData(
+                self.annotation_id,
+                self.get_bbox(),
+                self.get_segmentation(),
+                self.class_id,
+                self.class_name,
+                self.color,
+                self.mask.parentItem().boundingRect().width() if self.mask else self.parentItem().boundingRect().width(),
+                self.mask.parentItem().boundingRect().height() if self.mask else self.parentItem().boundingRect().height(),
+            )
+
+    def update_annotate_class(self, data: tuple[int, str, QColor]):
+        if self.mask:
+            if self.mask.class_data() == data:
+                return
+            else:
+                self.mask.update_annotate_class(data)
+        else:
+            super().update_annotate_class(data)
+        if data == (self.class_id, self.class_name, self.color):
+            return
+
+    def emit_update_event(self, item, prev_data, current_data):
+        if self.mask:
+            self.mask.on_update_polygon(self, prev_data, current_data)
+        else:
+            self.signal_holder.update_event.emit(item, prev_data, current_data)
 
     def x(self):
         return self.get_polygon().boundingRect().center().x()

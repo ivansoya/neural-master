@@ -33,18 +33,25 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         return
 
     def end_mode(self, change_mode: EWorkMode):
-        if self.mode is change_mode or change_mode is EWorkMode.ForceDragMode:
-            return
-        self._delete_current()
-        for annotation in self.scene.get_annotations():
-            annotation.enable_selection()
+        if self.mode in [EWorkMode.BoxAnnotationMode, EWorkMode.ForceDragMode]:
+            return True
+        elif not self.is_work_done():
+            return False
+        else:
+            self._delete_current()
+            for annotation in self.scene.get_annotations():
+                annotation.enable_selection()
+            return True
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
 
     def refresh(self):
-        self._clean_rect()
-        return
+        if self.is_work_done():
+            self._clean_rect()
+            return True
+        else:
+            return False
 
     def is_work_done(self) -> bool:
         return True if not self.current_rect else False

@@ -145,26 +145,33 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
             res_w, _ = ann_data.get_resolution()
             scale = float(self.width()) / res_w
-            if not isinstance(ann_data, FAnnotationData):
-                continue
-            if ann_data.get_annotation_type() is EAnnotationType.BoundingBox:
-                bbox = ann_data.get_bbox()
-                scaled_rect = QRect(
-                    int(bbox[0] * scale),
-                    int(bbox[1] * scale),
-                    int(bbox[2] * scale),
-                    int(bbox[3] * scale),
-                )
-                painter.drawRect(scaled_rect)
 
-            elif ann_data.get_annotation_type() is EAnnotationType.Segmentation:
+            if not isinstance(ann_data, FAnnotationData):
+                return
+
+            annotation_type = ann_data.get_annotation_type()
+
+            if annotation_type is EAnnotationType.BoundingBox:
+                bbox = ann_data.get_bbox()
+                rect = QRect(*(int(c * scale) for c in bbox))
+                painter.drawRect(rect)
+            else:
                 seg_info = ann_data.get_segmentation()
-                if len(seg_info) == 0:
-                    continue
-                cords_scaled = [cord * scale for cord in seg_info[0]]
-                points_list = get_points_from_flat_cords(cords_scaled)
+                if not seg_info:
+                    return
+
                 painter.setRenderHint(QPainter.Antialiasing, True)
-                painter.drawPolygon(points_list)
+
+                for seg in seg_info:
+                    cords_scaled = [c * scale for c in seg]
+                    points = get_points_from_flat_cords(cords_scaled)
+                    painter.drawPolygon(points)
+
+                if annotation_type is not EAnnotationType.Segmentation:
+                    bbox = ann_data.get_bbox()
+                    rect = QRect(*(int(c * scale) for c in bbox))
+                    painter.setBrush(Qt.NoBrush)
+                    painter.drawRect(rect)
 
         if self.isSelected():
             pen = QPen(Qt.blue)

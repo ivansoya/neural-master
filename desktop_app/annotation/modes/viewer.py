@@ -35,7 +35,7 @@ class UViewerMode(UBaseAnnotationMode):
     def end_mode(self, change_mode: EWorkMode):
         self.mask_adding_point_mode = False
         self.last_mask = None
-        return
+        return True
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
@@ -43,7 +43,7 @@ class UViewerMode(UBaseAnnotationMode):
     def refresh(self):
         self.mask_adding_point_mode = False
         self.last_mask = None
-        return
+        return True
 
     def is_work_done(self) -> bool:
         return True
@@ -153,13 +153,13 @@ class UForceDragAnnotationMode(UBaseAnnotationMode):
         for annotation in self.scene.get_annotations():
             annotation.enable_selection()
         self.scene.setDragMode(QGraphicsView.NoDrag)
-        return
+        return True
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.previous_mode
 
     def refresh(self):
-        return
+        return True
 
     def is_work_done(self) -> bool:
         return True

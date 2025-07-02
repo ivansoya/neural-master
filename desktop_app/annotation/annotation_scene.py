@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QColor, QPainter, QTransform, QFont, QPixmap, QIcon, QImage
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot, QPointF
 from cv2 import Mat
+from torch.onnx.symbolic_opset9 import is_floating_point
 
 from SAM2.sam2_net import USam2Net
 from annotation.annotation_box import UAnnotationBox
@@ -41,6 +42,8 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.setScene(self.annotate_scene)
 
         self.annotate_class: Optional[tuple[int, str, QColor]] = None
+        # Этот айди уникален только в процессе разметки
+        self.annotation_id: int = 0
 
         self.current_image: Optional[QGraphicsPixmapItem] = None
         self.current_display_thumbnail: Optional[tuple[int, str, list[FAnnotationData]]] = None
@@ -78,6 +81,13 @@ class UAnnotationGraphicsView(QGraphicsView):
     def get_current_mode(self):
         return self.annotate_mods[self.current_work_mode]
 
+    def set_annotation_id(self, annotation_id):
+        self.annotation_id = annotation_id
+
+    def get_annotation_id(self):
+        self.annotation_id += 1
+        return self.annotation_id
+
     def set_scene_parameters(self, commander: UAnnotationSignalHolder, sam2: USam2Net):
         if commander:
             self.commander = commander
@@ -94,10 +104,9 @@ class UAnnotationGraphicsView(QGraphicsView):
             }
 
     def display_image(self, thumbnail: tuple[int, str, list[FAnnotationData]], thumb_status: int):
-        if self.check_work_done() is False:
+        if self.annotate_mods[self.current_work_mode].refresh() is False:
             return
 
-        self.annotate_mods[self.current_work_mode].refresh()
         self.annotate_scene.clear()
         self.annotation_items.clear()
         if not thumbnail:
@@ -169,6 +178,20 @@ class UAnnotationGraphicsView(QGraphicsView):
                     True
                 )
                 load_annotations.append((len(load_annotations), ann_polygon))
+            elif item.get_annotation_type() is EAnnotationType.Mask:
+                points = item.get_segmentation()
+                if len(points) == 0:
+                    continue
+
+                add_mask = self.add_annotation_mask(
+                    [],
+                    (item.get_class_id(), item.get_class_name(), QColor(item.get_color())),
+                    self.get_annotation_id()
+                )
+                for poly_points in points:
+                    add_mask.create_polygon(get_points_from_flat_cords(poly_points))
+
+                load_annotations.append((len(load_annotations), add_mask))
             else:
                 continue
         if self.commander:
@@ -220,8 +243,9 @@ class UAnnotationGraphicsView(QGraphicsView):
         scale_change = 1.1 if event.angleDelta().y() > 0 else 0.9
         self.scale_factor *= scale_change
         self.setTransform(QTransform().scale(self.scale_factor, self.scale_factor))
-        for item in self.annotation_items:
-            item.set_draw_scale(self.scale_factor)
+        for item in self.scene().items():
+            if isinstance(item, UAnnotationItem):
+                item.set_draw_scale(self.scale_factor)
         self.annotate_mods[self.current_work_mode].on_wheel_mouse(self.scale_factor)
 
     def add_annotation_mask(self, polygons: list[UAnnotationPolygon], class_data: tuple[int, str, QColor], annotation_id: int):
@@ -229,7 +253,7 @@ class UAnnotationGraphicsView(QGraphicsView):
             polygons,
             class_data,
             self.scale_factor,
-            annotation_id,
+            self.get_annotation_id(),
             self.current_image
         )
 
@@ -238,25 +262,24 @@ class UAnnotationGraphicsView(QGraphicsView):
         return ann_mask
 
     def add_annotation_polygon(self, points_list: list[QPointF], class_data: tuple[int, str, QColor], closed: bool = False):
-        ann_mask = UAnnotationPolygon(
+        polygon = UAnnotationPolygon(
             points_list[:],
             class_data,
+            self.get_annotation_id(),
             self.scale_factor,
             closed,
             self.current_image
         )
 
-        self._set_annotation_item(ann_mask)
-        self.scene().addItem(ann_mask)
-        return ann_mask
+        self._set_annotation_item(polygon)
+        self.scene().addItem(polygon)
+        return polygon
 
     def add_annotation_box(self, x, y, width, height, class_data: tuple[int, str, QColor]) -> UAnnotationBox:
         ann_box = UAnnotationBox(
-            x,
-            y,
-            width,
-            height,
+            [x, y, width, height],
             class_data,
+            self.get_annotation_id(),
             self.scale_factor,
             self.current_image
         )
@@ -391,28 +414,19 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.current_image = image
 
     def set_work_mode(self, mode: int):
-        if mode == self.current_work_mode.value or self.check_work_done() is False:
-            return
-
         new_work_mode = EWorkMode(mode)
-        self.annotate_mods[self.current_work_mode].end_mode(new_work_mode)
-        self.annotate_mods[new_work_mode].start_mode(self.current_work_mode)
-        self.current_work_mode = new_work_mode
+        if self.annotate_mods[self.current_work_mode].end_mode(new_work_mode) is True:
+            self.annotate_mods[new_work_mode].start_mode(self.current_work_mode)
+            self.current_work_mode = new_work_mode
 
     def set_annotate_class(self, class_id: int, class_name: str, color: QColor):
-        # Изменение базового класса для разметки
         self.annotate_class = (class_id, class_name, QColor(color))
 
-        # Если есть выбранный на сцене бокс разметки, то изменяем его класс
         selected = self.get_selected_annotation()
         if selected is None:
             return
-        prev_data = selected.get_annotation_data()
+
         selected.update_annotate_class(self.annotate_class)
-        new_data = selected.get_annotation_data()
-        if self.commander is not None and self.current_display_thumbnail is not None:
-            ann_index = self.annotation_items.index(selected)
-            self.commander.updated_annotation.emit(self.get_current_thumb_index(), ann_index, prev_data, new_data)
 
     def get_selected_annotation(self):
         items = self.annotate_scene.selectedItems()
@@ -478,20 +492,6 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.annotate_mods[self.current_work_mode].on_release_mouse(event)
 
         return super().mouseReleaseEvent(event)
-
-    def check_work_done(self):
-        if self.annotate_mods[self.current_work_mode].is_work_done():
-            return True
-
-        if self.message_box is None:
-            self.message_box = QMessageBox()
-            self.message_box.setIcon(QMessageBox.Warning)
-            self.message_box.setWindowTitle("Предупреждение!")
-            self.message_box.setText("Завершите работу!")
-            self.message_box.setStandardButtons(QMessageBox.Ok)
-            self.message_box.show()
-            self.message_box.finished.connect(lambda _: setattr(self, 'message_box', None))
-        return False
 
     def get_current_thumb_index(self) -> int:
         thumb_index, *_ = self.current_display_thumbnail

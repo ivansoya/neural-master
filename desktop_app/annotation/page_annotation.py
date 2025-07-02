@@ -178,6 +178,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.label_count_not_annotated.setText(str(self.current_not_annotated_count))
         self.label_count_dropped.setText(str(self.current_dropped_count))
 
+        self.annotation_scene.set_annotation_id(self.project.get_annotation_id_with_increment())
         self.load_thumbnails(files)
 
         self.thumbnail_carousel.update()

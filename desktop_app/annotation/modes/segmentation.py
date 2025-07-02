@@ -36,15 +36,22 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
 
     def end_mode(self, change_mode: EWorkMode):
         if change_mode in [EWorkMode.ForceDragMode, EWorkMode.MaskAnnotationMode]:
-            return
+            return True
+        elif not self.is_work_done():
+            return False
         else:
             self._clear_scene()
-        for annotation in self.scene.get_annotations():
-            annotation.enable_selection()
+            for annotation in self.scene.get_annotations():
+                annotation.enable_selection()
+            return True
 
     def refresh(self):
-        self.polygons.clear()
-        self.current_polygon = None
+        if self.is_work_done():
+            self.polygons.clear()
+            self.current_polygon = None
+            return True
+        else:
+            return False
 
     def is_work_done(self) -> bool:
         return True if len(self.polygons) == 0 else False
@@ -93,18 +100,38 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         if key == Qt.Key_Enter or key == Qt.Key_Return:
             closed_polygons = [polygon for polygon in self.polygons if polygon.is_closed()]
             if len(closed_polygons) == 1:
-                pass
+                polygon = self.scene.add_annotation_polygon(
+                    closed_polygons[0].get_points(),
+                    class_data,
+                    True
+                )
+                self.scene.emit_commander_to_add(polygon.get_annotation_data())
+
+                [self.scene.scene().removeItem(polygon) for polygon in self.polygons]
+
+                self._finish_segmentation(polygon)
             elif len(closed_polygons) > 1:
-                mask = self.scene.add_annotation_mask(closed_polygons, class_data, 1)
+                mask = self.scene.add_annotation_mask(
+                    closed_polygons,
+                    class_data,
+                    self.scene.get_annotation_id()
+                )
                 self.scene.emit_commander_to_add(mask.get_annotation_data())
-                [self.scene.scene().removeItem(polygon) for polygon in self.polygons if polygon not in self.polygons]
-                mask.change_activity_mode(True)
-                self.polygons.clear()
+
+                [self.scene.scene().removeItem(polygon) for polygon in self.polygons if polygon not in closed_polygons]
+                self._finish_segmentation(mask)
             else:
                 return
         elif key == Qt.Key_Escape:
             self._clear_scene()
         return
+
+    def _finish_segmentation(self, ann_object: UAnnotationItem):
+        ann_object.enable_selection()
+        self.polygons.clear()
+        self.current_polygon = None
+        self.scene.set_work_mode(EWorkMode.Viewer.value)
+        self.scene.scene().update()
 
     def on_select_item(self, item: UAnnotationItem):
         return
@@ -130,7 +157,8 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         new_polygon = UAnnotationPolygon(
             [start_point],
             class_data,
-            1 / self.scene.scale_factor,
+            0,
+            self.scene.scale_factor,
             False,
             self.scene.get_image(),
             None

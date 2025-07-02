@@ -22,19 +22,21 @@ class UAnnotationBox(UAnnotationItem):
 
     def __init__(
             self,
-            x1: float,
-            y1: float,
-            width: float,
-            height:float,
+            cords: list[float],
             class_data: tuple[int, str, QColor],
+            annotation_id: int,
             scale: float = 1.0,
             parent = None
     ):
-        super().__init__(class_data, scale, parent)
+        super().__init__(class_data, annotation_id, scale, parent)
 
         self.isActive = True
 
-        self._rect = QRectF(x1, y1, width, height)
+        if len(cords) != 4:
+            raise ValueError("Координаты бокса должны быть валидны при его создании!")
+
+        self._rect = QRectF(cords[0], cords[1], cords[2], cords[3])
+
         self.line_width = 2
 
         self.background_color = QColor(self.color)
@@ -112,7 +114,7 @@ class UAnnotationBox(UAnnotationItem):
     def get_annotation_data(self):
         try:
             return FAnnotationData(
-                1,
+                self.annotation_id,
                 [self.x(), self.y(), self.width(), self.height()],
                 [],
                 int(self.class_id),

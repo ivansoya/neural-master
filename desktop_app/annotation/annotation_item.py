@@ -14,8 +14,16 @@ class UAnnotationSignal(QObject):
     update_event = pyqtSignal(object, object, object)
     delete_event = pyqtSignal(object)
 
+    def disconnect_all(self):
+        for signal_name in ['select_event', 'update_event', 'delete_event']:
+            signal = getattr(self, signal_name)
+            try:
+                signal.disconnect()
+            except TypeError:
+                pass
+
 class UAnnotationItem(QGraphicsItem):
-    def __init__(self, class_data: tuple[int, str, QColor], scale: float, parent=None):
+    def __init__(self, class_data: tuple[int, str, QColor], annotation_id: int, scale: float, parent=None):
         super().__init__(parent)
 
         self.setFlags(
@@ -27,6 +35,7 @@ class UAnnotationItem(QGraphicsItem):
         self.setAcceptHoverEvents(True)
 
         self.class_id, self.class_name, self.color = class_data
+        self.annotation_id = annotation_id
 
         self.background_color: QColor = QColor(Qt.black)
         self.set_draw_scale(scale)
@@ -86,12 +95,20 @@ class UAnnotationItem(QGraphicsItem):
     def get_area(self) -> float:
         pass
 
+    def get_annotation_id(self):
+        return self.annotation_id
+
     def change_activity_mode(self, status: bool):
         self.setAcceptedMouseButtons(Qt.AllButtons if status is True else Qt.NoButton)
         self.setAcceptHoverEvents(status)
 
     def set_class_data(self, class_data: tuple[int, str, QColor]):
         self.class_id, self.class_name, self.color = class_data
+
+        self.background_color = QColor(self.color)
+        self.background_color.setAlpha(50)
+
+        self.update()
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedChange:
@@ -165,11 +182,19 @@ class UAnnotationItem(QGraphicsItem):
             self.draw_scale = 1 / scale
 
     def update_annotate_class(self, data: tuple[int, str, QColor]):
+        if data == (self.class_id, self.class_name, self.color):
+            return
+
+        prev_data = self.get_annotation_data()
+
         self.class_id, self.class_name, self.color = data
+
+        current_data = self.get_annotation_data()
 
         self.background_color = QColor(self.color)
         self.background_color.setAlpha(50)
 
+        self.signal_holder.update_event.emit(self, prev_data, current_data)
         self.update()
 
     def connect_selected_signal(self, func: Callable[[object, bool], None]):

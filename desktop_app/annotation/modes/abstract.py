@@ -25,7 +25,7 @@ class UBaseAnnotationMode(ABC):
         pass
 
     @abstractmethod
-    def end_mode(self, mode: EWorkMode):
+    def end_mode(self, mode: EWorkMode) -> bool:
         pass
 
     @abstractmethod
@@ -37,7 +37,7 @@ class UBaseAnnotationMode(ABC):
         pass
 
     @abstractmethod
-    def refresh(self):
+    def refresh(self) -> bool:
         pass
 
     @abstractmethod

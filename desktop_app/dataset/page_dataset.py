@@ -1,18 +1,16 @@
-import os.path
 from typing import Optional
 
 from PyQt5.QtCore import pyqtSlot, QThread
-from PyQt5.QtWidgets import QWidget, QStackedWidget, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QWidget, QStackedWidget
 
 from coco.coco_json import cfg_convert_to_coco, build_coco_json, save_coco_json
 from coco.coco_project import UCocoProject
 from commander import UGlobalSignalHolder
 from design.dataset_page import Ui_page_dataset
-from dataset.list_datasets import UItemDataset, UListDataset
+from dataset.list_datasets import UItemDataset
 from dataset.loader import UThreadDatasetLoadAnnotations, UThreadDatasetCopy
 from load.export import UDialogExport
 from supporting.overlay_widget import UOverlayLoader
-from project import RESERVED, DATASETS
 from supporting.custom_threads import UProgressThread
 from supporting.task_runner import UTaskRunner
 from utility import UMessageBox, FAnnotationItem, EAnnotationType
@@ -94,7 +92,6 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
     @pyqtSlot()
     def on_task_runner_finished(self):
-        self.update_dataset_page()
         self.task_runner = None
         self.commander.project_updated_datasets.emit()
 
@@ -102,8 +99,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
     def update_dataset_page(self):
         self.create_list_dataset()
         self.fill_filter_list()
-        self.view_gallery.clear_scene()
-        self.view_gallery.filter_images(self.filter_dict, self.type_list)
+        self.set_selected_dataset_to_gallery()
 
     def on_changed_filter(self, class_id: int, selected: bool):
         if class_id in self.filter_dict:
@@ -111,9 +107,11 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.view_gallery.filter_images(self.filter_dict, self.type_list)
 
     def go_to_another_page(self, page_index: int):
-        if isinstance(self.parent(), QStackedWidget):
-            self.parent().setCurrentIndex(page_index)
+        stack = self.parent()
+        if isinstance(stack, QStackedWidget):
+            stack.setCurrentIndex(page_index)
 
+    @pyqtSlot(str, object)
     def move_annotations_to_gallery(self, dataset: str, annotations: dict[str, list[FAnnotationItem]]):
         list_annotations: list[FAnnotationItem] = list()
         for key, list_a in annotations.items():
@@ -121,6 +119,18 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.view_gallery.clear_scene()
         self.view_gallery.set_dataset_annotations(list_annotations)
         self.view_gallery.filter_images(self.filter_dict, self.type_list)
+
+    def set_selected_dataset_to_gallery(self):
+        selected_items = self.list_datasets.selectedItems()
+
+        if not selected_items or len(selected_items) == 0:
+            self.move_annotations_to_gallery("", {})
+        else:
+            selected_item = self.list_datasets.itemWidget(selected_items[0])
+            if isinstance(selected_item, UItemDataset):
+                self.move_annotations_to_gallery(selected_item.get_dataset_name(), selected_item.get_annotations())
+            else:
+                self.move_annotations_to_gallery("", {})
 
     @pyqtSlot()
     def handle_on_button_export_clicked(self):
@@ -225,9 +235,10 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 return str(error)
 
         if 0 <= selected_index < self.list_datasets.count():
-            widget = self.list_datasets.item(selected_index).listWidget()
+            list_item = self.list_datasets.item(selected_index)
+            widget = self.list_datasets.itemWidget(list_item)
             if isinstance(widget, UItemDataset) and widget.get_dataset_name() == selected_name:
-                self.list_datasets.setCurrentIndex(selected_index)
+                self.list_datasets.setCurrentRow(selected_index)
 
     def fill_filter_list(self):
         widget = self.scroll_classes.widget()

@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QGraphicsEllipseItem, QGraphicsPolygonItem, QDialog,
 
 from SAM2.sam2_net import USam2Net
 from annotation.annotation_item import UAnnotationItem
+from annotation.annotation_mask import UAnnotationMask
 from annotation.modes.abstract import UBaseAnnotationMode, EWorkMode
 from PyQt5.QtGui import QMouseEvent, QKeyEvent, QColor, QBrush, QPen, QPolygonF
 
@@ -65,32 +66,29 @@ class USam2Annotation(UBaseAnnotationMode):
 
     def end_mode(self, mode: EWorkMode):
         if mode in [EWorkMode.SAM2, EWorkMode.ForceDragMode]:
-            return
-        if self.has_started and mode is not EWorkMode.SAM2:
+            return True
+        elif not self.is_work_done():
             # Здесь должна быть ошибка при изменении режима
-            return
+            return False
 
-        if self.window:
-            self.window.close()
-            self.window = None
-
-        self.box_start_pos = None
-        self._clear_points()
-        self._clear_polygons()
-
-        for annotation in self.scene.get_annotations():
-            annotation.enable_selection()
+        self._clear_scene()
+        return True
 
     def get_previous_mode(self) -> EWorkMode | None:
         return self.prev_mode
 
     def refresh(self):
-        self._clear_polygons()
-        self._clear_points()
-        pass
+        if self.is_work_done():
+            self.points.clear()
+            self.polygons.clear()
+            self.box = None
+            self.box_start_pos = None
+            return True
+        else:
+            return False
 
     def is_work_done(self) -> bool:
-        return True if len(self.polygons) == 0 and len(self.points) == 0 else False
+        return True if len(self.polygons) == 0 and len(self.points) == 0 and not self.has_started else False
 
     def on_press_mouse(self, event: QMouseEvent | None):
         image, current_class = self.scene.get_image(), self.scene.get_current_class()
@@ -178,6 +176,7 @@ class USam2Annotation(UBaseAnnotationMode):
 
     def on_key_press(self, key: int):
         if key == Qt.Key_Escape:
+            self._clear_scene()
             self.scene.set_work_mode(EWorkMode.Viewer.value)
             return True
         elif key == Qt.Key_Enter or key == Qt.Key_Return:
@@ -186,13 +185,18 @@ class USam2Annotation(UBaseAnnotationMode):
             if len(self.polygons) == 0 or class_data is None:
                 return
 
-            for polygon in self.polygons:
-                mask = self.scene.add_annotation_polygon(
-                    polygon.get_points(),
+            if len(self.polygons) == 1:
+                polygon = self.scene.add_annotation_polygon(
+                    self.polygons[0].get_points(),
                     class_data,
                     True
                 )
-                self.scene.emit_commander_to_add(mask.get_annotation_data())
+                self.scene.emit_commander_to_add(polygon.get_annotation_data())
+            else:
+                mask = UAnnotationMask()
+                for polygon in self.polygons:
+
+                    self.scene.emit_commander_to_add(mask.get_annotation_data())
 
             self._clear_polygons()
             self._clear_points()
@@ -250,6 +254,18 @@ class USam2Annotation(UBaseAnnotationMode):
             self.box.scene().removeItem(self.box)
         self.box = None
         self.box_start_pos = None
+
+    def _clear_scene(self):
+        if self.window:
+            self.window.close()
+            self.window = None
+
+        self._delete_box()
+        self._clear_points()
+        self._clear_polygons()
+
+        for annotation in self.scene.get_annotations():
+            annotation.enable_selection()
 
     def _handle_on_slider_value_changed(self, value: int):
         if len(self.polygons) == 0:
