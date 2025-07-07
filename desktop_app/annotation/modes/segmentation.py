@@ -130,7 +130,7 @@ class UMaskAnnotationMode(UBaseAnnotationMode):
         ann_object.enable_selection()
         self.polygons.clear()
         self.current_polygon = None
-        self.scene.set_work_mode(EWorkMode.Viewer.value)
+        self.scene.emit_set_work_mode(EWorkMode.Viewer)
         self.scene.scene().update()
 
     def on_select_item(self, item: UAnnotationItem):

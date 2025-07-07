@@ -70,10 +70,7 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
             cursor_pos = self.scene.mapToScene(event.pos())
             self.start_point = self.scene.get_image().mapFromScene(cursor_pos)
             self.current_rect = self.scene.add_annotation_box(
-                self.start_point.x(),
-                self.start_point.y(),
-                1,
-                1,
+                [self.start_point.x(), self.start_point.y(), 1, 1],
                 self.scene.get_current_class(),
             )
 

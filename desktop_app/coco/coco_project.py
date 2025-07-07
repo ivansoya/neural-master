@@ -48,9 +48,15 @@ class UCocoProject:
     def get_project_name(self):
         return self.project_info.name if self.project_info is not None else "noname"
 
+    def get_image_id(self):
+        return self.current_image_id
+
     def get_image_id_with_increment(self):
         self.current_image_id += 1
         return self.current_image_id
+
+    def get_annotation_id(self):
+        return self.current_annotation_id
 
     def get_annotation_id_with_increment(self):
         self.current_annotation_id += 1

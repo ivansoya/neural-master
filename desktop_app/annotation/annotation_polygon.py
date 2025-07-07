@@ -365,7 +365,10 @@ class UAnnotationPolygon(UAnnotationItem):
 
         if event.button() == Qt.LeftButton:
             current_data = self.get_annotation_data()
-            if self.previous_data and self.previous_data != current_data:
+            if isinstance(current_data, FAnnotationData):
+                if not current_data.is_equal_data(self.previous_data):
+                    self.on_update_event(self.previous_data, current_data)
+            elif self.previous_data and not current_data == self.previous_data:
                 self.on_update_event(self.previous_data, current_data)
             self.previous_data = None
 

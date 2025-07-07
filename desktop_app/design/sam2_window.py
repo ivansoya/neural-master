@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(245, 194)
+        Dialog.resize(269, 230)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -103,7 +103,48 @@ class Ui_Dialog(object):
 "\n"
 "QSlider::handle:horizontal:pressed {\n"
 "    background: #1e7e34;   \n"
-"}")
+"}\n"
+"\n"
+"QComboBox {\n"
+"    border: 2px solid #00ff88;\n"
+"    border-radius: 4px;\n"
+"    background-color: #222222;\n"
+"    color: white;\n"
+"    padding: 4px;\n"
+"    text-align: center;\n"
+"    font-size: 12px;\n"
+"}\n"
+"\n"
+"QComboBox::drop-down {\n"
+"    border: none;\n"
+"    background: transparent;\n"
+"    width: 0px;\n"
+"}\n"
+"\n"
+"QComboBox::down-arrow {\n"
+"    image: none;\n"
+"    width: 0px;\n"
+"    height: 0px;\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView {\n"
+"        background-color: #222222;\n"
+"        color: white;\n"
+"        border: 1px solid #00ff88;\n"
+"        selection-background-color: #222222;\n"
+"        selection-color: #00ff88;\n"
+"        padding: 4px;\n"
+"        outline: 0;\n"
+"        show-decoration-selected: 1;\n"
+"    }\n"
+"\n"
+"    QComboBox QAbstractItemView::item {\n"
+"        padding: 6px;\n"
+"        margin: 2px;\n"
+"        border-radius: 4px;\n"
+"        background-color: #222222;\n"
+"        color: white;\n"
+"    }")
         Dialog.setModal(False)
         self.verticalLayout = QtWidgets.QVBoxLayout(Dialog)
         self.verticalLayout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
@@ -125,6 +166,23 @@ class Ui_Dialog(object):
         self.radio_box.setChecked(False)
         self.radio_box.setObjectName("radio_box")
         self.verticalLayout.addWidget(self.radio_box)
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        self.label_result = QtWidgets.QLabel(Dialog)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_result.sizePolicy().hasHeightForWidth())
+        self.label_result.setSizePolicy(sizePolicy)
+        self.label_result.setMaximumSize(QtCore.QSize(80, 16777215))
+        self.label_result.setObjectName("label_result")
+        self.horizontalLayout_4.addWidget(self.label_result)
+        self.combo_result = QtWidgets.QComboBox(Dialog)
+        self.combo_result.setObjectName("combo_result")
+        self.combo_result.addItem("")
+        self.combo_result.addItem("")
+        self.horizontalLayout_4.addWidget(self.combo_result)
+        self.verticalLayout.addLayout(self.horizontalLayout_4)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.label_polygon = QtWidgets.QLabel(Dialog)
@@ -185,6 +243,9 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.radio_points.setText(_translate("Dialog", "Использовать точки"))
         self.radio_box.setText(_translate("Dialog", "Использовать бокс"))
+        self.label_result.setText(_translate("Dialog", "Результат"))
+        self.combo_result.setItemText(0, _translate("Dialog", "Маска"))
+        self.combo_result.setItemText(1, _translate("Dialog", "Рамка"))
         self.label_polygon.setText(_translate("Dialog", "Количество полигонов:"))
         self.label_count.setText(_translate("Dialog", "0"))
         self.label_ap_text.setText(_translate("Dialog", "Аппроксимация:"))

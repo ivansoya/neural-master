@@ -36,6 +36,7 @@ class UAnnotationMask(UAnnotationItem):
             (self.class_id, self.class_name, QColor(self.color))
         )
         polygon.set_mask(self)
+        polygon.set_draw_scale(self.draw_scale)
         polygon.turn_off_signal_holder()
         self.polygons.append(polygon)
 

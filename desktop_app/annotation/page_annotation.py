@@ -303,13 +303,13 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     @pyqtSlot(int)
     def handle_on_key_pressed(self, key_number: int):
-        if key_number == int(Qt.Key_1):
+        if key_number in [int(Qt.Key_V), int(Qt.Key_1)]:
             self.annotate_commander.change_work_mode.emit(EWorkMode.Viewer.value)
-        elif key_number == int(Qt.Key_2):
+        elif key_number in [int(Qt.Key_B), int(Qt.Key_2)]:
             self.annotate_commander.change_work_mode.emit(EWorkMode.BoxAnnotationMode.value)
-        elif key_number == int(Qt.Key_3):
+        elif key_number in [int(Qt.Key_C), int(Qt.Key_3)]:
             self.annotate_commander.change_work_mode.emit(EWorkMode.MaskAnnotationMode.value)
-        elif key_number == int(Qt.Key_4):
+        elif key_number in [int(Qt.Key_S), int(Qt.Key_4)]:
             self.annotate_commander.change_work_mode.emit(EWorkMode.SAM2.value)
         elif key_number == int(Qt.LeftArrow) or key_number == int(Qt.Key_A):
             self.thumbnail_carousel.select_thumbnail_by_direction("left")
@@ -399,7 +399,16 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.annotation_scene.center_on_selected()
 
     def set_label_work_mode(self, mode: int):
-        self.selected_label.setText(str(mode))
+        if mode == EWorkMode.Viewer.value:
+            self.selected_label.setText("Просмотр")
+        elif mode == EWorkMode.ForceDragMode.value:
+            self.selected_label.setText("Перетаскивание")
+        elif mode == EWorkMode.MaskAnnotationMode.value:
+            self.selected_label.setText("Сегментация")
+        elif mode == EWorkMode.BoxAnnotationMode.value:
+            self.selected_label.setText("Детекция")
+        elif mode == EWorkMode.SAM2.value:
+            self.selected_label.setText("SAM2")
 
     def toggle_roulette_visibility(self):
         if self.thumbnail_carousel.isVisible():

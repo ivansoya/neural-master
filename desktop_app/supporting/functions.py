@@ -82,6 +82,9 @@ def from_polygons_to_bbox(points: list[list[float]]) -> list[float]:
 
     return [x_min, y_min, width, height]
 
+def from_qt_points_to_flat(points: list[list[QPointF]]) -> list[list[float]]:
+    return [[coord for pt in list_point for coord in (pt.x(), pt.y())] for list_point in points]
+
 def get_points_from_flat_cords(cords: list[float]) -> list[QPointF]:
     return [
         QPointF(cords[i], cords[i + 1])

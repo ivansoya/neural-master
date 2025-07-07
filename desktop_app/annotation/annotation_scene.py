@@ -158,12 +158,8 @@ class UAnnotationGraphicsView(QGraphicsView):
             if not isinstance(item, FAnnotationData):
                 continue
             if item.get_annotation_type() is EAnnotationType.BoundingBox:
-                bbox = item.get_bbox()
                 ann_box = self.add_annotation_box(
-                    bbox[0],
-                    bbox[1],
-                    bbox[2],
-                    bbox[3],
+                    item.get_bbox(),
                     (item.get_class_id(), item.get_class_name(), QColor(item.get_color()))
                 )
                 load_annotations.append((len(load_annotations), ann_box))
@@ -275,9 +271,9 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.scene().addItem(polygon)
         return polygon
 
-    def add_annotation_box(self, x, y, width, height, class_data: tuple[int, str, QColor]) -> UAnnotationBox:
+    def add_annotation_box(self, cords: list[float], class_data: tuple[int, str, QColor]) -> UAnnotationBox:
         ann_box = UAnnotationBox(
-            [x, y, width, height],
+            cords,
             class_data,
             self.get_annotation_id(),
             self.scale_factor,
@@ -320,6 +316,7 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.annotation_items[index] = UAnnotationPolygon(
             mask_points,
             (box.get_class_id(), box.get_class_name(), box.get_color()),
+            self.get_annotation_id(),
             self.scale_factor,
             True,
             self.current_image
@@ -388,16 +385,12 @@ class UAnnotationGraphicsView(QGraphicsView):
             self.commander.added_new_annotation.emit(index, annotation_data)
 
     def add_annotation_by_data(self, data: FAnnotationData):
-        if isinstance(data, FDetectAnnotationData):
-            object_id, class_id, class_name, color, (x, y, width, height) = data.get_data()
+        if isinstance(data, FAnnotationData) and data.get_annotation_type() is EAnnotationType.BoundingBox:
             annotation_box = self.add_annotation_box(
-                x,
-                y,
-                width,
-                height,
-                (class_id, class_name, QColor(color))
+                data.get_bbox(),
+                (data.get_class_id(), data.get_class_name(), QColor(data.get_color())),
             )
-            #self._emit_commander_on_add(annotation_box)
+            #self.emit_commander_to_add(data)
         else:
             return
 
@@ -412,6 +405,9 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     def set_image_item(self, image):
         self.current_image = image
+
+    def emit_set_work_mode(self, mode: EWorkMode):
+        self.commander.change_work_mode.emit(mode.value)
 
     def set_work_mode(self, mode: int):
         new_work_mode = EWorkMode(mode)

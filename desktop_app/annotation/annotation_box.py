@@ -324,7 +324,7 @@ class UAnnotationBox(UAnnotationItem):
                 self.setRect(self.correct_rect(self.rect()))
 
             current_data = self.get_annotation_data()
-            if current_data != self.prev_data:
+            if not current_data.is_equal_data(self.prev_data):
                 self.emit_update_event(self, self.prev_data, current_data)
 
     def delete_item(self):

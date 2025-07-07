@@ -187,7 +187,7 @@ class FAnnotationData:
         return FAnnotationData(*self._copy_init_args())
 
     def __str__(self):
-        return f"Объект аннотации не инициализирован!"
+        return f"Структура данных аннотаций!"
 
     def serialize(self, class_id: int) -> str:
         return f"Объект аннотации не инициализирован!"
@@ -224,6 +224,16 @@ class FAnnotationData:
 
     def get_annotation_type(self) -> EAnnotationType:
         return self.type
+
+    def is_equal_data(self, other):
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+
+        return (
+            self.bbox == other.get_bbox() and
+            self.segmentation == other.get_segmentation() and
+            self.class_id == other.get_class_id()
+        )
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):

@@ -1,21 +1,24 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
 
 import cv2
 import numpy as np
 from PyQt5.QtCore import Qt, QPointF, QRectF, pyqtSlot
-from PyQt5.QtWidgets import QGraphicsEllipseItem, QGraphicsPolygonItem, QDialog, QGraphicsItem, QGraphicsRectItem
+from PyQt5.QtWidgets import QGraphicsEllipseItem, QGraphicsPolygonItem, QDialog, QGraphicsItem, QGraphicsRectItem, \
+    QGraphicsPixmapItem
 
 from SAM2.sam2_net import USam2Net
 from annotation.annotation_item import UAnnotationItem
 from annotation.annotation_mask import UAnnotationMask
+from annotation.annotation_polygon import UAnnotationPolygon
 from annotation.modes.abstract import UBaseAnnotationMode, EWorkMode
 from PyQt5.QtGui import QMouseEvent, QKeyEvent, QColor, QBrush, QPen, QPolygonF
 
 from design.sam2_window import Ui_Dialog
 
 from commander import UAnnotationSignalHolder
-from supporting.functions import get_clamped_pos
+from supporting.functions import get_clamped_pos, from_qt_points_to_flat, from_polygons_to_bbox
 from utility import FAnnotationData
 
 if TYPE_CHECKING:
@@ -24,6 +27,12 @@ if TYPE_CHECKING:
 class ESam2TypeAnnotation(Enum):
     Points = 1
     Box = 2
+
+@dataclass
+class FSavedSam2Parameters:
+    simplify_value: float
+    checked_points: bool
+    result_type_index: int
 
 class USam2Annotation(UBaseAnnotationMode):
     def __init__(self, sam2: USam2Net, scene: 'UAnnotationGraphicsView', commander: UAnnotationSignalHolder):
@@ -42,11 +51,14 @@ class USam2Annotation(UBaseAnnotationMode):
         self.prev_mode = EWorkMode.Viewer
 
         self.window: Optional[USam2ParametersWindow] = None
+        self.sam2_parameters = FSavedSam2Parameters(1.0, True, 0)
 
         self.box_start_pos: Optional[QPointF] = None
         self.box_move_pos: Optional[QPointF] = None
 
         self.box: Optional[QGraphicsRectItem] = None
+
+        self.ctrl_pressed = False
 
     def start_mode(self, prev_mode: EWorkMode):
         if prev_mode in [EWorkMode.SAM2, EWorkMode.ForceDragMode] or self.has_started:
@@ -58,7 +70,7 @@ class USam2Annotation(UBaseAnnotationMode):
             annotation.disable_selection()
 
         if not self.window:
-            self.window = USam2ParametersWindow(self.scene)
+            self.window = USam2ParametersWindow(self.sam2_parameters, self.scene)
             self.window.move(0, 0)
             self.window.show()
 
@@ -118,11 +130,7 @@ class USam2Annotation(UBaseAnnotationMode):
                 self.points.append(point)
                 self.scene.scene().addItem(point)
 
-            to_net: list[tuple[int, int, int]] = list()
-            for point, label in zip(self.points, self.labels):
-                to_net.append((int(point.x()), int(point.y()), 1 if label else 0))
-
-            point_lists = self.sam2.segment_with_points(matrix, to_net)
+            point_lists = self.sam2.segment_with_points(matrix, self._make_list_points_to_sam2())
             self._add_polygons_from_mask(point_lists, image, current_class[2] if current_class else QColor(Qt.lightGray))
             self.window.show_parameters()
         else:
@@ -179,27 +187,66 @@ class USam2Annotation(UBaseAnnotationMode):
             self._clear_scene()
             self.scene.set_work_mode(EWorkMode.Viewer.value)
             return True
+        elif key == Qt.Key_Control:
+            self.ctrl_pressed = True
+            return True
+        elif key == Qt.Key_Z and self.is_ctrl_pressed():
+            if len(self.points) == 0:
+                return True
+
+            point = self.points.pop()
+            if point.scene():
+                point.scene().removeItem(point)
+            self.labels.pop()
+
+            if len(self.points) == 0:
+                self._clear_points()
+                self._clear_polygons()
+                return True
+
+            image, (_, matrix), class_data = self.scene.get_image(), self.scene.get_selectable_matrix(), self.scene.get_current_class()
+            if matrix is not None and image is not None:
+                result_points = self.sam2.segment_with_points(matrix, self._make_list_points_to_sam2())
+                self._add_polygons_from_mask(result_points, image, class_data[2] if class_data else QColor(Qt.lightGray))
+            return True
+
         elif key == Qt.Key_Enter or key == Qt.Key_Return:
             class_data = self.scene.get_current_class()
 
             if len(self.polygons) == 0 or class_data is None:
                 return
 
-            if len(self.polygons) == 1:
-                polygon = self.scene.add_annotation_polygon(
-                    self.polygons[0].get_points(),
-                    class_data,
-                    True
-                )
-                self.scene.emit_commander_to_add(polygon.get_annotation_data())
-            else:
-                mask = UAnnotationMask()
-                for polygon in self.polygons:
-
+            if self.window and self.window.get_type_result() == "Маска":
+                if len(self.polygons) == 1:
+                    polygon = self.scene.add_annotation_polygon(
+                        self.polygons[0].get_points(),
+                        class_data,
+                        True
+                    )
+                    self.scene.emit_commander_to_add(polygon.get_annotation_data())
+                else:
+                    mask = self.scene.add_annotation_mask(
+                        [],
+                        class_data,
+                        self.scene.get_annotation_id()
+                    )
+                    for polygon in self.polygons:
+                        mask.create_polygon(polygon.get_points())
                     self.scene.emit_commander_to_add(mask.get_annotation_data())
+            else:
+                qt_points = [polygon.get_points() for polygon in self.polygons]
+                result_box_cords = from_polygons_to_bbox(from_qt_points_to_flat(qt_points))
+
+                box = self.scene.add_annotation_box(
+                    result_box_cords,
+                    class_data,
+                )
+                self.scene.emit_commander_to_add(box.get_annotation_data())
+                box.enable_selection()
 
             self._clear_polygons()
             self._clear_points()
+            self.scene.emit_set_work_mode(EWorkMode.Viewer)
             if self.window:
                 self.window.clear_window()
             return True
@@ -224,6 +271,9 @@ class USam2Annotation(UBaseAnnotationMode):
             point.set_size(self.point_size, scale)
         for polygon in self.polygons:
             polygon.set_size(1, scale)
+
+    def is_ctrl_pressed(self):
+        return self.ctrl_pressed
 
     def _clear_items(self, items: list):
         for item in items:
@@ -275,34 +325,63 @@ class USam2Annotation(UBaseAnnotationMode):
         for polygon in self.polygons:
             polygon.simplify(epsilon)
 
-    def _add_polygons_from_mask(self, point_lists, image, color: QColor):
+    def _add_polygons_from_mask(self, point_lists, image: QGraphicsPixmapItem, color: QColor):
         self._clear_polygons()
         for point_list in point_lists:
             polygon = USam2Polygon(point_list, self.scene.scale_factor, color, image)
+            if self.window:
+                polygon.simplify(self.window.get_simplify_epsilon())
             self.polygons.append(polygon)
             self.scene.scene().addItem(polygon)
         self.scene.update()
         self.window.set_polygons_count(len(point_lists))
 
+    def _make_list_points_to_sam2(self):
+        to_net: list[tuple[int, int, int]] = list()
+        for point, label in zip(self.points, self.labels):
+            to_net.append((int(point.x()), int(point.y()), 1 if label else 0))
+
+        return to_net
+
+
 class USam2ParametersWindow(QDialog, Ui_Dialog):
-    def __init__(self, parent=None):
+    def __init__(self, parameters: FSavedSam2Parameters, parent=None):
         super().__init__(parent)
         self.setupUi(self)
 
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.SubWindow)
 
         self.offset = None
+        self.parameters = parameters
 
         self.slider_approximation.setRange(10, 50)
         self.slider_approximation.setSingleStep(1)
-        self.slider_approximation.setValue(10)
+        self.slider_approximation.setValue(int(self.parameters.simplify_value * 10))
+        self.label_approximation.setText(str(self.parameters.simplify_value))
+
+        self.combo_result.setCurrentIndex(self.parameters.result_type_index)
+        if self.parameters.checked_points:
+            self.radio_points.setChecked(True)
+        else:
+            self.radio_box.setChecked(True)
 
         self._hide_show(True)
 
         self.slider_approximation.valueChanged.connect(self.handle_slider_value_changed)
 
+        self.radio_points.toggled.connect(self._set_checked_parameter)
+        self.radio_box.toggled.connect(self._set_checked_parameter)
+
+        self.combo_result.currentIndexChanged.connect(self._handle_on_combo_selected)
+
     def show_parameters(self):
         self._hide_show(False)
+
+    def get_simplify_epsilon(self):
+        return self.slider_approximation.value() / 10.0
+
+    def get_type_result(self):
+        return self.combo_result.currentText()
 
     def clear_window(self):
         self.label_count.setText(str(0))
@@ -319,6 +398,7 @@ class USam2ParametersWindow(QDialog, Ui_Dialog):
 
     @pyqtSlot(int)
     def handle_slider_value_changed(self, value: int):
+        self.parameters.simplify_value = value / 10.0
         self.label_approximation.setText(str(value / 10.0))
 
     def mousePressEvent(self, event):
@@ -353,6 +433,14 @@ class USam2ParametersWindow(QDialog, Ui_Dialog):
             self.button_make_polygons.show()
             self.label_ap_text.show()
             self.label_polygon.show()
+
+    @pyqtSlot()
+    def _set_checked_parameter(self):
+        self.parameters.checked_points = True if self.radio_points.isChecked() else False
+
+    @pyqtSlot()
+    def _handle_on_combo_selected(self):
+        self.parameters.result_type_index = self.combo_result.currentIndex()
 
 class USam2Point(QGraphicsEllipseItem):
     def __init__(self, color: QColor, size: float, scale: float, position: QPointF, parent=None):
@@ -389,7 +477,7 @@ class USam2Polygon(QGraphicsPolygonItem):
         self.color_background = QColor(self.color)
         self.color_background.setAlpha(100)
 
-        self.draw_scale = set_to_draw_scale(scale)
+        self.draw_scale = scale
         self.size = 2
 
         self.setBrush(QBrush(self.color_background))
