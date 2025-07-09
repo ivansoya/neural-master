@@ -366,7 +366,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                     175,
                     files[index],
                     None,
-                    []
+                    [],
+                    None
                 )
             elif isinstance(file, FAnnotationItem):
                 ann_data = file.get_annotation_data()
@@ -375,7 +376,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                     175,
                     file.get_image_path(),
                     file.get_dataset_name(),
-                    [annotation.copy() for annotation in ann_data]
+                    [annotation.copy() for annotation in ann_data],
+                    file.get_image_id()
                 )
                 for annotation in ann_data:
                     self.list_total_annotations.increase_class(

@@ -60,7 +60,7 @@ class UListAnnotationWidget(QListWidget):
             self.item_selected.emit(self.widgets.index(widget))
 
     def add_item(self, annotation_data: FAnnotationData):
-        item = UListAnnotationItem(self.count() + 1, annotation_data)
+        item = UListAnnotationItem(annotation_data)
         list_item = QListWidgetItem()
         list_item.setSizeHint(item.sizeHint())
         self.addItem(list_item)
@@ -98,22 +98,13 @@ class UListAnnotationWidget(QListWidget):
                 break
 
         del self.widgets[index]
-        self._recalculate_indexes()
-
-    def _recalculate_indexes(self):
-        for i in range(self.count()):
-            item = self.item(i)
-            widget = self.itemWidget(item)
-            if isinstance(widget, UListAnnotationItem):
-                widget.set_index(i + 1)
-
 
 class UListAnnotationItem(QWidget):
-    def __init__(self, index: int, annotation_data: FAnnotationData):
+    def __init__(self, annotation_data: FAnnotationData):
         super().__init__()
-        self.index = index
+        self.index = annotation_data.get_annotation_id()
 
-        self.index_label = QLabel(str(index))
+        self.index_label = QLabel(str(self.index))
         index_font = QFont()
         index_font.setPointSize(10)
         self.index_label.setFont(index_font)
@@ -150,15 +141,10 @@ class UListAnnotationItem(QWidget):
         else:
             self.type_label.setText('неизвестно')
 
+        self.index = annotation.get_annotation_id()
+        self.index_label.setText(str(self.index))
         self.name_label.setText(annotation.get_class_name())
         self.color_label.update_color(QColor(annotation.get_color()))
-
-    def set_index(self, index: int):
-        self.index = index
-        self.index_label.setText(str(self.index))
-
-    def get_index(self):
-        return self.index
 
 
 class UListClassCounts(QListWidget):

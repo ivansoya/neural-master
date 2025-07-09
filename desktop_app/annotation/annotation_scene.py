@@ -160,7 +160,8 @@ class UAnnotationGraphicsView(QGraphicsView):
             if item.get_annotation_type() is EAnnotationType.BoundingBox:
                 ann_box = self.add_annotation_box(
                     item.get_bbox(),
-                    (item.get_class_id(), item.get_class_name(), QColor(item.get_color()))
+                    (item.get_class_id(), item.get_class_name(), QColor(item.get_color())),
+                    item.get_annotation_id()
                 )
                 load_annotations.append((len(load_annotations), ann_box))
             elif item.get_annotation_type() is EAnnotationType.Segmentation:
@@ -171,7 +172,8 @@ class UAnnotationGraphicsView(QGraphicsView):
                 ann_polygon = self.add_annotation_polygon(
                     qt_points,
                     (item.get_class_id(), item.get_class_name(), QColor(item.get_color())),
-                    True
+                    True,
+                    item.get_annotation_id()
                 )
                 load_annotations.append((len(load_annotations), ann_polygon))
             elif item.get_annotation_type() is EAnnotationType.Mask:
@@ -182,7 +184,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                 add_mask = self.add_annotation_mask(
                     [],
                     (item.get_class_id(), item.get_class_name(), QColor(item.get_color())),
-                    self.get_annotation_id()
+                    item.get_annotation_id()
                 )
                 for poly_points in points:
                     add_mask.create_polygon(get_points_from_flat_cords(poly_points))
@@ -244,12 +246,17 @@ class UAnnotationGraphicsView(QGraphicsView):
                 item.set_draw_scale(self.scale_factor)
         self.annotate_mods[self.current_work_mode].on_wheel_mouse(self.scale_factor)
 
-    def add_annotation_mask(self, polygons: list[UAnnotationPolygon], class_data: tuple[int, str, QColor], annotation_id: int):
+    def add_annotation_mask(
+            self,
+            polygons: list[UAnnotationPolygon],
+            class_data: tuple[int, str, QColor],
+            annotation_id: int | None
+    ):
         ann_mask = UAnnotationMask(
             polygons,
             class_data,
             self.scale_factor,
-            self.get_annotation_id(),
+            self.get_annotation_id() if annotation_id is None else annotation_id,
             self.current_image
         )
 
@@ -257,11 +264,17 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.scene().addItem(ann_mask)
         return ann_mask
 
-    def add_annotation_polygon(self, points_list: list[QPointF], class_data: tuple[int, str, QColor], closed: bool = False):
+    def add_annotation_polygon(
+            self,
+            points_list: list[QPointF],
+            class_data: tuple[int, str, QColor],
+            closed: bool = False,
+            ann_id: int | None = None
+    ):
         polygon = UAnnotationPolygon(
             points_list[:],
             class_data,
-            self.get_annotation_id(),
+            self.get_annotation_id() if ann_id is None else ann_id,
             self.scale_factor,
             closed,
             self.current_image
@@ -271,11 +284,11 @@ class UAnnotationGraphicsView(QGraphicsView):
         self.scene().addItem(polygon)
         return polygon
 
-    def add_annotation_box(self, cords: list[float], class_data: tuple[int, str, QColor]) -> UAnnotationBox:
+    def add_annotation_box(self, cords: list[float], class_data: tuple[int, str, QColor], ann_id: int | None = None) -> UAnnotationBox:
         ann_box = UAnnotationBox(
             cords,
             class_data,
-            self.get_annotation_id(),
+            self.get_annotation_id() if ann_id is None else ann_id,
             self.scale_factor,
             self.current_image
         )

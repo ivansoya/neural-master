@@ -47,7 +47,8 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             height: int,
             image_path: str,
             dataset: str | None,
-            annotation_data: list[FAnnotationData]
+            annotation_data: list[FAnnotationData],
+            image_id: int | None = None
     ):
         super().__init__()
 
@@ -67,6 +68,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
         self.annotation_status : EAnnotationStatus = EAnnotationStatus.NoAnnotation
         self.index = -1
         self.image_path = image_path
+        self.image_id: int | None = image_id
 
         self.board_width = 4
         self.annotation_width = 1
@@ -76,6 +78,9 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
 
     def get_annotation_data(self):
         return self.annotation_data_list
+
+    def get_image_id(self):
+        return self.image_id
 
     def add_annotation(self, data: FAnnotationData):
         self.annotation_data_list.append(data)
