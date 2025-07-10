@@ -213,6 +213,9 @@ class FAnnotationData:
     def get_annotation_id(self):
         return self.annotation_id
 
+    def set_annotation_id(self, annotation_id: int):
+        self.annotation_id = annotation_id
+
     def get_class_id(self):
         return self.class_id
 
@@ -293,8 +296,7 @@ class FAnnotationItem:
             return self is other
         else:
             return (self.get_image_id() == other.get_image_id() and
-                    self.image_path == other.get_image_path() and
-                    self.dataset == other.get_dataset_name())
+                    self.image_path == other.get_image_path())
 
     def __ne__(self, other):
         return not self == other

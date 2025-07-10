@@ -1,3 +1,4 @@
+from email.policy import default
 from typing import Optional
 
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRectF, QThread, QRect, pyqtSlot, QPointF
@@ -6,6 +7,7 @@ from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QWidget, QVBoxLayout
 )
+from matplotlib.image import thumbnail
 
 from annotation.annotation_box import UAnnotationBox
 from commander import UAnnotationSignalHolder
@@ -98,7 +100,7 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
             return
         self.annotation_data_list.pop(index)
         if len(self.annotation_data_list) <= 0 and self.annotation_status.value != EAnnotationStatus.MarkedDrop.value:
-             self.set_annotated_status(EAnnotationStatus.NoAnnotation)
+             self.set_annotated_status(EAnnotationStatus.MarkedDrop)
         self.update()
 
     def update_annotation(self, index: int, data: FAnnotationData):
@@ -332,8 +334,44 @@ class UThumbnailCarousel(QGraphicsView):
         self.dropped_thumbnails_indexes.clear()
 
         self.current_selected = None
-        self.x_position = 0
+        self.x_position = self.thumbnail_spacing
         self.y_position = 0
+
+    def clear_thumbnails_to_last_annotated(self):
+        last_index = max([max(self.annotated_thumbnails_indexes, default=0), max(self.dropped_thumbnails_indexes, default=0)], default=0)
+        delete_list: list[UAnnotationThumbnail] = []
+        for index in range(last_index + 1):
+            if not 0 <= index < len(self.thumbnails):
+                break
+            removing_thumbnail = self.thumbnails[index]
+            delete_list.append(removing_thumbnail)
+            if removing_thumbnail and removing_thumbnail.scene():
+                removing_thumbnail.scene().removeItem(removing_thumbnail)
+
+        for thumb in delete_list:
+            self.thumbnails.remove(thumb)
+
+        self.x_position = self.thumbnail_spacing
+        self.y_position = 0
+
+        for index in range(len(self.thumbnails)):
+            updated_thumb = self.thumbnails[index]
+            updated_thumb.setPos(self.x_position, self.y_position)
+
+            self.x_position += updated_thumb.width() + self.thumbnail_spacing
+
+            updated_thumb.set_index(index)
+
+        self.last_displayed_images.clear()
+        self.annotated_thumbnails_indexes.clear()
+        self.dropped_thumbnails_indexes.clear()
+
+        self.update()
+
+        self.current_selected = self.thumbnails[0] if len(self.thumbnails) > 0 else None
+
+    def get_thumbnails_count(self):
+        return len(self.thumbnails)
 
     # direction: left или right
     def select_thumbnail_by_direction(self, direction: str):
@@ -498,16 +536,16 @@ class UThumbnailCarousel(QGraphicsView):
                 if thumb.get_annotated_status().value != status_check.value:
                     continue
 
-                dataset = thumb.get_dataset()
-                if target_list is list_annotations_to_delete and dataset is None:
+                if target_list is list_annotations_to_delete and thumb.get_dataset() is None:
                     continue
 
                 ann_item = FAnnotationItem(
                     list(thumb.get_annotation_data()),
                     thumb.get_image_path(),
-                    dataset
+                    thumb.get_image_id(),
+                    thumb.get_dataset(),
                 )
-                if target_list is list_annotation_items and dataset is None:
+                if target_list is list_annotation_items and thumb.get_dataset() is None:
                     list_annotation_none_dataset.append(ann_item)
                 else:
                     target_list.append(ann_item)

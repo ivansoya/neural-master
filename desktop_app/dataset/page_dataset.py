@@ -72,27 +72,8 @@ class UPageDataset(QWidget, Ui_page_dataset):
             self.commander.project_load_complete.connect(self.update_dataset_page)
             self.commander.project_updated_datasets.connect(self.update_dataset_page)
 
-        # Объект выполнителя
-        self.task_runner: Optional[UTaskRunner] = None
-        self.task_tread: Optional[QThread] = None
-
-    def start_task_thread(self, tasks: list[tuple[callable, tuple, dict]]):
-        self.task_runner = UTaskRunner(tasks)
-
-        self.task_tread = QThread()
-        self.task_runner.moveToThread(self.task_tread)
-
-        self.task_tread.started.connect(self.task_runner.run)
-        #self.task_tread.finished.connect(self.task_tread.deleteLater)
-
-        self.task_runner.finished.connect(self.task_tread.quit)
-        self.task_runner.finished.connect(self.on_task_runner_finished)
-
-        self.task_tread.start()
-
     @pyqtSlot()
     def on_task_runner_finished(self):
-        self.task_runner = None
         self.commander.project_updated_datasets.emit()
 
     @pyqtSlot()
@@ -174,16 +155,14 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
     @pyqtSlot()
     def handle_on_click_button_delete_annotations(self):
-        if self.task_runner:
-            return
-
         selected_annotations = self.view_gallery.get_selected_annotation()
         if len(selected_annotations) > 0 and UMessageBox.ask_confirmation("Удалить аннотации из проекта?"):
-            task = [
+            tasks = [
                 (self.project.remove_list_of_annotations, (selected_annotations,), {}),
                 (self.project.save, (), {})
             ]
-            self.start_task_thread(task)
+            if self.project.start_task_thread(tasks, [self.on_task_runner_finished]) is False:
+                UMessageBox.show_error("Поток сейчас занят, попробуйте позже!")
 
     @pyqtSlot()
     def handle_on_type_changed(self):
@@ -202,7 +181,8 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 (self.project.save, (), {})
             ]
 
-            self.start_task_thread(tasks)
+            if self.project.start_task_thread(tasks, [self.on_task_runner_finished]) is False:
+                UMessageBox.show_error("Поток сейчас занят, попробуйте позже!")
         else:
             return
 

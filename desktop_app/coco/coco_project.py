@@ -3,7 +3,7 @@ import random
 import shutil
 from typing import Optional
 
-from PyQt5.QtCore import QThread, QObject
+from PyQt5.QtCore import QThread, QObject, pyqtSlot
 from PyQt5.QtGui import QColor
 
 from SAM2.sam2_net import USam2Net
@@ -11,6 +11,7 @@ from coco.coco_json import load_coco_json, make_coco_json, save_coco_json
 from coco.coco_utility import UProjectInfo, UAnnotationClass
 from neural_model import URemoteNeuralNet, UBaseNeuralNet, ULocalDetectYOLO
 from supporting.functions import rstrip, get_distinct_color
+from supporting.task_runner import UTaskRunner
 from utility import FAnnotationItem, FAnnotationData, UMessageBox
 
 class UCocoProject:
@@ -18,8 +19,6 @@ class UCocoProject:
 
         self.annotations: dict[str, list[FAnnotationItem]] = {}
         self.annotation_classes: dict[int, UAnnotationClass] = {}
-
-        self.last_image_id, self.last_annotation_id, self.last_class_id = 1, 1, 1
 
         self.project_info: Optional[UProjectInfo] = None
         self.project_path: Optional[str] = None
@@ -38,6 +37,10 @@ class UCocoProject:
         self.load_sam2('SAM2/sam2.1_b.pt')
 
         self.image_extensions = [".jpg", ".jpeg", ".png"]
+
+        # Дополнительный поток обработки
+        self.task_runner: Optional[UTaskRunner] = None
+        self.task_thread: Optional[QThread] = None
 
     def get_annotations(self):
         return self.annotations
@@ -159,7 +162,7 @@ class UCocoProject:
 
         save_coco_json(json_file, coco)
 
-    def update_annotations(self, update_annotations: list[FAnnotationItem], new_dataset: str = "noname"):
+    def update_annotations(self, update_annotations: list[FAnnotationItem], new_dataset: str = "noname_dataset"):
         for annotation in update_annotations:
             dataset = annotation.get_dataset_name()
             if dataset is None:
@@ -171,7 +174,12 @@ class UCocoProject:
                 if dataset not in self.annotations:
                     self.annotations[dataset] = list()
 
-                found_annotation = next((ann for ann in self.annotations[dataset] if ann == annotation), None)
+                found_annotation = None
+                for ann in self.annotations[dataset]:
+                    if ann == annotation:
+                        found_annotation = ann
+                        break
+
                 if found_annotation is None:
                     self.add_annotation(annotation, dataset)
                 else:
@@ -191,7 +199,7 @@ class UCocoProject:
 
         annotation.set_image_id(self.get_image_id_with_increment())
         for ann_object in annotation.get_annotation_data():
-            ann_object.set_class_id(self.get_annotation_id_with_increment())
+            ann_object.set_annotation_id(self.get_annotation_id_with_increment())
 
         self.annotations[dataset].append(annotation)
 
@@ -279,3 +287,31 @@ class UCocoProject:
             self.sam2_thread.start()
         except Exception as error:
             return str(error)
+
+    """
+    ----------------------------
+    """
+
+    def start_task_thread(self, tasks: list[tuple[callable, tuple, dict]], on_finished_list: list[callable]):
+        if self.task_thread and self.task_thread.isRunning():
+            return False
+
+        self.task_runner = UTaskRunner(tasks)
+
+        self.task_thread = QThread()
+        self.task_runner.moveToThread(self.task_thread)
+
+        self.task_thread.started.connect(self.task_runner.run)
+
+        self.task_runner.finished.connect(self.task_thread.quit)
+        self.task_runner.finished.connect(self.on_task_runner_finished)
+
+        for func in on_finished_list:
+            self.task_runner.finished.connect(func)
+
+        self.task_thread.start()
+
+        return True
+
+    def on_task_runner_finished(self):
+        self.task_runner = None

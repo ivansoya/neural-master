@@ -115,7 +115,7 @@ class UAnnotationBox(UAnnotationItem):
         try:
             return FAnnotationData(
                 self.annotation_id,
-                [self.x(), self.y(), self.width(), self.height()],
+                self.get_bbox(),
                 [],
                 int(self.class_id),
                 str(self.class_name),
@@ -126,6 +126,9 @@ class UAnnotationBox(UAnnotationItem):
         except Exception as error:
             print(str(error))
             return None
+
+    def get_bbox(self) -> list[float]:
+        return [self.x(), self.y(), self.width(), self.height()]
 
     def hoverMoveEvent(self, event):
         # Здесь все это нужно только для смены курсоров

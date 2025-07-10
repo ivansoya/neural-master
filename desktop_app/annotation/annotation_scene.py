@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QColor, QPainter, QTransform, QFont, QPixmap, QIcon, QImage
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot, QPointF
 from cv2 import Mat
-from torch.onnx.symbolic_opset9 import is_floating_point
 
 from SAM2.sam2_net import USam2Net
 from annotation.annotation_box import UAnnotationBox

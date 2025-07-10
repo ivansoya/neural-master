@@ -178,7 +178,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.label_count_not_annotated.setText(str(self.current_not_annotated_count))
         self.label_count_dropped.setText(str(self.current_dropped_count))
 
-        self.annotation_scene.set_annotation_id(self.project.get_annotation_id_with_increment())
+        self.annotation_scene.set_annotation_id(self.project.get_annotation_id())
         self.load_thumbnails(files)
 
         self.thumbnail_carousel.update()
@@ -203,26 +203,31 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 dataset_name = dialog.lineedit_dataset_name.text()
                 for ann_item in list_nones:
                     ann_item.set_dataset_name(dataset_name)
+                    ann_item.set_image_id(self.project.get_image_id_with_increment())
                 list_annotations.extend(list_nones)
 
         self.overlay = UOverlayLoader(self.display_scene)
-        self.merge_thread = UMergeAnnotationThread(self.project, list_annotations, list_to_delete, DATASETS)
-        self.merge_thread.signal_on_loaded_image.connect(self.overlay.update_progress)
-        self.merge_thread.signal_on_ended.connect(self.handle_on_ended_adding_dataset)
-        self.merge_thread.start()
+
+        tasks = [
+            (self.project.update_annotations, (list_annotations, "noname_dataset", ), {}),
+            (self.project.remove_list_of_annotations, (list_to_delete,), {}),
+            (self.project.save, (), {})
+        ]
+
+        self.project.start_task_thread(tasks, [self.handle_on_ended_adding_dataset])
 
         self.commander.set_block(False)
 
-    @pyqtSlot(str)
-    def handle_on_ended_adding_dataset(self, dataset_name: str):
-        UMessageBox.show_ok("Добавлены аннотации в проект!")
+    @pyqtSlot()
+    def handle_on_ended_adding_dataset(self):
+        UMessageBox.show_ok("Изменение завершено!")
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
-        self.project.save()
-        self.thumbnail_carousel.clear_thumbnails()
+        self.thumbnail_carousel.clear_thumbnails_to_last_annotated()
         self.annotation_scene.clear()
         if self.commander:
-            self.commander.go_to_page_datasets.emit()
             self.commander.project_updated_datasets.emit()
+            if self.thumbnail_carousel.get_thumbnails_count() == 0:
+                self.commander.go_to_page_datasets.emit()
 
     @pyqtSlot(list)
     def handle_on_screen_loaded_annotations(self, annotations: list[tuple[int, UAnnotationItem]]):
@@ -395,6 +400,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 index + 1,
                 len(files)
             )
+        self.thumbnail_carousel.update()
 
         UMessageBox.show_ok("Изображения загружены!")
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)

@@ -157,7 +157,7 @@ class UAnnotationMask(UAnnotationItem):
         parent_bounds = self.parentItem().boundingRect() if self.parentItem() else QRectF()
         return FAnnotationData(
             self.annotation_id,
-            [box.x(), box.y(), box.width(), box.height()],
+            self.get_bbox(),
             self.get_segmentation(),
             self.class_id,
             self.class_name,
@@ -165,6 +165,12 @@ class UAnnotationMask(UAnnotationItem):
             parent_bounds.width(),
             parent_bounds.height(),
         )
+
+    def get_bbox(self) -> list[float]:
+        return [self.pos().x() + self.rect().topLeft().x(),
+                self.pos().y() + self.rect().topLeft().y(),
+                self.rect().width(),
+                self.rect().height()]
 
     def paint(self, painter, option, widget = ...):
         if len(self.polygons) == 0:

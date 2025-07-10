@@ -84,7 +84,7 @@ class UAnnotationItem(QGraphicsItem):
         pass
 
     @abstractmethod
-    def get_bbox(self) -> tuple[float, float, float, float]:
+    def get_bbox(self) -> list[float]:
         pass
 
     @abstractmethod

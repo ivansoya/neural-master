@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, QRectF, QRect, QObject, pyqtSl
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPixmap, QColor, QImage, QPolygonF
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QWidget, QGraphicsPixmapItem, QGraphicsProxyWidget, \
     QGraphicsObject
+from networkx.algorithms.bipartite.basic import color
 
 from supporting.functions import get_points_from_flat_cords
 from utility import FAnnotationItem, EAnnotationType, FAnnotationData
@@ -94,6 +95,27 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
                 painter.setPen(pen)
                 qt_points = get_points_from_flat_cords(point_list[0])
                 painter.drawPolygon(QPolygonF(qt_points))
+
+            elif annotation.get_annotation_type() is EAnnotationType.Mask:
+                box = annotation.get_bbox()
+                point_list = annotation.get_segmentation()
+                if len(point_list) == 0:
+                    continue
+
+                painter.setPen(QPen(Qt.NoPen))
+                color_background = QColor(annotation.get_color())
+                color_background.setAlpha(155)
+                painter.setBrush(QBrush(color_background))
+                for list_point in point_list:
+                    qt_points = get_points_from_flat_cords(list_point)
+                    painter.drawPolygon(QPolygonF(qt_points))
+
+                pen = QPen(annotation.get_color())
+                pen.setWidth(int(self.board_width * (image.width() // self.size)))
+                painter.setPen(pen)
+                painter.setBrush(Qt.NoBrush)
+
+                painter.drawRect(QRectF(box[0], box[1], box[2], box[3]))
 
         painter.end()
 
