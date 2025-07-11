@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>dialog_add_class</class>
+ <widget class="QDialog" name="dialog_add_class">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>253</width>
+    <height>201</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Добавление нового класса</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QDialog {
+	background-color: rgba(50, 50, 50, 200);
+	border-radius: 10px;
+	color: white;
+	font-family: Arial;
+}
+
+QLineEdit {
+    background-color: #3c3f41;
+    color: white;
+    border: 1px solid white;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QLabel {
+	color: white;
+	font-family: Arial;
+	font-size: 12px;
+	padding: 2px 10px;
+}
+
+QPushButton {
+	background-color: #00cc66;
+    border: 2px solid #00ff88;
+	border-radius: 4px;
+	color: white;
+	font-family: Arial;
+	padding: 6px 12px;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #218838;
+	border: 2px solid #00cc66;
+}
+
+QPushButton:pressed {
+    background-color: #1e7e34;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Название класса</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLineEdit" name="lineedit_class_name"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Категория</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLineEdit" name="lineedit_supercategory"/>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="button_choose_color">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+	background-color: #00cc66;
+    border: 2px solid #00ff88;
+	border-radius: 4px;
+	color: white;
+	font-family: Arial;
+	padding: 3px 6px;
+	font-size: 14px;
+}
+
+QPushButton:hover {
+    background-color: #218838;
+	border: 2px solid #00cc66;
+}
+
+QPushButton:pressed {
+    background-color: #1e7e34;
+}</string>
+       </property>
+       <property name="text">
+        <string>Выбрать цвет</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_class_color">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>40</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">    border: 2px solid #00ff88;
+	border-radius: 6px;
+	font-family: Arial
+</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPushButton" name="button_add_class">
+     <property name="styleSheet">
+      <string notr="true">font-size: 16px;</string>
+     </property>
+     <property name="text">
+      <string>Подтвердить</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

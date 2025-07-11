@@ -79,21 +79,6 @@ QPushButton:pressed {
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <widget class="QLineEdit" name="lineedit_enter_class">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="placeholderText">
-              <string>Введите название нового класса</string>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="button_add_class">
              <property name="font">
               <font>
@@ -192,6 +177,11 @@ QPushButton:pressed {
  </widget>
  <customwidgets>
   <customwidget>
+   <class>UClassSelectorList</class>
+   <extends>QListWidget</extends>
+   <header location="global">annotation.annotation_scene</header>
+  </customwidget>
+  <customwidget>
    <class>EnumComboBox</class>
    <extends>QComboBox</extends>
    <header location="global">dataset.dataset_widgets</header>
@@ -201,11 +191,6 @@ QPushButton:pressed {
    <extends>QWidget</extends>
    <header location="global">stats.class_chart</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>UClassSelectorList</class>
-   <extends>QListWidget</extends>
-   <header location="global">annotation.annotable</header>
   </customwidget>
  </customwidgets>
  <resources/>

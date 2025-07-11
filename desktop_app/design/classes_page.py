@@ -10,8 +10,6 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from annotation.annotation_scene import UClassSelectorList, UClassSelectorItem
-
 
 class Ui_classes_page_design(object):
     def setupUi(self, classes_page_design):
@@ -61,13 +59,6 @@ class Ui_classes_page_design(object):
         self.groupBox.setObjectName("groupBox")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.groupBox)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.lineedit_enter_class = QtWidgets.QLineEdit(self.groupBox)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.lineedit_enter_class.setFont(font)
-        self.lineedit_enter_class.setText("")
-        self.lineedit_enter_class.setObjectName("lineedit_enter_class")
-        self.verticalLayout_3.addWidget(self.lineedit_enter_class)
         self.button_add_class = QtWidgets.QPushButton(self.groupBox)
         font = QtGui.QFont()
         font.setPointSize(11)
@@ -119,11 +110,10 @@ class Ui_classes_page_design(object):
         classes_page_design.setWindowTitle(_translate("classes_page_design", "Форма для аннотации"))
         self.groupBox_2.setTitle(_translate("classes_page_design", "Список классов"))
         self.groupBox.setTitle(_translate("classes_page_design", "Добавление класса"))
-        self.lineedit_enter_class.setPlaceholderText(_translate("classes_page_design", "Введите название нового класса"))
         self.button_add_class.setText(_translate("classes_page_design", "Добавить класс"))
         self.groupBox_3.setTitle(_translate("classes_page_design", "Отображение статистики"))
         self.button_show_all.setText(_translate("classes_page_design", "Вывести все"))
-
+from annotation.annotation_scene import UClassSelectorList
 from dataset.dataset_widgets import EnumComboBox
 from stats.class_chart import UWidgetChart
 

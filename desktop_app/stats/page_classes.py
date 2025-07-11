@@ -1,12 +1,13 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QAbstractItemView, QMessageBox
+from PyQt5.QtWidgets import QWidget, QAbstractItemView, QMessageBox, QDialog
 
 from coco.coco_project import UCocoProject
 from stats.class_chart import FCountColor
 from commander import UGlobalSignalHolder
 from design.classes_page import Ui_classes_page_design
 from project import UTrainProject
+from stats.window_add_class import UWindowClass, EAddClassStrings
 from supporting.functions import get_distinct_color
 from utility import UMessageBox, EAnnotationType, FAnnotationClasses
 
@@ -25,9 +26,10 @@ class UPageClasses(QWidget, Ui_classes_page_design):
 
         self.combo_type.currentIndexChanged.connect(self.handle_on_type_changed)
         self.combo_type.set_members({
-            "Все аннотации": [EAnnotationType.BoundingBox, EAnnotationType.Segmentation],
+            "Все аннотации": [EAnnotationType.BoundingBox, EAnnotationType.Segmentation, EAnnotationType.Mask],
             "Ограничительные рамки": [EAnnotationType.BoundingBox],
-            "Маски": [EAnnotationType.Segmentation],
+            "Полигоны": [EAnnotationType.Segmentation],
+            "Маски": [EAnnotationType.Mask],
         })
         self.combo_type.setCurrentIndex(0)
 
@@ -37,19 +39,34 @@ class UPageClasses(QWidget, Ui_classes_page_design):
             self.commander.project_updated_datasets.connect(self.update_chart_statistics)
 
     def add_class_to_project(self):
-        class_name = self.lineedit_enter_class.text()
-        if class_name and len(class_name) >= 3:
-            self.project.add_class(
-                class_name,
-                "attachment",
-                None
-            )
+        if self.project.task_thread and self.project.task_thread.isRunning():
+            UMessageBox.show_error("Не все рабочие задачи завершились, дождитесь их окончания!")
+            return
 
-            self.commander.classes_updated.emit()
-            self.update_classes()
-            self.update_chart_statistics()
-            self.project.save()
-            UMessageBox.show_ok(f"Добавлен новый класс {class_name} в проект!")
+        window_class = UWindowClass(self.project.get_current_class_id() + 1)
+        self.commander.set_block(True)
+        if window_class.exec_() == QDialog.Accepted:
+            result = window_class.get_result()
+
+            tasks = [
+                (
+                    self.project.add_class,
+                    (result[EAddClassStrings.CLASS_NAME], result[EAddClassStrings.SUPERCATEGORY], result[EAddClassStrings.COLOR],),
+                    {}
+                ),
+                (self.project.save, (), {})
+            ]
+
+            self.project.start_task_thread(tasks, [self.on_added_finished])
+
+        self.commander.set_block(False)
+
+    @pyqtSlot()
+    def on_added_finished(self):
+        self.commander.classes_updated.emit()
+        self.update_classes()
+        self.update_chart_statistics()
+        UMessageBox.show_ok(f"Добавлен новый класс в проект!")
 
     def update_classes(self):
         self.list_classes.clear()

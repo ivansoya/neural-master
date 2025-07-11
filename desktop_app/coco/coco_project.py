@@ -25,6 +25,7 @@ class UCocoProject:
 
         self.current_image_id = 1
         self.current_annotation_id = 1
+        self.current_class_id = 1
 
         # Поток обработки нейросети
         self.model_thread: Optional[QThread] = None
@@ -47,6 +48,9 @@ class UCocoProject:
 
     def get_classes(self):
         return self.annotation_classes
+
+    def get_current_class_id(self):
+        return self.current_class_id
 
     def get_project_name(self):
         return self.project_info.name if self.project_info is not None else "noname"
@@ -73,12 +77,16 @@ class UCocoProject:
         info, licenses, annotations, images, categories = result
         self.project_path = rstrip(os.path.dirname(json_file))
 
+        list_id_class: list[int] = []
         for class_item in categories:
             self.annotation_classes[class_item['id']] = UAnnotationClass(
                 class_item['name'],
                 QColor(class_item['color']),
                 class_item['supercategory']
             )
+            list_id_class.append(class_item['id'])
+
+        self.current_class_id = max(list_id_class, default=1)
 
         dict_annotations: dict[int, list[dict]] = {}
         for annotation in annotations:
