@@ -322,8 +322,6 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.thumbnail_carousel.select_thumbnail_by_direction("right")
         elif key_number == int(Qt.Key_N):
             self._drop_current_thumbnail()
-        elif key_number == int(Qt.Key_Space):
-            self._annotate_image()
         elif key_number == int(Qt.Key_Shift):
             self.annotation_scene.set_work_mode(EWorkMode.ForceDragMode.value)
 

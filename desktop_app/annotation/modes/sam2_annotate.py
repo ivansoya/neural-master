@@ -210,7 +210,7 @@ class USam2Annotation(UBaseAnnotationMode):
                 self._add_polygons_from_mask(result_points, image, class_data[2] if class_data else QColor(Qt.lightGray))
             return True
 
-        elif key == Qt.Key_Enter or key == Qt.Key_Return:
+        elif key == Qt.Key_Enter or key == Qt.Key_Return or key == Qt.Key_Space:
             class_data = self.scene.get_current_class()
 
             if len(self.polygons) == 0 or class_data is None:
