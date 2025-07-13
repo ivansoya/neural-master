@@ -3,11 +3,14 @@ from typing import Optional
 
 from PyQt5.QtWidgets import QFileDialog, QWidget, QDialog
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
-from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSlot, QTimer
+
+import imageio.v3 as iio
 
 from annotation.annotation_item import UAnnotationItem
 from annotation.modes.abstract import EWorkMode
 from annotation.annotation_scene import UAnnotationBox
+from coco.coco_json import make_dump_annotations_from_coco, make_coco_json, save_coco_json
 from coco.coco_project import UCocoProject
 from design.annotation_page import Ui_annotataion_page
 from commander import UGlobalSignalHolder, UAnnotationSignalHolder
@@ -15,7 +18,7 @@ from annotation.carousel import UAnnotationThumbnail
 from design.diag_create_dataset import Ui_diag_create_dataset
 from supporting.overlay_widget import UOverlayLoader
 from project import UTrainProject, UMergeAnnotationThread, DATASETS
-from utility import EAnnotationStatus, UMessageBox, FAnnotationData, FAnnotationItem
+from utility import EAnnotationStatus, UMessageBox, FAnnotationData, FAnnotationItem, ECommanderStatus
 
 
 class UTextInputDialog(QDialog, Ui_diag_create_dataset):
@@ -81,7 +84,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.list_class_selector.class_selected.connect(self.annotation_scene.set_annotate_class)
 
         # Обработка автоаннотации
-        self.annotate_commander.selected_thumbnail.connect(self.handle_auto_annotate_on_select)
+        self.annotate_commander.selected_thumbnail.connect(self.handle_on_select_thumbnail)
         self.annotate_commander.displayed_image.connect(self.handle_print_image_name)
 
         # Обработка события изменения режима работы
@@ -90,10 +93,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             lambda checked=False, mode=EWorkMode.Viewer.value: self.annotate_commander.change_work_mode.emit(mode)
         )
         self.button_detect_mode.clicked.connect(
-            lambda checked=False, mode=EWorkMode.BoxAnnotationMode.value: self.annotate_commander.change_work_mode.emit(mode)
+            lambda checked=False, mode=EWorkMode.BoxAnnotationMode.value: self.annotate_commander.change_work_mode.emit(
+                mode)
         )
         self.button_mask_mode.clicked.connect(
-            lambda checked=False, mode=EWorkMode.MaskAnnotationMode.value: self.annotate_commander.change_work_mode.emit(mode)
+            lambda checked=False,
+                   mode=EWorkMode.MaskAnnotationMode.value: self.annotate_commander.change_work_mode.emit(mode)
         )
         self.button_sam2.clicked.connect(
             lambda checked=False, mode=EWorkMode.SAM2.value: self.annotate_commander.change_work_mode.emit(mode)
@@ -117,6 +122,57 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
         self.toggle_round_images.clicked.connect(self.toggle_roulette_visibility)
 
+        # Таймер автосохранения
+        self.autosave_timer = QTimer(self)
+        self.autosave_timer.setInterval(60000)
+        self.autosave_timer.timeout.connect(self.on_autosave_timer_tick)
+
+    def on_autosave_timer_tick(self):
+        if not self.commander or not self.commander.get_status() is ECommanderStatus.Annotation:
+            return
+
+        self.autosave_timer.stop()
+        self.try_run_task()
+
+    def try_run_task(self):
+        if self.thumbnail_carousel.get_thumbnails_count() == 0:
+            self.autosave_timer.stop()
+            return
+
+        task = [
+            (self.dump_task, (), {}),
+        ]
+
+        if self.project.start_task_thread(task, [self.handle_on_ended_autosave]):
+            self.commander.task_start.emit("Идет автосохранение!")
+
+    def dump_task(self):
+        result = self.thumbnail_carousel.get_dump_annotations()
+        if len(result) == 0:
+            self.commander.task_error.emit("Ошибка при автосохранении! (Длина 0)")
+            return
+
+        dump_coco = make_coco_json(
+            result,
+            self.project.annotation_classes,
+            {
+                'name': self.project.project_info.name,
+                'description': self.project.project_info.description,
+                'author': self.project.project_info.author,
+                'year': self.project.project_info.year,
+            },
+            self.project.project_info.licenses,
+            True
+        )
+
+        save_coco_json(self.project.get_project_ann_dump_path(), dump_coco)
+
+    @pyqtSlot()
+    def handle_on_ended_autosave(self):
+        if not self.autosave_timer.isActive():
+            self.autosave_timer.start()
+        self.commander.task_finished.emit("Автосохранение завершено!")
+
     def handle_on_load_project(self):
         if self.project is None:
             return
@@ -128,11 +184,9 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self._load_classes()
 
     @pyqtSlot(tuple, int)
-    def handle_auto_annotate_on_select(self, thumb_tuple: tuple, status: int):
-        if self.project.model_worker and self.project.model_worker.is_running():
-            if self.auto_annotate_checkbox.isChecked():
-                if status == EAnnotationStatus.NoAnnotation.value:
-                    self._annotate_image()
+    def handle_on_select_thumbnail(self, thumb_tuple: tuple, status: int):
+        index, name, data = thumb_tuple
+        self.label_current_index.setText(str(index + 1))
 
     def handle_on_load_model(self):
         self.auto_annotate_checkbox.setEnabled(True)
@@ -209,9 +263,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.overlay = UOverlayLoader(self.display_scene)
 
         tasks = [
-            (self.project.update_annotations, (list_annotations, "noname_dataset", ), {}),
+            (self.project.update_annotations, (list_annotations, "noname_dataset",), {}),
             (self.project.remove_list_of_annotations, (list_to_delete,), {}),
-            (self.project.save, (), {})
+            (self.project.save, (), {}),
+            (self.dump_task, (), {})
         ]
 
         self.project.start_task_thread(tasks, [self.handle_on_ended_adding_dataset])
@@ -228,6 +283,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.commander.project_updated_datasets.emit()
             if self.thumbnail_carousel.get_thumbnails_count() == 0:
                 self.commander.go_to_page_datasets.emit()
+                self.autosave_timer.stop()
+            else:
+                self.autosave_timer.stop()
+                self.autosave_timer.start()
 
     @pyqtSlot(list)
     def handle_on_screen_loaded_annotations(self, annotations: list[tuple[int, UAnnotationItem]]):
@@ -296,7 +355,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 index_annotation,
                 updated_annotation
             )
-        if not isinstance(prev_annotation, FAnnotationData) or prev_annotation.get_class_id() == updated_annotation.get_class_id():
+        if not isinstance(prev_annotation,
+                          FAnnotationData) or prev_annotation.get_class_id() == updated_annotation.get_class_id():
             return
         else:
             self.list_total_annotations.decrease_class(prev_annotation.get_class_id())
@@ -364,24 +424,33 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         for index in range(len(files)):
             file = files[index]
             if isinstance(file, str):
+                meta = iio.immeta(file)
+                source_width, source_height = meta["shape"]
                 thumb = UAnnotationThumbnail(
                     200,
                     175,
+                    source_width,
+                    source_height,
                     files[index],
                     None,
                     [],
-                    None
+                    index + 1
                 )
             elif isinstance(file, FAnnotationItem):
                 ann_data = file.get_annotation_data()
                 thumb = UAnnotationThumbnail(
                     200,
                     175,
+                    file.get_width(),
+                    file.get_height(),
                     file.get_image_path(),
                     file.get_dataset_name(),
                     [annotation.copy() for annotation in ann_data],
                     file.get_image_id()
                 )
+                thumb_status = file.get_annotation_status()
+                if thumb_status is not EAnnotationStatus.NO_STATUS:
+                    thumb.annotation_status = file.get_annotation_status()
                 for annotation in ann_data:
                     self.list_total_annotations.increase_class(
                         annotation.get_class_id(),
@@ -390,6 +459,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                     )
             else:
                 continue
+
             thumb = self.thumbnail_carousel.add_thumbnail(thumb)
             self.update_labels_by_status(thumb.annotation_status, True)
             self.label_count_images.setText(str(len(self.thumbnail_carousel.thumbnails)))
@@ -399,10 +469,13 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 len(files)
             )
         self.thumbnail_carousel.update()
+        self.thumbnail_carousel.select_last_annotated()
 
         UMessageBox.show_ok("Изображения загружены!")
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
         self.annotation_scene.center_on_selected()
+
+        self.autosave_timer.start()
 
     def set_label_work_mode(self, mode: int):
         if mode == EWorkMode.Viewer.value:
@@ -438,13 +511,13 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     def update_labels_by_status(self, status: EAnnotationStatus, to_increase: bool):
         value = 1 if to_increase is True else -1
-        if status.value == EAnnotationStatus.Annotated.value:
+        if status.value == EAnnotationStatus.ANNOTATED.value:
             self.current_annotated_count += value
             self.label_count_annotated.setText(str(self.current_annotated_count))
-        elif status.value == EAnnotationStatus.NoAnnotation.value:
+        elif status.value == EAnnotationStatus.NO_ANNOTATION.value:
             self.current_not_annotated_count += value
             self.label_count_not_annotated.setText(str(self.current_not_annotated_count))
-        elif status.value == EAnnotationStatus.MarkedDrop.value:
+        elif status.value == EAnnotationStatus.MARKED_DROP.value:
             self.current_dropped_count += value
             self.label_count_dropped.setText(str(self.current_dropped_count))
 
@@ -452,7 +525,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         thumb_id, matrix = self.annotation_scene.get_selectable_matrix()
         if thumb_id is None or matrix is None:
             return
-        if self.thumbnail_carousel.get_current_thumbnail_status() == EAnnotationStatus.PerformingAnnotation:
+        if self.thumbnail_carousel.get_current_thumbnail_status() == EAnnotationStatus.PERFORMING_ANNOTATION:
             return
         if self.project.model_worker and self.project.model_worker.is_running():
             self.project.model_worker.add_to_queue(

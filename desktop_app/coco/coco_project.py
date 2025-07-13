@@ -69,6 +69,10 @@ class UCocoProject:
         self.current_annotation_id += 1
         return self.current_annotation_id
 
+    def get_project_ann_dump_path(self):
+        path = rstrip(os.path.join(self.project_path, "saved/dump.json"))
+        return path
+
     def load_from_json(self, json_file: str):
         result = load_coco_json(json_file)
         if isinstance(result, str):
@@ -76,6 +80,7 @@ class UCocoProject:
 
         info, licenses, annotations, images, categories = result
         self.project_path = rstrip(os.path.dirname(json_file))
+        print(self.get_project_ann_dump_path())
 
         list_id_class: list[int] = []
         for class_item in categories:
@@ -94,11 +99,11 @@ class UCocoProject:
             if image_id not in dict_annotations:
                 dict_annotations[image_id] = []
             dict_annotations[image_id].append({
-                'id' : annotation['id'],
-                'category_id' : annotation['category_id'],
-                'bbox' : annotation['bbox'],
-                'segmentation' : annotation['segmentation'],
-                'iscrowd' : annotation['iscrowd'],
+                'id': annotation['id'],
+                'category_id': annotation['category_id'],
+                'bbox': annotation['bbox'],
+                'segmentation': annotation['segmentation'],
+                'iscrowd': annotation['iscrowd'],
             })
 
         self.project_info = UProjectInfo(
@@ -118,24 +123,24 @@ class UCocoProject:
                 continue
             if dataset not in self.annotations:
                 self.annotations[dataset] = list()
-            self.annotations[dataset].append(
-                FAnnotationItem(
-                    [FAnnotationData(
-                        annotation['id'],
-                        annotation['bbox'],
-                        annotation['segmentation'],
-                        annotation['category_id'],
-                        self.annotation_classes[annotation['category_id']].name,
-                        QColor(self.annotation_classes[annotation['category_id']].color),
-                        image['width'],
-                        image['height']
-                    )
-                     for annotation in dict_annotations[image["id"]]],
-                    image_path,
-                    image['id'],
-                    dataset
+            ann_item = FAnnotationItem(
+                [FAnnotationData(
+                    annotation['id'],
+                    annotation['bbox'],
+                    annotation['segmentation'],
+                    annotation['category_id'],
+                    self.annotation_classes[annotation['category_id']].name,
+                    QColor(self.annotation_classes[annotation['category_id']].color)
                 )
+                 for annotation in dict_annotations[image["id"]]],
+                image_path,
+                image['id'],
+                dataset,
+                image['width'],
+                image['height']
             )
+
+            self.annotations[dataset].append(ann_item)
 
         print(f"Общее количество изображений: {len(images), sum([len(ann_list) for ann_list in self.annotations.values()])}")
         print(f"Количество аннотаций в проекте: {len(annotations)}")

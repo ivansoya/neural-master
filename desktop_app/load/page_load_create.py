@@ -4,6 +4,7 @@ from typing import Optional
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QStackedWidget, QFileDialog, QDialog, QMessageBox
 
+from coco.coco_json import make_dump_annotations_from_coco
 from coco.coco_project import UCocoProject
 from dataset.loader import UThreadDatasetLoadAnnotations
 from supporting.overlay_widget import UOverlayLoader
@@ -57,9 +58,35 @@ class UPageLoader(QWidget, Ui_page_load_dataset):
             QDialogCreateProject.show_error(error)
             return
         else:
-            UMessageBox.show_ok("Проект успешно загружен!")
             self.commander.project_load_complete.emit()
-
+            dump_json = self.project.get_project_ann_dump_path()
+            if os.path.exists(dump_json):
+                to_continue = UMessageBox.ask_confirmation(
+                    "Обнаружены сохранения разметок. Хотите ли Вы продолжить прерванную работу?",
+                    "Обнаружен дамп!",
+                    "Продолжить",
+                    "Удалить"
+                )
+                if to_continue:
+                    try:
+                        ret, result = make_dump_annotations_from_coco(dump_json)
+                        if ret < 1:
+                            UMessageBox.show_error(result)
+                            self.commander.go_to_page_datasets.emit()
+                        else:
+                            print(result)
+                            self.commander.go_to_page_annotation.emit()
+                            self.commander.loaded_images_to_annotate.emit(result)
+                    except Exception as error:
+                        UMessageBox.show_error(str(error))
+                        self.commander.go_to_page_datasets.emit()
+                else:
+                    os.remove(dump_json)
+                    UMessageBox.show_ok("Проект успешно загружен!")
+                    self.commander.go_to_page_datasets.emit()
+            else:
+                UMessageBox.show_ok("Проект успешно загружен!")
+                self.commander.go_to_page_datasets.emit()
 
     def create_project(self):
         self.commander.set_block(True)

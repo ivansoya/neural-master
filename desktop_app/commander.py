@@ -1,17 +1,8 @@
-from enum import Enum
+from PyQt5.QtCore import QObject, QEvent, pyqtSignal, QTimer
+from PyQt5.QtWidgets import QWidget
 
-from PyQt5.QtCore import Qt, QObject, QEvent, pyqtSignal, QTimer
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
+from utility import EAnnotationStatus, ECommanderStatus
 
-from utility import EAnnotationStatus
-
-class ECommanderStatus(Enum):
-    LoadProject = 1
-    DatasetView = 2
-    Annotation = 3
-    Statistics = 4
-    LoadModel = 5
 
 class UAnnotationSignalHolder(QWidget):
     added_new_annotation = pyqtSignal(int, object)
@@ -55,6 +46,10 @@ class UGlobalSignalHolder(QObject):
 
     go_to_page_annotation = pyqtSignal()
     go_to_page_datasets = pyqtSignal()
+
+    task_start = pyqtSignal(str)
+    task_finished = pyqtSignal(str)
+    task_error = pyqtSignal(str)
 
     # str - путь к папке, куда экспортируется
     # list - список датасетов, которые нужно экспортировать

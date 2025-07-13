@@ -138,7 +138,7 @@ class UAnnotationGraphicsView(QGraphicsView):
                                   16000 - self.current_image.boundingRect().height() // 2)
 
         self._display_all_annotation()
-        self.is_model_annotating = True if thumb_status == EAnnotationStatus.PerformingAnnotation.value else False
+        self.is_model_annotating = True if thumb_status == EAnnotationStatus.PERFORMING_ANNOTATION.value else False
         if self.is_model_annotating and self.overlay is None:
             self.overlay = UAnnotationOverlayWidget(self)
             self.raise_()

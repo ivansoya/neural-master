@@ -71,6 +71,7 @@ class USam2Annotation(UBaseAnnotationMode):
 
         if not self.window:
             self.window = USam2ParametersWindow(self.sam2_parameters, self.scene)
+            self.window.button_make_polygons.clicked.connect(lambda _: self.on_key_press(Qt.Key_Space))
             self.window.move(0, 0)
             self.window.show()
 

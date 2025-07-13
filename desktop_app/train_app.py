@@ -1,20 +1,20 @@
 import sys
 from typing import Optional
 
-from PyQt5.QtCore import pyqtSlot, QThread
+from PyQt5.QtCore import pyqtSlot, QThread, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 from coco.coco_project import UCocoProject
 from dataset.export_thread import UExportWorker
 from design.train_app import Ui_TrainApp
-from commander import UGlobalSignalHolder, ECommanderStatus
+from commander import UGlobalSignalHolder
 from annotation.page_annotation import UPageAnnotation
 from stats.page_classes import UPageClasses
 from dataset.page_dataset import UPageDataset
 from load.page_load_create import UPageLoader
 from page_model import UPageModel
 from project import UTrainProject
-from utility import UMessageBox
+from utility import UMessageBox, ECommanderStatus
 
 
 class TrainApp(QMainWindow, Ui_TrainApp):
@@ -52,7 +52,7 @@ class TrainApp(QMainWindow, Ui_TrainApp):
         self.nav_bar.setVisible(False)
         self.nav_bar.setEnabled(False)
 
-        self.label_export.setVisible(False)
+        self.label_task.setVisible(False)
 
         self.global_signal_holder.project_load_complete.connect(self.handle_on_load_project)
 
@@ -65,15 +65,38 @@ class TrainApp(QMainWindow, Ui_TrainApp):
             lambda: self.change_page(2, ECommanderStatus.Annotation)
         )
 
+        self.global_signal_holder.task_start.connect(self.handle_on_task_start)
+        self.global_signal_holder.task_error.connect(self.handle_on_task_error)
+        self.global_signal_holder.task_finished.connect(self.handle_on_task_finished)
+
     def change_page(self, page_index: int, status: ECommanderStatus):
         self.stacked_page_loader.setCurrentIndex(page_index)
         self.global_signal_holder.set_status(status)
+
+    @pyqtSlot(str)
+    def handle_on_task_start(self, ret: str):
+        self.label_task.setVisible(True)
+        self.label_task.setStyleSheet("padding: 5px 10px;\nfont-size: 14px;\ncolor: black;")
+        self.label_task.setText(ret)
+
+    @pyqtSlot(str)
+    def handle_on_task_error(self, ret: str):
+        self.label_task.setVisible(True)
+        self.label_task.setStyleSheet("padding: 5px 10px;\nfont-size: 14px;\ncolor: red;")
+        self.label_task.setText(ret)
+        QTimer.singleShot(5000, self.label_task.hide)
+
+    @pyqtSlot(str)
+    def handle_on_task_finished(self, ret: str):
+        self.label_task.setVisible(True)
+        self.label_task.setStyleSheet("padding: 5px 10px;\nfont-size: 14px;\ncolor: green;")
+        self.label_task.setText(ret)
+        QTimer.singleShot(5000, self.label_task.hide)
 
     @pyqtSlot()
     def handle_on_load_project(self):
         self.nav_bar.setVisible(True)
         self.nav_bar.setEnabled(True)
-        self.change_page(1, ECommanderStatus.DatasetView)
 
     @pyqtSlot(str, list, object)
     def handle_on_start_export(self, path: str, dataset_list: list[str], refactor_dict: dict[str, (int, str)] | None):

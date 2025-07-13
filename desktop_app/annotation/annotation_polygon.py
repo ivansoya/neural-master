@@ -455,7 +455,8 @@ class UAnnotationPolygon(UAnnotationItem):
     def get_annotation_data(self):
         if not self.closed or self.parentItem() is None:
             return None
-        if self.mask :
+
+        if self.mask:
             return self.get_points()
         else:
             return FAnnotationData(
@@ -464,9 +465,7 @@ class UAnnotationPolygon(UAnnotationItem):
                 self.get_segmentation(),
                 self.class_id,
                 self.class_name,
-                self.color,
-                self.mask.parentItem().boundingRect().width() if self.mask else self.parentItem().boundingRect().width(),
-                self.mask.parentItem().boundingRect().height() if self.mask else self.parentItem().boundingRect().height(),
+                self.color
             )
 
     def update_annotate_class(self, data: tuple[int, str, QColor]):

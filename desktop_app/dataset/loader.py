@@ -184,9 +184,7 @@ class UThreadDatasetLoadAnnotations(QThread):
                                 [],
                                 id_class,
                                 class_name,
-                                color,
-                                width_res,
-                                height_res
+                                color
                             )
                         )
                         line_count += 1
@@ -211,9 +209,7 @@ class UThreadDatasetLoadAnnotations(QThread):
                                 [point_list],
                                 id_class,
                                 class_name,
-                                color,
-                                width_res,
-                                height_res
+                                color
                         ))
                 else:
                     return "Error"

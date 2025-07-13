@@ -11,7 +11,7 @@ from PyQt5.QtGui import QColor, QPolygonF
 
 import random
 
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QPushButton
 from sympy import andre
 
 from supporting.functions import clamp, segmentation_area
@@ -25,26 +25,40 @@ GColorList = [
     QColor(0, 255, 255),
 ]
 
+
+class ECommanderStatus(Enum):
+    LoadProject = 1
+    DatasetView = 2
+    Annotation = 3
+    Statistics = 4
+    LoadModel = 5
+
+
 class EAnnotationStatus(Enum):
-    NoAnnotation = 1
-    Annotated = 2
-    MarkedDrop = 3
-    PerformingAnnotation = 4
+    NO_ANNOTATION = 1
+    ANNOTATED = 2
+    MARKED_DROP = 3
+    PERFORMING_ANNOTATION = 4
+    NO_STATUS = 5
+
 
 class EDatasetType(Enum):
     YamlYOLO = 1
     TxtYOLO = 2
+
 
 class EImagesType(Enum):
     Train = 1
     Valid = 2
     Test = 3
 
+
 class EAnnotationType(Enum):
     BoundingBox = 1
     Segmentation = 2
     Mask = 3
     NoType = 4
+
 
 class FAnnotationClasses:
     class FClassData:
@@ -133,6 +147,7 @@ class FAnnotationClasses:
 
         return QColor.fromHsv(hue, saturation, value)
 
+
 class FAnnotationData:
     def __init__(
             self,
@@ -141,9 +156,7 @@ class FAnnotationData:
             segmentation: list,
             class_id: int,
             class_name: str,
-            color: QColor,
-            res_w = 1920,
-            res_h = 1400
+            color: QColor
     ):
         if len(segmentation) >= 2:
             self.type = EAnnotationType.Mask
@@ -162,9 +175,6 @@ class FAnnotationData:
         self.class_name = class_name
         self.color = color
 
-        self.w_resolution = res_w
-        self.h_resolution = res_h
-
     def clamp_cords(self):
         return
 
@@ -181,7 +191,7 @@ class FAnnotationData:
             return segmentation_area(self.segmentation)
 
     def _copy_init_args(self):
-        return self.annotation_id, self.bbox, self.segmentation, self.class_id, self.class_name, QColor(self.color), self.w_resolution, self.h_resolution
+        return self.annotation_id, self.bbox, self.segmentation, self.class_id, self.class_name, QColor(self.color)
 
     def copy(self):
         return FAnnotationData(*self._copy_init_args())
@@ -201,9 +211,6 @@ class FAnnotationData:
         self.class_name = data.class_name
         self.color = data.color
 
-        self.w_resolution = data.w_resolution
-        self.h_resolution = data.h_resolution
-
     def get_color(self):
         return self.color
 
@@ -222,9 +229,6 @@ class FAnnotationData:
     def set_class_id(self, class_id: int):
         self.class_id = class_id
 
-    def get_resolution(self):
-        return self.w_resolution, self.h_resolution
-
     def get_annotation_type(self) -> EAnnotationType:
         return self.type
 
@@ -242,33 +246,49 @@ class FAnnotationData:
         if not isinstance(other, self.__class__):
             return NotImplemented
 
-        return (
-                self.annotation_id == other.annotation_id and
-                self.w_resolution == other.w_resolution and
-                self.h_resolution == other.h_resolution
-        )
+        return self.annotation_id == other.annotation_id
 
     def __ne__(self, other):
         return not self == other
 
+
 class FAnnotationItem:
-    def __init__(self, ann_list: list[FAnnotationData], image_path: str, image_id: int, dataset_name: str | None):
+    def __init__(
+            self,
+            ann_list: list[FAnnotationData],
+            image_path: str,
+            image_id: int,
+            dataset_name: str | None,
+            width: int,
+            height: int,
+    ):
         self.annotation_list = ann_list
+
         self.image_path = image_path
+        self.width = width
+        self.height = height
+
         self.dataset: Optional[str] = dataset_name
         self.image_id = image_id
+
+        self.annotation_status: EAnnotationStatus = EAnnotationStatus.NO_STATUS
 
     def copy(self):
         return self.__class__(
             [annotation.copy() for annotation in self.annotation_list],
             str(self.image_path),
             self.image_id,
-            str(self.dataset)
+            str(self.dataset),
+            self.width,
+            self.height
         )
 
     def update_annotation_data(self, annotation_data: list[FAnnotationData]):
         self.annotation_list.clear()
         self.annotation_list = list(annotation_data)
+
+    def add_annotation_data(self, annotation_data: FAnnotationData):
+        self.annotation_list.append(annotation_data)
 
     def get_annotation_data(self):
         return self.annotation_list
@@ -282,6 +302,12 @@ class FAnnotationItem:
     def get_image_id(self):
         return self.image_id
 
+    def get_width(self):
+        return self.width
+
+    def get_height(self):
+        return self.height
+
     def set_image_id(self, image_id: int):
         self.image_id = image_id
 
@@ -290,6 +316,12 @@ class FAnnotationItem:
 
     def set_image_path(self, image_path: str):
         self.image_path = image_path
+
+    def set_annotation_status(self, new_status: EAnnotationStatus):
+        self.annotation_status = new_status
+
+    def get_annotation_status(self):
+        return self.annotation_status
 
     def __eq__(self, other):
         if not isinstance(other, FAnnotationItem):
@@ -331,12 +363,20 @@ class UMessageBox:
         msg_box.exec_()
 
     @staticmethod
-    def ask_confirmation(message: str, title: str = "Подтверждение") -> bool:
+    def ask_confirmation(message: str, title: str = "Подтверждение",
+                         yes_text: str = "Да", no_text: str = "Нет") -> bool:
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Question)
         msg_box.setWindowTitle(title)
         msg_box.setText(message)
-        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg_box.setDefaultButton(QMessageBox.No)
-        result = msg_box.exec_()
-        return result == QMessageBox.Yes
+
+        yes_button = QPushButton(yes_text)
+        no_button = QPushButton(no_text)
+
+        msg_box.addButton(yes_button, QMessageBox.YesRole)
+        msg_box.addButton(no_button, QMessageBox.NoRole)
+
+        msg_box.setDefaultButton(no_button)
+
+        msg_box.exec_()
+        return msg_box.clickedButton() == yes_button

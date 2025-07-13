@@ -119,9 +119,7 @@ class UAnnotationBox(UAnnotationItem):
                 [],
                 int(self.class_id),
                 str(self.class_name),
-                QColor(self.color),
-                int(self.parentItem().boundingRect().width()),
-                int(self.parentItem().boundingRect().height())
+                QColor(self.color)
             )
         except Exception as error:
             print(str(error))

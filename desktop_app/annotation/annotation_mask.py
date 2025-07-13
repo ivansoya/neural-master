@@ -153,17 +153,13 @@ class UAnnotationMask(UAnnotationItem):
                ]
 
     def get_annotation_data(self) -> FAnnotationData:
-        box = self.rect()
-        parent_bounds = self.parentItem().boundingRect() if self.parentItem() else QRectF()
         return FAnnotationData(
             self.annotation_id,
             self.get_bbox(),
             self.get_segmentation(),
             self.class_id,
             self.class_name,
-            self.color,
-            parent_bounds.width(),
-            parent_bounds.height(),
+            self.color
         )
 
     def get_bbox(self) -> list[float]:

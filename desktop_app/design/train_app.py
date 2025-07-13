@@ -96,18 +96,14 @@ class Ui_TrainApp(object):
         self.horizontalLayout.addWidget(self.button_to_model)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
-        self.label_export = QtWidgets.QLabel(self.nav_bar)
+        self.label_task = QtWidgets.QLabel(self.nav_bar)
         font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_export.setFont(font)
-        self.label_export.setStyleSheet("QLabel {\n"
-"        border: 1px solid gray;\n"
-"        border-radius: 0px;\n"
-"        padding: 2px 6px;\n"
-"        background-color: palette(button);\n"
-"    }")
-        self.label_export.setObjectName("label_export")
-        self.horizontalLayout.addWidget(self.label_export)
+        font.setPointSize(-1)
+        self.label_task.setFont(font)
+        self.label_task.setStyleSheet("padding: 5px 10px;\n"
+"font-size: 14px;")
+        self.label_task.setObjectName("label_task")
+        self.horizontalLayout.addWidget(self.label_task)
         self.button_close_project = QtWidgets.QPushButton(self.nav_bar)
         self.button_close_project.setStyleSheet("QPushButton {\n"
 "padding: 5px 20px;\n"
@@ -125,7 +121,7 @@ class Ui_TrainApp(object):
         self.verticalLayout_2.addWidget(self.stacked_page_loader)
         TrainApp.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(TrainApp)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1153, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1153, 26))
         self.menubar.setObjectName("menubar")
         TrainApp.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(TrainApp)
@@ -142,7 +138,7 @@ class Ui_TrainApp(object):
         self.button_to_annotation_scene.setText(_translate("TrainApp", "Окно разметки"))
         self.button_to_statistics.setText(_translate("TrainApp", "Окно статистики"))
         self.button_to_model.setText(_translate("TrainApp", "Окно модели"))
-        self.label_export.setText(_translate("TrainApp", "TextLabel"))
+        self.label_task.setText(_translate("TrainApp", "TextLabel"))
         self.button_close_project.setText(_translate("TrainApp", "Закрыть проект"))
 
 
