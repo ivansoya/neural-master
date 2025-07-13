@@ -257,6 +257,83 @@ class UCocoProject:
         )
 
     """
+    -------------- EXPORT ---------------
+    """
+
+    def simple_export_with_refactor(self, export_path: str, chosen_datasets: list[str], chosen_classes_id: list[int]):
+        os.makedirs(export_path, exist_ok=True)
+
+        refactored_data_dict = self._get_refactor_data(chosen_datasets, chosen_classes_id)
+        refactored_classes = self._get_refactored_classes(chosen_classes_id)
+
+        self._copy_images(export_path, refactored_data_dict)
+
+        export_coco = make_coco_json(
+            refactored_data_dict,
+            refactored_classes,
+            {
+                'name': self.project_info.name,
+                'description': self.project_info.description,
+                'author': self.project_info.author,
+                'year': self.project_info.year,
+            },
+            self.project_info.licenses,
+        )
+
+        save_coco_json(rstrip(os.path.join(export_path, os.path.basename(export_path) + ".json")), export_coco)
+
+    def _get_refactored_classes(self, chosen_classes_id: list[int]):
+        refactored_classes: dict[int, UAnnotationClass] = dict()
+
+        keys = list(self.annotation_classes.keys())
+        for index in range(len(chosen_classes_id)):
+            if chosen_classes_id[index] not in keys:
+                continue
+
+            refactored_classes[index + 1] = self.annotation_classes.get(chosen_classes_id[index])
+
+        return refactored_classes
+
+    def _get_refactor_data(self, chosen_datasets: list[str], chosen_classes_id: list[int]):
+        needed_dataset_items: list[FAnnotationItem] = [item for dataset in chosen_datasets for item in self.annotations.get(dataset, [])]
+        refactored_annotations: dict[str, list[FAnnotationItem]] = dict()
+
+        for item in needed_dataset_items:
+            annotation_list: list[FAnnotationData] = list()
+
+            data_list = item.get_annotation_data()
+            for annotation in data_list:
+                class_id = annotation.get_class_id()
+                if class_id in chosen_classes_id:
+                    copy_annotation = annotation.copy()
+                    copy_annotation.set_class_id(chosen_classes_id.index(class_id) + 1)
+
+                    annotation_list.append(copy_annotation)
+                else:
+                    continue
+
+            if len(annotation_list) == 0:
+                continue
+
+            copy_item = item.copy()
+            copy_item.update_annotation_data(annotation_list)
+
+            dataset = item.get_dataset_name()
+            if dataset not in refactored_annotations:
+                refactored_annotations[dataset] = list()
+            refactored_annotations[dataset].append(copy_item)
+
+        return refactored_annotations
+
+    def _copy_images(self, source_path: str, data_list: dict[str, list[FAnnotationItem]]):
+        for dataset, item_list in data_list.items():
+            for item in item_list:
+                new_image_path = rstrip(os.path.join(source_path, "datasets", dataset, os.path.basename(item.get_image_path())))
+                os.makedirs(os.path.dirname(new_image_path), exist_ok=True)
+
+                shutil.copy2(item.get_image_path(), new_image_path)
+
+    """
     ----------------------------
     """
 

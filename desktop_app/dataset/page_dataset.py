@@ -1,18 +1,17 @@
 from typing import Optional
 
-from PyQt5.QtCore import pyqtSlot, QThread
-from PyQt5.QtWidgets import QWidget, QStackedWidget
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QWidget, QStackedWidget, QDialog
 
-from coco.coco_json import cfg_convert_to_coco, build_coco_json, save_coco_json
+from coco.coco_json import cfg_convert_to_coco, build_coco_json
 from coco.coco_project import UCocoProject
 from commander import UGlobalSignalHolder
 from design.dataset_page import Ui_page_dataset
 from dataset.list_datasets import UItemDataset
 from dataset.loader import UThreadDatasetLoadAnnotations, UThreadDatasetCopy
-from load.export import UDialogExport
+from export.export import UDialogExport
 from supporting.overlay_widget import UOverlayLoader
 from supporting.custom_threads import UProgressThread
-from supporting.task_runner import UTaskRunner
 from utility import UMessageBox, FAnnotationItem, EAnnotationType
 
 DATASET_ALL = "All Annotations"
@@ -44,7 +43,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.button_reset_selected.clicked.connect(self.handle_on_click_button_clear_all_selections)
         self.button_delete_selected.clicked.connect(self.handle_on_click_button_delete_annotations)
 
-        #self.button_export.clicked.connect(self.handle_on_button_export_clicked)
+        self.button_export.clicked.connect(self.handle_on_button_export_clicked)
 
         self.button_to_coco.clicked.connect(self.handle_on_click_to_coco)
 
@@ -115,11 +114,25 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
     @pyqtSlot()
     def handle_on_button_export_clicked(self):
-        dialog = UDialogExport(self.project.get_annotations(), self.project.get_classes())
-        dialog.signal_done.connect(self.handle_on_export_window_done)
+        dialog = UDialogExport(self.project)
         self.commander.set_block(True)
-        if dialog.exec_():
+        if dialog.exec_() == QDialog.Accepted:
+            export_path, chosen_class_ids, chosen_datasets = dialog.get_result()
+
+            task = [
+                (self.project.simple_export_with_refactor, (export_path, chosen_datasets, chosen_class_ids,), {})
+            ]
+
+            if self.project.start_task_thread(task, [self.handle_on_ended_export]) is False:
+                UMessageBox.show_error("Невозможно запустить экспорт, поток занят!")
+
+            self.commander.task_start.emit(f"Идет экспорт датасета!")
             self.commander.set_block(False)
+
+    @pyqtSlot()
+    def handle_on_ended_export(self):
+        if self.commander:
+            self.commander.task_finished.emit("Экспорт завершен!")
 
     @pyqtSlot(str, list, object)
     def handle_on_export_window_done(self, path: str, dataset_list: list[str], refactor_class_dict: object):

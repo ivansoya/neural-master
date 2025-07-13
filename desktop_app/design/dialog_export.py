@@ -14,13 +14,14 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_dialog_export(object):
     def setupUi(self, dialog_export):
         dialog_export.setObjectName("dialog_export")
-        dialog_export.resize(441, 641)
+        dialog_export.resize(588, 678)
         self.verticalLayout = QtWidgets.QVBoxLayout(dialog_export)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label = QtWidgets.QLabel(dialog_export)
         font = QtGui.QFont()
         font.setPointSize(12)
         self.label.setFont(font)
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.label.setObjectName("label")
         self.verticalLayout.addWidget(self.label)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
@@ -120,7 +121,7 @@ class Ui_dialog_export(object):
         self.verticalLayout_3.setContentsMargins(0, -1, 0, 0)
         self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.list_choose_classes = QtWidgets.QListWidget(self.page_21)
+        self.list_choose_classes = UClassListWidget(self.page_21)
         self.list_choose_classes.setStyleSheet("QListWidget {\n"
 "    font-size: 11pt;\n"
 "}\n"
@@ -159,7 +160,7 @@ class Ui_dialog_export(object):
         self.verticalLayout.addWidget(self.button_start_export)
 
         self.retranslateUi(dialog_export)
-        self.stack_export.setCurrentIndex(0)
+        self.stack_export.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(dialog_export)
 
     def retranslateUi(self, dialog_export):
@@ -173,6 +174,7 @@ class Ui_dialog_export(object):
         self.button_choose_all.setText(_translate("dialog_export", "Выделить все"))
         self.button_cancel_all.setText(_translate("dialog_export", "Снять все"))
         self.button_start_export.setText(_translate("dialog_export", "Экспорт"))
+from export.export_class_list import UClassListWidget
 
 
 if __name__ == "__main__":
