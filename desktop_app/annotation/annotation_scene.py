@@ -197,9 +197,12 @@ class UAnnotationGraphicsView(QGraphicsView):
     def _clear_display_image(self):
         self.display_matrix = None
         self.current_display_thumbnail = None
+
         self.current_image = QPixmap(1920, 1400)
         self.current_image.fill(QColor(Qt.gray))
-        self.annotate_scene.addItem(self.current_image)
+
+        pixmap_item = QGraphicsPixmapItem(self.current_image)
+        self.annotate_scene.addItem(pixmap_item)
 
     @pyqtSlot(int)
     def handle_on_key_press(self, key: int):
