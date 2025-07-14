@@ -1,9 +1,11 @@
 import json
 import os
+from collections import defaultdict
 
 from PyQt5.QtGui import QColor
 
 from coco.coco_utility import UAnnotationClass
+from supporting.functions import rstrip
 from utility import FAnnotationItem, FAnnotationClasses, EAnnotationStatus, FAnnotationData
 
 
@@ -116,6 +118,66 @@ def make_dump_annotations_from_coco(path: str):
 
     return 1, list(images_dict.values())
 
+def make_annotation_dict_from_coco(
+        images: list[dict],
+        annotations: list[dict],
+        categories: list[dict],
+        project_path: str,
+) -> (dict[str, list[FAnnotationItem]], dict[int, UAnnotationClass]):
+
+    classes_dict: dict[int, UAnnotationClass] = {}
+    for category in categories:
+        temp_class = UAnnotationClass(
+            category["name"],
+            QColor(category["color"]),
+            category["supercategory"],
+        )
+        classes_dict.update({category["id"]: temp_class})
+
+    temp_image_dict: dict[int, FAnnotationItem] = {}
+    for image in images:
+        image_id = image["id"]
+        dataset = image["dataset"] if image["dataset"] != "None" else "no_name_dataset"
+        file_path = rstrip(os.path.join(project_path, "datasets", dataset, image["file_name"]))
+        temp_item = FAnnotationItem(
+            [],
+            file_path,
+            image_id,
+            dataset,
+            image["width"],
+            image["height"]
+        )
+        temp_image_dict.update({image_id: temp_item})
+
+    for annotation in annotations:
+        ann_id = annotation["id"]
+        image_id = annotation["image_id"]
+        class_id = annotation["category_id"]
+        if image_id not in temp_image_dict:
+            print(f"Не найдено изображение ID {image_id} для аннотации под номером ID {ann_id}")
+            continue
+
+        if class_id not in classes_dict:
+            print(f"Не найден класс под номером ID {class_id} для аннотации под номером ID {ann_id}")
+            continue
+
+        temp_data = FAnnotationData(
+            annotation["id"],
+            annotation["bbox"],
+            annotation["segmentation"],
+            class_id,
+            classes_dict[class_id].name,
+            QColor(classes_dict[class_id].color),
+        )
+
+        temp_image_dict[image_id].add_annotation_data(temp_data)
+
+    result: dict[str, list[FAnnotationItem]] = defaultdict(list)
+
+    for item in temp_image_dict.values():
+        result[item.get_dataset_name()].append(item)
+
+    return result, classes_dict
 
 def make_coco_json(
         annotations: dict[str, list[FAnnotationItem]],

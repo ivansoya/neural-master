@@ -36,7 +36,7 @@ class UPageClasses(QWidget, Ui_classes_page_design):
         if self.commander:
             self.commander.project_load_complete.connect(self.update_chart_statistics)
             self.commander.project_load_complete.connect(self.update_classes)
-            self.commander.project_updated_datasets.connect(self.update_chart_statistics)
+            self.commander.project_updated.connect(self.update_chart_statistics)
 
     def add_class_to_project(self):
         if self.project.task_thread and self.project.task_thread.isRunning():
@@ -57,7 +57,7 @@ class UPageClasses(QWidget, Ui_classes_page_design):
                 (self.project.save, (), {})
             ]
 
-            self.project.start_task_thread(tasks, [self.on_added_finished])
+            self.project.start_task_thread(tasks, [self.on_added_finished], [])
 
         self.commander.set_block(False)
 

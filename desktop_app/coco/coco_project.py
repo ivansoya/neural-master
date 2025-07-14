@@ -7,7 +7,7 @@ from PyQt5.QtCore import QThread, QObject, pyqtSlot
 from PyQt5.QtGui import QColor
 
 from SAM2.sam2_net import USam2Net
-from coco.coco_json import load_coco_json, make_coco_json, save_coco_json
+from coco.coco_json import load_coco_json, make_coco_json, save_coco_json, make_annotation_dict_from_coco
 from coco.coco_utility import UProjectInfo, UAnnotationClass
 from neural_model import URemoteNeuralNet, UBaseNeuralNet, ULocalDetectYOLO
 from supporting.functions import rstrip, get_distinct_color
@@ -73,6 +73,9 @@ class UCocoProject:
         path = rstrip(os.path.join(self.project_path, "saved/dump.json"))
         return path
 
+    def is_classes_equal(self, other_classes: dict[int, UAnnotationClass]):
+        return self.annotation_classes == other_classes
+
     def load_from_json(self, json_file: str):
         result = load_coco_json(json_file)
         if isinstance(result, str):
@@ -80,31 +83,13 @@ class UCocoProject:
 
         info, licenses, annotations, images, categories = result
         self.project_path = rstrip(os.path.dirname(json_file))
-        print(self.get_project_ann_dump_path())
 
-        list_id_class: list[int] = []
-        for class_item in categories:
-            self.annotation_classes[class_item['id']] = UAnnotationClass(
-                class_item['name'],
-                QColor(class_item['color']),
-                class_item['supercategory']
-            )
-            list_id_class.append(class_item['id'])
-
-        self.current_class_id = max(list_id_class, default=1)
-
-        dict_annotations: dict[int, list[dict]] = {}
-        for annotation in annotations:
-            image_id = annotation['image_id']
-            if image_id not in dict_annotations:
-                dict_annotations[image_id] = []
-            dict_annotations[image_id].append({
-                'id': annotation['id'],
-                'category_id': annotation['category_id'],
-                'bbox': annotation['bbox'],
-                'segmentation': annotation['segmentation'],
-                'iscrowd': annotation['iscrowd'],
-            })
+        self.annotations, self.annotation_classes = make_annotation_dict_from_coco(
+            images,
+            annotations,
+            categories,
+            self.project_path
+        )
 
         self.project_info = UProjectInfo(
             name=info['name'],
@@ -113,34 +98,6 @@ class UCocoProject:
             year=info['year'],
             licenses=licenses,
         )
-
-        for image in images:
-            dataset = image['dataset'] if 'dataset' in image else "no_dataset"
-            image_path = (os.path.join(os.path.dirname(json_file), "images" if dataset == "noname" else 'datasets/' + dataset, image['file_name'])
-                         .strip().replace('\\', '/'))
-            if os.path.isfile(image_path) is False:
-                print(f"Не существует изображения по пути {image_path}!")
-                continue
-            if dataset not in self.annotations:
-                self.annotations[dataset] = list()
-            ann_item = FAnnotationItem(
-                [FAnnotationData(
-                    annotation['id'],
-                    annotation['bbox'],
-                    annotation['segmentation'],
-                    annotation['category_id'],
-                    self.annotation_classes[annotation['category_id']].name,
-                    QColor(self.annotation_classes[annotation['category_id']].color)
-                )
-                 for annotation in dict_annotations[image["id"]]],
-                image_path,
-                image['id'],
-                dataset,
-                image['width'],
-                image['height']
-            )
-
-            self.annotations[dataset].append(ann_item)
 
         print(f"Общее количество изображений: {len(images), sum([len(ann_list) for ann_list in self.annotations.values()])}")
         print(f"Количество аннотаций в проекте: {len(annotations)}")
@@ -176,12 +133,15 @@ class UCocoProject:
         save_coco_json(json_file, coco)
 
     def update_annotations(self, update_annotations: list[FAnnotationItem], new_dataset: str = "noname_dataset"):
+        usable_image_ids: set[int] = {item.get_image_id() for item_list in self.annotations.values() for item in item_list}
+        usable_ann_ids: set[int] = {ann_data.get_annotation_id() for item_list in self.annotations.values() for item in item_list for ann_data in item.get_annotation_data()}
+
         for annotation in update_annotations:
             dataset = annotation.get_dataset_name()
             if dataset is None:
                 if new_dataset not in self.annotations:
                     self.annotations[new_dataset] = list()
-                self.add_annotation(annotation, new_dataset)
+                self.add_annotation(annotation, new_dataset, usable_image_ids, usable_ann_ids)
                 continue
             else:
                 if dataset not in self.annotations:
@@ -194,11 +154,18 @@ class UCocoProject:
                         break
 
                 if found_annotation is None:
-                    self.add_annotation(annotation, dataset)
+                    self.add_annotation(annotation, dataset, usable_image_ids, usable_ann_ids)
                 else:
-                    found_annotation.update_annotation_data(annotation.get_annotation_data())
+                    found_ids = {item.get_annotation_id() for item in found_annotation.get_annotation_data()}
+                    new_data = annotation.get_annotation_data()
 
-    def add_annotation(self, annotation: FAnnotationItem, dataset: str):
+                    for item in new_data:
+                        if item.get_annotation_id() not in found_ids:
+                            item.set_annotation_id(self.get_annotation_id_with_increment())
+
+                    found_annotation.update_annotation_data(new_data)
+
+    def add_annotation(self, annotation: FAnnotationItem, dataset: str, image_ids: set[int], ann_ids: set[int]):
         if os.path.isfile(annotation.get_image_path()) is False:
             return
         else:
@@ -210,9 +177,13 @@ class UCocoProject:
             shutil.copy2(annotation.get_image_path(), new_path_image)
             annotation.set_image_path(new_path_image)
 
-        annotation.set_image_id(self.get_image_id_with_increment())
+        # Изменяем ID элементов, если такие значения были найдены в проекте
+        if annotation.get_image_id() in image_ids:
+            annotation.set_image_id(self.get_image_id_with_increment())
+
         for ann_object in annotation.get_annotation_data():
-            ann_object.set_annotation_id(self.get_annotation_id_with_increment())
+            if ann_object.get_annotation_id() in ann_ids:
+                ann_object.set_annotation_id(self.get_annotation_id_with_increment())
 
         self.annotations[dataset].append(annotation)
 
@@ -239,6 +210,9 @@ class UCocoProject:
         if annotation not in self.annotations[dataset]:
             return
         self.annotations[dataset].remove(annotation)
+
+        if len(self.annotations[dataset]) == 0:
+            self.annotations.pop(dataset)
 
         image_path = annotation.get_image_path()
         if os.path.isfile(image_path):
@@ -382,7 +356,12 @@ class UCocoProject:
     ----------------------------
     """
 
-    def start_task_thread(self, tasks: list[tuple[callable, tuple, dict]], on_finished_list: list[callable]):
+    def start_task_thread(
+            self,
+            tasks: list[tuple[callable, tuple, dict]],
+            on_finished_list: list[callable],
+            on_error_list: list[callable],
+    ):
         if self.task_thread and self.task_thread.isRunning():
             return False
 
@@ -398,6 +377,9 @@ class UCocoProject:
 
         for func in on_finished_list:
             self.task_runner.finished.connect(func)
+
+        for func in on_error_list:
+            self.task_runner.error.connect(func)
 
         self.task_thread.start()
 

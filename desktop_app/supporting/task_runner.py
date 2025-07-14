@@ -3,6 +3,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, QThread
 class UTaskRunner(QObject):
     started = pyqtSignal()
     finished = pyqtSignal()
+    error = pyqtSignal(str)
 
     def __init__(self, tasks: list[tuple[callable, tuple, dict]]):
         """
@@ -23,5 +24,8 @@ class UTaskRunner(QObject):
             try:
                 func(*args, **kwargs)
             except Exception as e:
-                print(f"Ошибка при выполнении {func.__name__}: {e}")
+                error_text = f"Ошибка при выполнении {func.__name__}: {e}"
+                print(error_text)
+                self.error.emit(error_text)
+                return
         self.finished.emit()

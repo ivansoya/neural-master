@@ -1,9 +1,11 @@
+import os
 from typing import Optional
 
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QWidget, QStackedWidget, QDialog
+from PyQt5.QtWidgets import QWidget, QStackedWidget, QDialog, QFileDialog
 
-from coco.coco_json import cfg_convert_to_coco, build_coco_json
+from coco.coco_json import cfg_convert_to_coco, build_coco_json, make_coco_json, load_coco_json, \
+    make_annotation_dict_from_coco
 from coco.coco_project import UCocoProject
 from commander import UGlobalSignalHolder
 from design.dataset_page import Ui_page_dataset
@@ -45,7 +47,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
         self.button_export.clicked.connect(self.handle_on_button_export_clicked)
 
-        self.button_to_coco.clicked.connect(self.handle_on_click_to_coco)
+        self.button_import.clicked.connect(self.handle_on_button_import_clicked)
 
         self.list_datasets.signal_on_item_clicked.connect(self.move_annotations_to_gallery)
 
@@ -69,11 +71,11 @@ class UPageDataset(QWidget, Ui_page_dataset):
         # Привязка к событиям
         if self.commander:
             self.commander.project_load_complete.connect(self.update_dataset_page)
-            self.commander.project_updated_datasets.connect(self.update_dataset_page)
+            self.commander.project_updated.connect(self.update_dataset_page)
 
     @pyqtSlot()
     def on_task_runner_finished(self):
-        self.commander.project_updated_datasets.emit()
+        self.commander.project_updated.emit()
 
     @pyqtSlot()
     def update_dataset_page(self):
@@ -123,7 +125,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 (self.project.simple_export_with_refactor, (export_path, chosen_datasets, chosen_class_ids,), {})
             ]
 
-            if self.project.start_task_thread(task, [self.handle_on_ended_export]) is False:
+            if self.project.start_task_thread(task, [self.handle_on_ended_export], []) is False:
                 UMessageBox.show_error("Невозможно запустить экспорт, поток занят!")
 
             self.commander.task_start.emit(f"Идет экспорт датасета!")
@@ -149,18 +151,60 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.view_gallery.set_all_selected()
 
     @pyqtSlot()
-    def handle_on_click_to_coco(self):
-        images, annotations, categories = cfg_convert_to_coco(self.project.get_annotations(), self.project.get_classes())
+    def handle_on_button_import_clicked(self):
+        confirm_window = UMessageBox.ask_confirmation(
+            "Выберите режим импорта",
+            "Внимание",
+            "Слияние",
+            "Добавление"
+        )
+        if confirm_window is None:
+            return
 
-        info = {
-            "name": "Varan-Master",
-            "description": "Varan",
-            "version": "0.1",
-            "author": "Ivan",
-            "year": 2025
-        }
+        # Обработка слияния
+        if confirm_window is True:
+            json_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Выберите json импортируемых данных",
+                os.getcwd(),
+                "Json проекты (*.json);;Все файлы (*)"
+            )
+            if not os.path.isfile(json_path):
+                return
 
-        coco_json = build_coco_json(images, annotations, categories, info, [])
+            task = [
+                (self.merge_import, (json_path, ), {}),
+                (self.project.save, (), {})
+            ]
+
+            if self.project.start_task_thread(task, [self.handle_on_ended_import], [self.handle_on_error_import]):
+                if self.commander: self.commander.task_start.emit("Начат импорт!")
+        else:
+            return
+
+    def merge_import(self, path_import: str):
+        _, _, annotations, images, classes = load_coco_json(path_import)
+
+        loaded_annotations, classes = make_annotation_dict_from_coco(images, annotations, classes, os.path.dirname(path_import))
+
+        if not self.project.is_classes_equal(classes):
+            raise Exception("Набор классов импортируемого датасета не совпадает с текущим!")
+
+        for dataset, ann_items in loaded_annotations.items():
+            self.project.update_annotations(ann_items, dataset)
+
+    @pyqtSlot(str)
+    def handle_on_error_import(self, error_text: str):
+        if self.commander:
+            self.commander.task_error.emit("Импорт не выполнен!")
+            self.commander.project_updated.emit()
+        UMessageBox.show_error(f"Произошла ошибка во время импорта: {error_text}")
+
+    @pyqtSlot()
+    def handle_on_ended_import(self):
+        if self.commander:
+            self.commander.task_finished.emit("Импорт завершен!")
+            self.commander.project_updated.emit()
 
     @pyqtSlot()
     def handle_on_click_button_clear_all_selections(self):
@@ -174,7 +218,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 (self.project.remove_list_of_annotations, (selected_annotations,), {}),
                 (self.project.save, (), {})
             ]
-            if self.project.start_task_thread(tasks, [self.on_task_runner_finished]) is False:
+            if self.project.start_task_thread(tasks, [self.on_task_runner_finished], []) is False:
                 UMessageBox.show_error("Поток сейчас занят, попробуйте позже!")
 
     @pyqtSlot()
@@ -194,7 +238,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 (self.project.save, (), {})
             ]
 
-            if self.project.start_task_thread(tasks, [self.on_task_runner_finished]) is False:
+            if self.project.start_task_thread(tasks, [self.on_task_runner_finished], []) is False:
                 UMessageBox.show_error("Поток сейчас занят, попробуйте позже!")
         else:
             return

@@ -499,17 +499,26 @@ margin: 0px;
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="button_to_coco">
+          <widget class="QPushButton" name="button_import">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
             </font>
            </property>
+           <property name="styleSheet">
+            <string notr="true">QWidget &gt; QPushButton {
+	background-color: rgb(88, 239, 255);
+}
+
+QWidget &gt; QPushButton:hover {
+	background-color: white;
+}</string>
+           </property>
            <property name="text">
-            <string>Создать COCO Json</string>
+            <string>Импорт</string>
            </property>
           </widget>
          </item>

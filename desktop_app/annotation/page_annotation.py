@@ -143,7 +143,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             (self.dump_task, (), {}),
         ]
 
-        if self.project.start_task_thread(task, [self.handle_on_ended_autosave]):
+        if self.project.start_task_thread(task, [self.handle_on_ended_autosave], []):
             self.commander.task_start.emit("Идет автосохранение!")
 
     def dump_task(self):
@@ -269,7 +269,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             (self.dump_task, (), {})
         ]
 
-        self.project.start_task_thread(tasks, [self.handle_on_ended_adding_dataset])
+        self.project.start_task_thread(tasks, [self.handle_on_ended_adding_dataset], [])
 
         self.commander.set_block(False)
 
@@ -280,7 +280,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.thumbnail_carousel.clear_thumbnails_to_last_annotated()
         self.annotation_scene.clear()
         if self.commander:
-            self.commander.project_updated_datasets.emit()
+            self.commander.project_updated.emit()
             if self.thumbnail_carousel.get_thumbnails_count() == 0:
                 self.commander.go_to_page_datasets.emit()
                 self.autosave_timer.stop()

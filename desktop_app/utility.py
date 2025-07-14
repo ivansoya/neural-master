@@ -328,7 +328,9 @@ class FAnnotationItem:
             return self is other
         else:
             return (self.get_image_id() == other.get_image_id() and
-                    self.image_path == other.get_image_path())
+                    os.path.basename(self.image_path) == os.path.basename(other.get_image_path()) and
+                    self.dataset == other.get_dataset_name()
+                    )
 
     def __ne__(self, other):
         return not self == other
@@ -364,7 +366,7 @@ class UMessageBox:
 
     @staticmethod
     def ask_confirmation(message: str, title: str = "Подтверждение",
-                         yes_text: str = "Да", no_text: str = "Нет") -> bool:
+                         yes_text: str = "Да", no_text: str = "Нет") -> bool | None:
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Question)
         msg_box.setWindowTitle(title)
@@ -379,4 +381,8 @@ class UMessageBox:
         msg_box.setDefaultButton(no_button)
 
         msg_box.exec_()
-        return msg_box.clickedButton() == yes_button
+        clicked = msg_box.clickedButton()
+        if clicked is None:
+            return
+        else:
+            return clicked == yes_button

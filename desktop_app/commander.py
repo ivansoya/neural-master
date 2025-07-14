@@ -39,7 +39,7 @@ class UGlobalSignalHolder(QObject):
     number_key_pressed = pyqtSignal(int)
 
     project_load_complete = pyqtSignal()
-    project_updated_datasets = pyqtSignal()
+    project_updated = pyqtSignal()
 
     model_loaded = pyqtSignal()
     model_unloaded = pyqtSignal()
