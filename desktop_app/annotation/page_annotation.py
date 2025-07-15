@@ -335,10 +335,13 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
 
     @pyqtSlot(int, int, object)
     def handle_on_screen_deleted_annotations(self, index_thumb: int, index_deleted: int, deleted_data: object):
-        if index_thumb == self.annotation_scene.get_current_thumb_index():
-            self.list_current_annotations.remove_item(index_deleted)
-        if isinstance(deleted_data, FAnnotationData):
-            self.list_total_annotations.decrease_class(deleted_data.get_class_id())
+        try:
+            if index_thumb == self.annotation_scene.get_current_thumb_index():
+                self.list_current_annotations.remove_item(index_deleted)
+            if isinstance(deleted_data, FAnnotationData):
+                self.list_total_annotations.decrease_class(deleted_data.get_class_id())
+        except Exception as Error:
+            UMessageBox.show_error(str(Error))
 
     @pyqtSlot(int, int, object, object)
     def handle_on_screen_updated_annotations(

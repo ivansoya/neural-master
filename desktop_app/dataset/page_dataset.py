@@ -119,7 +119,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
         dialog = UDialogExport(self.project)
         self.commander.set_block(True)
         if dialog.exec_() == QDialog.Accepted:
-            export_path, chosen_class_ids, chosen_datasets = dialog.get_result()
+            export_path, chosen_class_ids, chosen_datasets, train_percentage = dialog.get_result()
 
             task = [
                 (self.project.simple_export_with_refactor, (export_path, chosen_datasets, chosen_class_ids,), {})

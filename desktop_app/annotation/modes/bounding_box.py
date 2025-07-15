@@ -111,6 +111,9 @@ class UBoxAnnotationMode(UBaseAnnotationMode):
         return
 
     def on_delete_item(self, item: UAnnotationItem):
+        if not isinstance(item, UAnnotationItem):
+            return
+
         if self.current_rect is item:
             self._clean_rect()
         return

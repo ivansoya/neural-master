@@ -10,7 +10,7 @@ from annotation.annotation_polygon import UAnnotationPolygon
 from annotation.modes.abstract import UBaseAnnotationMode, EWorkMode
 from commander import UAnnotationSignalHolder, UGlobalSignalHolder
 from supporting.functions import get_clamped_pos
-from utility import FAnnotationData
+from utility import FAnnotationData, UMessageBox
 
 if TYPE_CHECKING:
     from annotation.annotation_scene import UAnnotationGraphicsView

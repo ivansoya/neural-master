@@ -1,6 +1,6 @@
 from typing import Optional
 
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QDialog, QListWidget, QFileDialog
 
@@ -24,6 +24,13 @@ class UDialogExport(QDialog, Ui_dialog_export):
         self.classes: dict[int, UAnnotationClass] = self.project.get_classes()
 
         self.export_path: Optional[str] = None
+
+        self.check_for_training.setChecked(False)
+        self.check_for_training.stateChanged.connect(self.handle_on_checked_changed)
+
+        self.widget_train.setVisible(False)
+
+        self.slider_train.valueChanged.connect(self.handle_on_slider_changed)
 
         self.list_choose_classes.setSelectionMode(QListWidget.MultiSelection)
         self.list_choose_datasets.setSelectionMode(QListWidget.MultiSelection)
@@ -53,6 +60,10 @@ class UDialogExport(QDialog, Ui_dialog_export):
         else:
             self.export_path = None
 
+    @pyqtSlot(int)
+    def handle_on_checked_changed(self, state: Qt.CheckState):
+        self.widget_train.setVisible(state == Qt.Checked)
+
     @pyqtSlot()
     def handle_on_export_clicked(self):
         if not self.export_path:
@@ -68,8 +79,14 @@ class UDialogExport(QDialog, Ui_dialog_export):
 
         self.accept()
 
+    @pyqtSlot(int)
+    def handle_on_slider_changed(self, value: int):
+        self.label_train.setText(str(value))
+        self.label_val.setText(str(self.slider_train.maximum() - value))
+
     def get_result(self):
-        return self.export_path, self.chosen_classes_id, self.chosen_datasets
+        return (self.export_path, self.chosen_classes_id, self.chosen_datasets,
+                float(self.slider_train.value() / self.slider_train.maximum()) if self.check_for_training.isChecked() else None)
 
     @staticmethod
     def _select_all(list_widget: QListWidget, is_selected: bool):

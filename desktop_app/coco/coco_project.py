@@ -74,7 +74,13 @@ class UCocoProject:
         return path
 
     def is_classes_equal(self, other_classes: dict[int, UAnnotationClass]):
-        return self.annotation_classes == other_classes
+        for class_id, class_info in other_classes.items():
+            if class_id not in self.annotation_classes:
+                return False
+            if (self.annotation_classes[class_id].name != class_info.name or
+                self.annotation_classes[class_id].super_category != class_info.super_category):
+                return False
+        return True
 
     def load_from_json(self, json_file: str):
         result = load_coco_json(json_file)
@@ -179,11 +185,15 @@ class UCocoProject:
 
         # Изменяем ID элементов, если такие значения были найдены в проекте
         if annotation.get_image_id() in image_ids:
-            annotation.set_image_id(self.get_image_id_with_increment())
+            new_image_id = self.get_image_id_with_increment()
+            annotation.set_image_id(new_image_id)
+            image_ids.add(new_image_id)
 
         for ann_object in annotation.get_annotation_data():
             if ann_object.get_annotation_id() in ann_ids:
-                ann_object.set_annotation_id(self.get_annotation_id_with_increment())
+                new_annotation_id = self.get_annotation_id_with_increment()
+                ann_object.set_annotation_id(new_annotation_id)
+                ann_ids.add(new_annotation_id)
 
         self.annotations[dataset].append(annotation)
 

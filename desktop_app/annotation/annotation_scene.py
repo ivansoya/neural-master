@@ -371,28 +371,26 @@ class UAnnotationGraphicsView(QGraphicsView):
 
     @pyqtSlot(object)
     def handle_on_delete_annotation_item(self, annotation: UAnnotationItem | None):
-        if not isinstance(annotation, UAnnotationItem) or annotation not in self.annotation_items or self.current_display_thumbnail is None:
+        if not isinstance(annotation, UAnnotationItem):
             return
 
-        if QApplication.overrideCursor():
-            QApplication.restoreOverrideCursor()
+        if annotation not in self.annotation_items or self.current_display_thumbnail is None:
+            return
+        try:
+            if self.commander:
+                deleted_data = annotation.get_annotation_data()
+                deleted_index = self.annotation_items.index(annotation)
+                self.commander.deleted_annotation.emit(self.get_current_thumb_index(), deleted_index, deleted_data)
 
-        if self.commander:
-            deleted_data = annotation.get_annotation_data()
-            deleted_index = self.annotation_items.index(annotation)
-            self.commander.deleted_annotation.emit(self.get_current_thumb_index(), deleted_index, deleted_data)
+            if annotation.scene():
+                self.annotate_scene.removeItem(annotation)
 
-        self.annotate_mods[self.current_work_mode].on_delete_item(annotation)
+            self.annotate_mods[self.current_work_mode].on_delete_item(annotation)
 
-        if annotation.scene():
-            self.annotate_scene.removeItem(annotation)
-
-        if annotation.signal_holder:
-            annotation.signal_holder.disconnect()
-            annotation.signal_holder.deleteLater()
-
-        self.annotation_items.remove(annotation)
-        self.scene().update()
+            self.annotation_items.remove(annotation)
+            self.scene().update()
+        except Exception as error:
+            UMessageBox.show_error(f"Ошибка при удалении: {str(error)}")
 
     def emit_commander_to_add(self, annotation_data: FAnnotationData):
         if self.commander:

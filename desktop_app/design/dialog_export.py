@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_dialog_export(object):
     def setupUi(self, dialog_export):
         dialog_export.setObjectName("dialog_export")
-        dialog_export.resize(588, 678)
+        dialog_export.resize(588, 721)
         self.verticalLayout = QtWidgets.QVBoxLayout(dialog_export)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label = QtWidgets.QLabel(dialog_export)
@@ -44,8 +44,86 @@ class Ui_dialog_export(object):
         self.horizontalLayout.addWidget(self.label_path)
         self.horizontalLayout.setStretch(1, 1)
         self.verticalLayout.addLayout(self.horizontalLayout)
-        spacerItem = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        spacerItem = QtWidgets.QSpacerItem(20, 10, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         self.verticalLayout.addItem(spacerItem)
+        self.check_for_training = QtWidgets.QCheckBox(dialog_export)
+        self.check_for_training.setStyleSheet("QCheckBox {\n"
+"        spacing: 10px;\n"
+"        font-size: 16px;\n"
+"        color: black;\n"
+"    }\n"
+"\n"
+"    QCheckBox::indicator {\n"
+"        width: 14px;\n"
+"        height: 14px;\n"
+"    }\n"
+"\n"
+"    QCheckBox::indicator:unchecked {\n"
+"        border: 2px solid #555;\n"
+"        background-color: white;\n"
+"        border-radius: 4px;\n"
+"    }\n"
+"\n"
+"    QCheckBox::indicator:unchecked:hover {\n"
+"        border: 2px solid #007BFF; /* синий при наведении */\n"
+"    }\n"
+"\n"
+"    QCheckBox::indicator:checked {\n"
+"        border: 2px solid #4CAF50;\n"
+"        background-color: #4CAF50; /* зелёный при выборе */\n"
+"        border-radius: 4px;\n"
+"    }\n"
+"\n"
+"    QCheckBox::indicator:checked:hover {\n"
+"        background-color: #45A049; /* тёмно-зелёный при наведении */\n"
+"    }")
+        self.check_for_training.setObjectName("check_for_training")
+        self.verticalLayout.addWidget(self.check_for_training)
+        self.widget_train = QtWidgets.QWidget(dialog_export)
+        self.widget_train.setMinimumSize(QtCore.QSize(0, 0))
+        self.widget_train.setStyleSheet("")
+        self.widget_train.setObjectName("widget_train")
+        self.widget_train_layout = QtWidgets.QVBoxLayout(self.widget_train)
+        self.widget_train_layout.setContentsMargins(0, -1, -1, -1)
+        self.widget_train_layout.setObjectName("widget_train_layout")
+        self.slider_train = QtWidgets.QSlider(self.widget_train)
+        self.slider_train.setMinimum(1)
+        self.slider_train.setMaximum(100)
+        self.slider_train.setProperty("value", 75)
+        self.slider_train.setOrientation(QtCore.Qt.Horizontal)
+        self.slider_train.setObjectName("slider_train")
+        self.widget_train_layout.addWidget(self.slider_train)
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        self.label_train = QtWidgets.QLabel(self.widget_train)
+        self.label_train.setStyleSheet("background-color: green;\n"
+"  color: white;\n"
+"  padding: 10px;\n"
+"  text-align: center;\n"
+"  display: block;\n"
+"  border-radius: 5px;\n"
+"  font-weight: bold;\n"
+"font-size: 16px;\n"
+"qproperty-alignment: \'AlignCenter\';")
+        self.label_train.setObjectName("label_train")
+        self.horizontalLayout_4.addWidget(self.label_train)
+        self.label_val = QtWidgets.QLabel(self.widget_train)
+        self.label_val.setLayoutDirection(QtCore.Qt.LeftToRight)
+        self.label_val.setStyleSheet("background-color: blue;\n"
+"  color: white;\n"
+"  padding: 10px;\n"
+"  text-align: center;\n"
+"  display: block;\n"
+"  border-radius: 5px;\n"
+"  font-weight: bold;\n"
+"font-size: 16px;\n"
+"qproperty-alignment: \'AlignCenter\';")
+        self.label_val.setObjectName("label_val")
+        self.horizontalLayout_4.addWidget(self.label_val)
+        self.widget_train_layout.addLayout(self.horizontalLayout_4)
+        self.verticalLayout.addWidget(self.widget_train)
+        spacerItem1 = QtWidgets.QSpacerItem(20, 10, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.verticalLayout.addItem(spacerItem1)
         self.label_2 = QtWidgets.QLabel(dialog_export)
         font = QtGui.QFont()
         font.setPointSize(12)
@@ -143,8 +221,8 @@ class Ui_dialog_export(object):
         self.verticalLayout_3.addWidget(self.list_choose_classes)
         self.stack_export.addWidget(self.page_21)
         self.verticalLayout.addWidget(self.stack_export)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        self.verticalLayout.addItem(spacerItem1)
+        spacerItem2 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.verticalLayout.addItem(spacerItem2)
         self.button_start_export = QtWidgets.QPushButton(dialog_export)
         font = QtGui.QFont()
         font.setPointSize(12)
@@ -168,6 +246,10 @@ class Ui_dialog_export(object):
         dialog_export.setWindowTitle(_translate("dialog_export", "Dialog"))
         self.label.setText(_translate("dialog_export", "Выберите путь для экспорта"))
         self.button_choose_path.setText(_translate("dialog_export", "Выбрать"))
+        self.check_for_training.setAccessibleName(_translate("dialog_export", "Экспорт для обучения"))
+        self.check_for_training.setText(_translate("dialog_export", "Экспорт для обучения"))
+        self.label_train.setText(_translate("dialog_export", "75"))
+        self.label_val.setText(_translate("dialog_export", "25"))
         self.label_2.setText(_translate("dialog_export", "Настройка параметров экспорта"))
         self.button_enable_datasets.setText(_translate("dialog_export", "Датасеты"))
         self.button_enable_classes.setText(_translate("dialog_export", "Классы"))
