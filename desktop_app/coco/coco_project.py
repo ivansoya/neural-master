@@ -1,6 +1,7 @@
 import os
 import random
 import shutil
+from collections import defaultdict
 from typing import Optional
 
 from PyQt5.QtCore import QThread, QObject, pyqtSlot
@@ -8,7 +9,7 @@ from PyQt5.QtGui import QColor
 
 from SAM2.sam2_net import USam2Net
 from coco.coco_json import load_coco_json, make_coco_json, save_coco_json, make_annotation_dict_from_coco
-from coco.coco_utility import UProjectInfo, UAnnotationClass
+from coco.coco_utility import UProjectInfo, UAnnotationClass, ECocoFileNames, EDefaultTrainName
 from neural_model import URemoteNeuralNet, UBaseNeuralNet, ULocalDetectYOLO
 from supporting.functions import rstrip, get_distinct_color
 from supporting.task_runner import UTaskRunner
@@ -266,6 +267,67 @@ class UCocoProject:
 
         save_coco_json(rstrip(os.path.join(export_path, os.path.basename(export_path) + ".json")), export_coco)
 
+    def simple_txt_export_with_refactor(self, export_path: str, chosen_datasets: list[str], chosen_classes_id: list[int]):
+        dirs = [
+            export_path,
+            rstrip(os.path.join(export_path, EDefaultTrainName.IMAGES)),
+            rstrip(os.path.join(export_path, EDefaultTrainName.LABELS))
+        ]
+        for dir_path in dirs:
+            os.makedirs(dir_path, exist_ok=True)
+
+        refactored_data_dict = self._get_refactor_data(chosen_datasets, chosen_classes_id)
+        refactored_classes = self._get_refactored_classes(chosen_classes_id)
+
+        print(f"Оригинальное количество картинок: {sum(len(ann_data) for ann_data in self.annotations.values())}"
+              f"После рефакторинга: {sum(len(ann_data) for ann_data in refactored_data_dict.values())}")
+
+        for ann_list in refactored_data_dict.values():
+            for ann_item in ann_list:
+                image_name = os.path.basename(ann_item.get_image_path())
+                image_path = rstrip(os.path.join(export_path, EDefaultTrainName.IMAGES, image_name))
+                try:
+                    shutil.copy2(ann_item.get_image_path(), image_path)
+                except Exception as error:
+                    print(f"{str(error)}: связано с файлом {ann_item.get_image_path()} и копированием его в {image_path}")
+                    continue
+
+                label_name = os.path.splitext(image_name)[0] + ".txt"
+                label_path = rstrip(os.path.join(export_path, EDefaultTrainName.LABELS, label_name))
+                with open(label_path, "w", encoding="utf-8") as label_file:
+                    label_file.write(ann_item.get_bbox_strings())
+
+        with open(rstrip(os.path.join(export_path, EDefaultTrainName.CLASSES)), "w", encoding="utf-8") as classes_file:
+            classes_file.writelines([f"{class_obj.name}\n" for class_id, class_obj in refactored_classes.items()])
+
+    def train_export_with_refactor(
+            self,
+            export_path: str,
+            chosen_datasets: list[str],
+            chosen_classes_id: list[int],
+            train_percentage: float
+    ):
+        dirs = [
+            export_path,
+            rstrip(os.path.join(export_path, ECocoFileNames.TRAIN_DIR)),
+            rstrip(os.path.join(export_path, ECocoFileNames.VAL_DIR)),
+            rstrip(os.path.join(export_path, ECocoFileNames.ANNOTATION_DIR))
+        ]
+        for dir_path in dirs:
+            os.makedirs(dir_path, exist_ok=True)
+
+        refactored_data_dict = self._get_refactor_data(chosen_datasets, chosen_classes_id)
+        refactored_classes = self._get_refactored_classes(chosen_classes_id)
+
+        train_dicts = self._get_train_val_dicts(refactored_data_dict, train_percentage)
+        save_json_names = (
+            rstrip(os.path.join(export_path, ECocoFileNames.ANNOTATION_DIR, ECocoFileNames.TRAIN_JSON)),
+            rstrip(os.path.join(export_path, ECocoFileNames.ANNOTATION_DIR, ECocoFileNames.VAL_JSON))
+        )
+
+        # Сохранение
+
+
     def _get_refactored_classes(self, chosen_classes_id: list[int]):
         refactored_classes: dict[int, UAnnotationClass] = dict()
 
@@ -308,6 +370,48 @@ class UCocoProject:
             refactored_annotations[dataset].append(copy_item)
 
         return refactored_annotations
+
+    def _get_train_val_dicts(self, refactored_data_dict: dict[str, list[FAnnotationItem]], train_percentage: float):
+        class_group_dict: dict[int, list[tuple[FAnnotationData, FAnnotationItem]]] = defaultdict(list)
+
+        # Группировка по классу
+        for dataset, ann_list in refactored_data_dict.items():
+            for ann_item in ann_list:
+                for ann_data in ann_item.get_annotation_data():
+                    class_group_dict[ann_data.get_class_id()].append((ann_data, ann_item))
+
+        images_train: dict[int, FAnnotationItem] = dict()
+        images_val: dict[int, FAnnotationItem] = dict()
+
+        for class_id, group_list in class_group_dict.items():
+            count = len(group_list)
+            if count == 0:
+                continue
+
+            train_indexes = set(random.sample(range(count), int(train_percentage * count)))
+            for group_index in range(len(group_list)):
+                if group_index in train_indexes:
+                    to_add_dict = images_train
+                else:
+                    to_add_dict = images_val
+
+                ann_data, ann_item = group_list[group_index]
+                if ann_item.get_image_id() not in to_add_dict:
+                    temp_item = ann_item.copy()
+                    temp_item.update_annotation_data([])
+                    to_add_dict[ann_item.get_image_id()] = temp_item
+
+                to_add_dict[ann_item.get_image_id()].add_annotation_data(ann_data)
+
+        train_result: dict[str, list[FAnnotationItem]] = defaultdict(list)
+        for item in images_train.values():
+            train_result[item.get_dataset_name()].append(item)
+
+        val_result: dict[str, list[FAnnotationItem]] = defaultdict(list)
+        for item in images_val.values():
+            val_result[item.get_dataset_name()].append(item)
+
+        return train_result, val_result
 
     def _copy_images(self, source_path: str, data_list: dict[str, list[FAnnotationItem]]):
         for dataset, item_list in data_list.items():
@@ -385,6 +489,8 @@ class UCocoProject:
         self.task_runner.finished.connect(self.task_thread.quit)
         self.task_runner.finished.connect(self.on_task_runner_finished)
 
+        self.task_runner.error.connect(self.on_task_runner_error)
+
         for func in on_finished_list:
             self.task_runner.finished.connect(func)
 
@@ -396,4 +502,8 @@ class UCocoProject:
         return True
 
     def on_task_runner_finished(self):
+        self.task_runner = None
+
+    def on_task_runner_error(self, error: str):
+        self.task_thread.quit()
         self.task_runner = None

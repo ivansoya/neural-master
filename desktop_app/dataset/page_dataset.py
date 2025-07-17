@@ -121,15 +121,21 @@ class UPageDataset(QWidget, Ui_page_dataset):
         if dialog.exec_() == QDialog.Accepted:
             export_path, chosen_class_ids, chosen_datasets, train_percentage = dialog.get_result()
 
-            task = [
-                (self.project.simple_export_with_refactor, (export_path, chosen_datasets, chosen_class_ids,), {})
-            ]
+            if train_percentage is None:
+                task = [
+                    (self.project.simple_export_with_refactor, (export_path, chosen_datasets, chosen_class_ids,), {})
+                ]
+            else:
+                task = [
+                    (self.project.simple_txt_export_with_refactor, (export_path, chosen_datasets, chosen_class_ids,), {})
+                ]
 
             if self.project.start_task_thread(task, [self.handle_on_ended_export], []) is False:
                 UMessageBox.show_error("Невозможно запустить экспорт, поток занят!")
 
             self.commander.task_start.emit(f"Идет экспорт датасета!")
-            self.commander.set_block(False)
+
+        self.commander.set_block(False)
 
     @pyqtSlot()
     def handle_on_ended_export(self):

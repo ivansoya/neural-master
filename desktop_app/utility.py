@@ -323,6 +323,22 @@ class FAnnotationItem:
     def get_annotation_status(self):
         return self.annotation_status
 
+    def get_bbox_strings(self):
+        result = ""
+        for ann_data in self.annotation_list:
+            bbox = ann_data.get_bbox()
+
+            x_center = clamp((bbox[0] + bbox[2] / 2) / self.width, 0, 1)
+            y_center = clamp((bbox[1] + bbox[3] / 2) / self.height, 0, 1)
+            norm_w = clamp(bbox[2] / self.width, 0, 1)
+            norm_h = clamp(bbox[3] / self.height, 0, 1)
+
+            # Форматируем строку
+            result += f"{ann_data.get_class_id() - 1} {x_center:.6f} {y_center:.6f} {norm_w:.6f} {norm_h:.6f}\n"
+
+        return result
+
+
     def __eq__(self, other):
         if not isinstance(other, FAnnotationItem):
             return self is other
@@ -331,6 +347,9 @@ class FAnnotationItem:
                     os.path.basename(self.image_path) == os.path.basename(other.get_image_path()) and
                     self.dataset == other.get_dataset_name()
                     )
+
+    def __hash__(self):
+        return hash((self.image_id, os.path.basename(self.image_path), self.dataset))
 
     def __ne__(self, other):
         return not self == other

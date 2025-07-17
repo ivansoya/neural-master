@@ -111,6 +111,8 @@ class UAnnotationItem(QGraphicsItem):
         self.update()
 
     def itemChange(self, change, value):
+        if self.scene() is None:
+            return super().itemChange(change, value)
         if change == QGraphicsItem.ItemSelectedChange:
             if value:
                 self.setZValue(5)
@@ -128,6 +130,9 @@ class UAnnotationItem(QGraphicsItem):
             self.alt_pressed = False
 
     def paint_text(self, painter, point_start: QPointF):
+        if self.scene() is None:
+            return
+
         text = f"ID: {self.class_id}, {self.class_name}"
         font = QFont(self.font, int(self.font_size * self.draw_scale))
         font_color = QColor(Qt.black)

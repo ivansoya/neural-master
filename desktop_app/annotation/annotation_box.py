@@ -1,6 +1,6 @@
 from typing import Callable
 
-from PyQt5.QtCore import pyqtSignal, Qt, QRectF, QSizeF, QPointF, QObject, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, Qt, QRectF, QSizeF, QPointF, QObject, pyqtSlot, QPoint
 from PyQt5.QtGui import QColor, QBrush, QCursor, QPainterPath, QFontMetricsF, QFont, QPen
 from PyQt5.QtWidgets import QGraphicsRectItem, QApplication, QGraphicsPixmapItem, QGraphicsItem
 
@@ -28,6 +28,8 @@ class UAnnotationBox(UAnnotationItem):
             scale: float = 1.0,
             parent = None
     ):
+        self._deleted: bool = False
+
         super().__init__(class_data, annotation_id, scale, parent)
 
         self.isActive = True
@@ -49,6 +51,9 @@ class UAnnotationBox(UAnnotationItem):
         self.prev_data = self.get_annotation_data()
 
     def get_square(self):
+        if self._deleted:
+            return 0
+
         rect = self.rect()
         if rect.isValid() is False:
             return 0
@@ -62,7 +67,15 @@ class UAnnotationBox(UAnnotationItem):
             rect = QRectF(rect.right(), rect.top(), -rect.width(), rect.height())
         return rect
 
+    def pos(self):
+        if self.scene() is None or self._deleted:
+            return QPointF(0, 0)
+        else:
+            return super().pos()
+
     def rect(self):
+        if self.scene() is None or self._deleted:
+            return QRectF()
         return self._rect
 
     def setRect(self, new_rect: QRectF):
@@ -70,6 +83,8 @@ class UAnnotationBox(UAnnotationItem):
         self._rect = new_rect
 
     def get_resize_handles(self):
+        if self.scene() is None or self._deleted:
+            return {}
         rect = self.rect()
         line_width = int(self.line_width * self.draw_scale)
         handle_size = int(self.resize_handle_size * self.draw_scale)
@@ -129,6 +144,8 @@ class UAnnotationBox(UAnnotationItem):
         return [self.x(), self.y(), self.width(), self.height()]
 
     def hoverMoveEvent(self, event):
+        if self.scene() is None or self._deleted:
+            return super().hoverMoveEvent(event)
         # Здесь все это нужно только для смены курсоров
         pos = event.pos()
         cursor_shape = None
@@ -164,6 +181,9 @@ class UAnnotationBox(UAnnotationItem):
         QApplication.restoreOverrideCursor()
 
     def boundingRect(self):
+        if self.scene() is None or self._deleted:
+            return QRectF()
+
         base_rect = self.rect().normalized()
         border_width = int(self.line_width * self.draw_scale)
         handle_margin = int(self.resize_handle_size * self.draw_scale)
@@ -179,6 +199,9 @@ class UAnnotationBox(UAnnotationItem):
         )
 
     def shape(self):
+        if self.scene() is None or self._deleted:
+            return QPainterPath()
+
         path = QPainterPath()
         path.addRect(self.rect())
         for handle, handle_rect in self.get_resize_handles().items():
@@ -193,6 +216,8 @@ class UAnnotationBox(UAnnotationItem):
         return path
 
     def paint(self, painter, option, widget=None):
+        if self.scene() is None  or self._deleted:
+            return
         # фон прямоугольника
         pen_width = self.line_width * self.draw_scale
 
@@ -214,11 +239,16 @@ class UAnnotationBox(UAnnotationItem):
                 self.paint_text(painter, self.get_resize_handles()['top_left'])
 
     def itemChange(self, change, value):
+        if self.scene() is None or self._deleted:
+            return
         if change == QGraphicsItem.ItemSelectedHasChanged:
             self.signal_holder.select_event.emit(self, self.isSelected())
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
+        if self.scene() is None or self._deleted:
+            return
+
         if event.button() == Qt.LeftButton:
             for name, handle in self.get_resize_handles().items():
                 if name in ['top_line', 'bottom_line', 'right_line', 'left_line']:
@@ -248,6 +278,9 @@ class UAnnotationBox(UAnnotationItem):
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if self.scene() is None or self._deleted:
+            return
+
         if self.resizing:
             rect = self.rect()
             pos = event.pos()
@@ -318,6 +351,9 @@ class UAnnotationBox(UAnnotationItem):
                     super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        if self.scene() is None or self._deleted:
+            return
+
         if event.button() == Qt.LeftButton:
             if self.resizing:
                 self.resizing = False
@@ -329,6 +365,7 @@ class UAnnotationBox(UAnnotationItem):
                 self.emit_update_event(self, self.prev_data, current_data)
 
     def delete_item(self):
+        self._deleted = True
         self.signal_holder.delete_event.emit(self)
 
     def get_line_scaled(self):

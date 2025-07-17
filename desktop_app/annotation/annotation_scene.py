@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QWidget, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMessageBox
 )
 from PyQt5.QtGui import QColor, QPainter, QTransform, QFont, QPixmap, QIcon, QImage
-from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot, QPointF
+from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot, QPointF, QTimer
 from cv2 import Mat
 
 from SAM2.sam2_net import USam2Net
@@ -377,18 +377,18 @@ class UAnnotationGraphicsView(QGraphicsView):
         if annotation not in self.annotation_items or self.current_display_thumbnail is None:
             return
         try:
+            if annotation.scene():
+                annotation.setSelected(False)
+                self.annotate_scene.removeItem(annotation)
+                QApplication.processEvents()
+
             if self.commander:
                 deleted_data = annotation.get_annotation_data()
                 deleted_index = self.annotation_items.index(annotation)
                 self.commander.deleted_annotation.emit(self.get_current_thumb_index(), deleted_index, deleted_data)
 
-            if annotation.scene():
-                self.annotate_scene.removeItem(annotation)
-
             self.annotate_mods[self.current_work_mode].on_delete_item(annotation)
 
-            self.annotation_items.remove(annotation)
-            self.scene().update()
         except Exception as error:
             UMessageBox.show_error(f"Ошибка при удалении: {str(error)}")
 
