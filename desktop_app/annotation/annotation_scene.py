@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QColor, QPainter, QTransform, QFont, QPixmap, QIcon, QImage
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal, pyqtSlot, QPointF, QTimer
 from cv2 import Mat
+from requests import delete
 
 from SAM2.sam2_net import USam2Net
 from annotation.annotation_box import UAnnotationBox
@@ -384,8 +385,7 @@ class UAnnotationGraphicsView(QGraphicsView):
 
             if self.commander:
                 deleted_data = annotation.get_annotation_data()
-                deleted_index = self.annotation_items.index(annotation)
-                self.commander.deleted_annotation.emit(self.get_current_thumb_index(), deleted_index, deleted_data)
+                self.commander.deleted_annotation.emit(self.get_current_thumb_index(), deleted_data.get_annotation_id(), deleted_data)
 
             self.annotate_mods[self.current_work_mode].on_delete_item(annotation)
 
@@ -447,10 +447,11 @@ class UAnnotationGraphicsView(QGraphicsView):
         else:
             return None
 
-    def select_annotation_by_index(self, index: int):
-        if 0 <= index < len(self.annotation_items):
-            self.scene().clearSelection()
-            self.annotation_items[index].setSelected(True)
+    def select_annotation_by_annotation_id(self, annotation_id: int):
+        for annotation in self.annotation_items:
+            if annotation.get_annotation_id() == annotation_id:
+                self.scene().clearSelection()
+                annotation.setSelected(True)
 
     def clean_all_annotations(self, to_emit: bool = False):
         self.scene().clearSelection()
@@ -465,7 +466,7 @@ class UAnnotationGraphicsView(QGraphicsView):
             if to_emit:
                 self.commander.deleted_annotation.emit(
                     self.get_current_thumb_index(),
-                    len(self.annotation_items),
+                    deleted_data.get_annotation_id(),
                     deleted_data
                 )
 

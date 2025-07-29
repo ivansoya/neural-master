@@ -29,8 +29,9 @@ class ImageLoaderThread(QThread):
             pixmap = QPixmap(self.image_path).scaled(self.width, self.height, Qt.KeepAspectRatio,
                                                      Qt.SmoothTransformation)
             self.image_loaded.emit(pixmap)
-        except Exception:
+        except Exception as error:
             self.image_loaded.emit(None)
+            print(str(error))
             return
 
 
@@ -109,13 +110,16 @@ class UAnnotationThumbnail(QGraphicsPixmapItem):
         self.set_annotated_status(EAnnotationStatus.NO_ANNOTATION)
         self.update()
 
-    def delete_annotation(self, index: int):
-        if index < 0 or index >= len(self.annotation_data_list):
-            return
-        self.annotation_data_list.pop(index)
-        if len(self.annotation_data_list) <= 0 and self.annotation_status.value != EAnnotationStatus.MARKED_DROP.value:
-            self.set_annotated_status(EAnnotationStatus.MARKED_DROP)
-        self.update()
+    def delete_annotation(self, annotation_id: int):
+        for annotation in self.annotation_data_list:
+            if annotation.get_annotation_id() == annotation_id:
+                self.annotation_data_list.remove(annotation)
+                if len(self.annotation_data_list) == 0 and self.annotation_status.value != EAnnotationStatus.MARKED_DROP.value:
+                    self.set_annotated_status(EAnnotationStatus.MARKED_DROP)
+                elif self.annotation_status.value != EAnnotationStatus.ANNOTATED:
+                    self.set_annotated_status(EAnnotationStatus.ANNOTATED)
+                self.update()
+                return
 
     def update_annotation(self, index: int, data: FAnnotationData):
         if index < 0 or index >= len(self.annotation_data_list):
@@ -496,10 +500,10 @@ class UThumbnailCarousel(QGraphicsView):
             self.thumbnails[index_thumb].update_annotation(index_annotation, annotation_data)
 
     @pyqtSlot(int, int, object)
-    def handle_signal_on_delete_annotation(self, index_thumb: int, index_annotation: int, data: FAnnotationData):
+    def handle_signal_on_delete_annotation(self, index_thumb: int, annotation_id: int, data: FAnnotationData):
         if not 0 <= index_thumb < len(self.thumbnails):
             return
-        self.thumbnails[index_thumb].delete_annotation(index_annotation)
+        self.thumbnails[index_thumb].delete_annotation(annotation_id)
 
     @pyqtSlot(int, object)
     def handle_signal_on_added_annotation(self, index_thumb: int, annotation_data):

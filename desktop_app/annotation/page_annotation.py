@@ -334,10 +334,10 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 self.list_current_annotations.add_item(annotation)
 
     @pyqtSlot(int, int, object)
-    def handle_on_screen_deleted_annotations(self, index_thumb: int, index_deleted: int, deleted_data: object):
+    def handle_on_screen_deleted_annotations(self, index_thumb: int, annotation_id: int, deleted_data: object):
         try:
             if index_thumb == self.annotation_scene.get_current_thumb_index():
-                self.list_current_annotations.remove_item(index_deleted)
+                self.list_current_annotations.remove_item(annotation_id)
             if isinstance(deleted_data, FAnnotationData):
                 self.list_total_annotations.decrease_class(deleted_data.get_class_id())
         except Exception as Error:
@@ -401,8 +401,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.thumbnail_carousel.select_thumbnail_by_direction("right")
 
     @pyqtSlot(int)
-    def handle_on_select_annotation_from_list(self, index: int):
-        self.annotation_scene.select_annotation_by_index(index)
+    def handle_on_select_annotation_from_list(self, annotation_id: int):
+        self.annotation_scene.select_annotation_by_annotation_id(annotation_id)
 
     @pyqtSlot(int, bool)
     def handle_on_select_annotation(self, selected_index: int, to_select: bool):

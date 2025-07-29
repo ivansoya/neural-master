@@ -30,6 +30,8 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.filter_dict: dict[int, bool] = dict()
         self.type_list: list[EAnnotationType] = list()
 
+        self.last_selected: int = -1
+
         # Дополнительные виджеты
         self.overlay: Optional[UOverlayLoader] = None
         self.thread_load_annotations: Optional[UThreadDatasetLoadAnnotations] = None
@@ -61,7 +63,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
             "Все аннотации": [EAnnotationType.BoundingBox, EAnnotationType.Segmentation, EAnnotationType.Mask],
             "Ограничительные рамки" : [EAnnotationType.BoundingBox],
             "Полигоны" : [EAnnotationType.Segmentation],
-            "Макси": [EAnnotationType.Mask]
+            "Маски": [EAnnotationType.Mask]
         })
         self.combo_annotation_type.setCurrentIndex(0)
 

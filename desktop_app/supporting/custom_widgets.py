@@ -57,7 +57,7 @@ class UListAnnotationWidget(QListWidget):
     def on_item_clicked(self, item: QListWidgetItem):
         widget = self.itemWidget(item)
         if isinstance(widget, UListAnnotationItem):
-            self.item_selected.emit(self.widgets.index(widget))
+            self.item_selected.emit(widget.get_annotation_id())
 
     def add_item(self, annotation_data: FAnnotationData):
         item = UListAnnotationItem(annotation_data)
@@ -84,20 +84,14 @@ class UListAnnotationWidget(QListWidget):
 
         self.widgets[index].set_data(annotation_data)
 
-    def remove_item(self, index: int):
-        if not 0 <= index < len(self.widgets):
-            return
-
-        widget_to_remove = self.widgets[index]
-
+    def remove_item(self, annotation_id: int):
         for i in range(self.count()):
             item = self.item(i)
             widget = self.itemWidget(item)
-            if widget == widget_to_remove:
-                self.takeItem(i)  # удаляет и сам виджет из списка
+            if isinstance(widget, UListAnnotationItem) and widget.get_annotation_id() == annotation_id:
+                self.takeItem(i)
+                del self.widgets[i]
                 break
-
-        del self.widgets[index]
 
 class UListAnnotationItem(QWidget):
     def __init__(self, annotation_data: FAnnotationData):
@@ -130,6 +124,9 @@ class UListAnnotationItem(QWidget):
         layout.addStretch()
         layout.setContentsMargins(4, 2, 4, 2)
         self.setLayout(layout)
+
+    def get_annotation_id(self):
+        return self.index
 
     def set_data(self, annotation: FAnnotationData):
         if annotation.get_annotation_type() is EAnnotationType.BoundingBox:
