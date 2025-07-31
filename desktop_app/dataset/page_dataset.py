@@ -14,6 +14,7 @@ from dataset.loader import UThreadDatasetLoadAnnotations, UThreadDatasetCopy
 from export.export import UDialogExport
 from supporting.overlay_widget import UOverlayLoader
 from supporting.custom_threads import UProgressThread
+from supporting.qt_general import terminate_closable_dialog
 from utility import UMessageBox, FAnnotationItem, EAnnotationType
 
 DATASET_ALL = "All Annotations"
@@ -217,6 +218,23 @@ class UPageDataset(QWidget, Ui_page_dataset):
     @pyqtSlot()
     def handle_on_click_button_clear_all_selections(self):
         self.view_gallery.clear_all_selections()
+
+    @pyqtSlot()
+    def handle_on_button_rename_dataset_clicked(self):
+        ret, selected_dataset = self.list_datasets.get_selected_item()
+        if ret == -1:
+            UMessageBox.show_error("Датасет не выбран!")
+            return
+
+        self.commander.set_block(True)
+        new_dataset_name = terminate_closable_dialog(self.project.get_annotations().keys())
+        self.commander.set_block(False)
+
+        if len(new_dataset_name) == 0:
+            UMessageBox.show_error("Введите или выберите название датасета!")
+            return
+
+
 
     @pyqtSlot()
     def handle_on_click_button_delete_annotations(self):

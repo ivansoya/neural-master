@@ -265,8 +265,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         tasks = [
             (self.project.update_annotations, (list_annotations, "noname_dataset",), {}),
             (self.project.remove_list_of_annotations, (list_to_delete,), {}),
-            (self.project.save, (), {}),
-            (self.dump_task, (), {})
+            (self.project.save, (), {})
         ]
 
         self.project.start_task_thread(tasks, [self.handle_on_ended_adding_dataset], [])

@@ -375,7 +375,7 @@ margin: 0px;
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <item>
-             <widget class="QPushButton" name="button_move_dataset_to_reserved">
+             <widget class="QPushButton" name="button_rename_dataset">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -385,7 +385,7 @@ margin: 0px;
                </font>
               </property>
               <property name="text">
-               <string>Резервировать датасет</string>
+               <string>Переименовать датасет</string>
               </property>
              </widget>
             </item>
@@ -444,7 +444,7 @@ margin: 0px;
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <item>
-             <widget class="QPushButton" name="button_move_selected_to_reserved">
+             <widget class="QPushButton" name="button_change_dataset">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -454,7 +454,7 @@ margin: 0px;
                </font>
               </property>
               <property name="text">
-               <string>Резервировать выбранное</string>
+               <string>Сменить датасет</string>
               </property>
              </widget>
             </item>

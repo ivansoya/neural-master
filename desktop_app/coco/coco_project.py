@@ -60,14 +60,14 @@ class UCocoProject:
         return self.current_image_id
 
     def get_image_id_with_increment(self):
-        self.current_image_id += 1
+        self.current_image_id = self.current_image_id + 1
         return self.current_image_id
 
     def get_annotation_id(self):
         return self.current_annotation_id
 
     def get_annotation_id_with_increment(self):
-        self.current_annotation_id += 1
+        self.current_annotation_id = self.current_annotation_id + 1
         return self.current_annotation_id
 
     def get_project_ann_dump_path(self):
@@ -185,16 +185,22 @@ class UCocoProject:
             annotation.set_image_path(new_path_image)
 
         # Изменяем ID элементов, если такие значения были найдены в проекте
-        if annotation.get_image_id() in image_ids:
+        image_id = annotation.get_image_id()
+        if image_id in image_ids:
             new_image_id = self.get_image_id_with_increment()
             annotation.set_image_id(new_image_id)
             image_ids.add(new_image_id)
+        elif self.current_image_id < image_id:
+            self.current_image_id = image_id
 
         for ann_object in annotation.get_annotation_data():
-            if ann_object.get_annotation_id() in ann_ids:
+            ann_object_id = ann_object.get_annotation_id()
+            if ann_object_id in ann_ids:
                 new_annotation_id = self.get_annotation_id_with_increment()
                 ann_object.set_annotation_id(new_annotation_id)
                 ann_ids.add(new_annotation_id)
+            elif self.current_annotation_id < ann_object_id:
+                    self.current_annotation_id = ann_object_id
 
         self.annotations[dataset].append(annotation)
 
@@ -207,6 +213,40 @@ class UCocoProject:
 
         if len(self.annotations[dataset]) == 0:
             self.annotations.pop(dataset)
+
+        deleted_dataset_dir = rstrip(os.path.join(self.project_path, 'datasets', dataset))
+        if os.path.isdir(deleted_dataset_dir):
+            shutil.rmtree(deleted_dataset_dir)
+
+    def rename_dataset(self, dataset: str, new_dataset_name: str):
+        if dataset not in self.annotations:
+            return
+
+        if new_dataset_name not in self.annotations[dataset]:
+            self.annotations[new_dataset_name] = list()
+
+        for annotation in self.annotations[dataset][:]:
+            annotation.set_dataset_name(new_dataset_name)
+            self.annotations[dataset].remove(annotation)
+            self.annotations[new_dataset_name].append(annotation)
+
+        self.annotations.pop(dataset)
+
+    def rename_dataset_annotations(self, annotations: list[FAnnotationItem], new_dataset_name: str):
+        if new_dataset_name not in self.annotations:
+            self.annotations[new_dataset_name] = list()
+
+        for annotation in annotations:
+            ann_dataset = annotation.get_dataset_name()
+            try:
+                self.annotations[ann_dataset].remove(annotation)
+            except ValueError:
+                pass
+            self.annotations[new_dataset_name].append(annotation)
+            if len(self.annotations[ann_dataset]) == 0:
+                self.annotations.pop(ann_dataset)
+                self._delete_dataset_dir(ann_dataset)
+
 
     def remove_list_of_annotations(self, removing_annotations: list[FAnnotationItem]):
         for annotation in removing_annotations:
@@ -420,6 +460,16 @@ class UCocoProject:
                 os.makedirs(os.path.dirname(new_image_path), exist_ok=True)
 
                 shutil.copy2(item.get_image_path(), new_image_path)
+
+    def _delete_dataset_dir(self, dataset_name: str):
+        deleted_dataset_dir = rstrip(os.path.join(self.project_path, 'datasets', dataset_name))
+        if os.path.isdir(deleted_dataset_dir):
+            shutil.rmtree(deleted_dataset_dir)
+
+    def _create_dataset_dir(self, dataset_name: str):
+        dataset_dir = rstrip(os.path.join(self.project_path, 'datasets', dataset_name))
+        os.makedirs(dataset_dir, exist_ok=True)
+
 
     """
     ----------------------------
