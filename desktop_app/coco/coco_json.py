@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from PyQt5.QtGui import QColor
 
+from coco.coco_utility import IMAGES_DIR
 from coco.coco_utility import UAnnotationClass
 from supporting.functions import rstrip
 from utility import FAnnotationItem, FAnnotationClasses, EAnnotationStatus, FAnnotationData
@@ -138,7 +139,7 @@ def make_annotation_dict_from_coco(
     for image in images:
         image_id = image["id"]
         dataset = image["dataset"] if image["dataset"] != "None" else "no_name_dataset"
-        file_path = rstrip(os.path.join(project_path, "datasets", dataset, image["file_name"]))
+        file_path = rstrip(os.path.join(project_path, IMAGES_DIR, image["file_name"]))
         temp_item = FAnnotationItem(
             [],
             file_path,

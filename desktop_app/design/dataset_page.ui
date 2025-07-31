@@ -377,7 +377,7 @@ margin: 0px;
             <item>
              <widget class="QPushButton" name="button_rename_dataset">
               <property name="enabled">
-               <bool>false</bool>
+               <bool>true</bool>
               </property>
               <property name="font">
                <font>
@@ -446,7 +446,7 @@ margin: 0px;
             <item>
              <widget class="QPushButton" name="button_change_dataset">
               <property name="enabled">
-               <bool>false</bool>
+               <bool>true</bool>
               </property>
               <property name="font">
                <font>

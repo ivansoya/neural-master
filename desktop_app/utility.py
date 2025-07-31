@@ -338,6 +338,9 @@ class FAnnotationItem:
 
         return result
 
+    def __str__(self):
+        return (f"Аннотаций(id={self.image_id}, path={self.image_path}, dataset={self.dataset}, width={self.width}, height={self.height}), "
+                f"annotations=({', '.join(str(annotation.get_annotation_id()) for annotation in self.annotation_list)}))")
 
     def __eq__(self, other):
         if not isinstance(other, FAnnotationItem):

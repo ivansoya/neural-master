@@ -3,6 +3,8 @@ from enum import StrEnum
 
 from PyQt5.QtGui import QColor
 
+IMAGES_DIR = "images"
+
 class ECocoFileNames(StrEnum):
     TRAIN_DIR = "images/train"
     VAL_DIR = "images/val"

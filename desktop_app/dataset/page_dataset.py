@@ -48,15 +48,14 @@ class UPageDataset(QWidget, Ui_page_dataset):
         self.button_reset_selected.clicked.connect(self.handle_on_click_button_clear_all_selections)
         self.button_delete_selected.clicked.connect(self.handle_on_click_button_delete_annotations)
 
+        self.button_change_dataset.clicked.connect(self.handle_on_button_rename_dataset_annotations_clicked)
+        self.button_rename_dataset.clicked.connect(self.handle_on_button_rename_dataset_clicked)
+
         self.button_export.clicked.connect(self.handle_on_button_export_clicked)
 
         self.button_import.clicked.connect(self.handle_on_button_import_clicked)
 
         self.list_datasets.signal_on_item_clicked.connect(self.move_annotations_to_gallery)
-
-        """self.button_move_dataset_to_reserved.clicked.connect(
-            lambda: self.move_selected_dataset(self.list_datasets, self.project.get_datasets(), DATASETS, RESERVED)
-        )"""
 
         #Настройка выбора отображений аннотаций
         self.combo_annotation_type.currentIndexChanged.connect(self.handle_on_type_changed)
@@ -221,20 +220,55 @@ class UPageDataset(QWidget, Ui_page_dataset):
 
     @pyqtSlot()
     def handle_on_button_rename_dataset_clicked(self):
+        self._rename_dataset_common(
+            get_source_data_func=lambda: self._get_selected_dataset(),
+            rename_func=self.project.rename_dataset,
+            error_no_selection_msg="Датасет не выбран!",
+            error_no_name_msg="Введите или выберите название датасета!"
+        )
+
+    @pyqtSlot()
+    def handle_on_button_rename_dataset_annotations_clicked(self):
+        self._rename_dataset_common(
+            get_source_data_func=self.view_gallery.get_selected_annotation,
+            rename_func=self.project.rename_dataset_annotations,
+            error_no_selection_msg="Выберите изображенияЙ",
+            error_no_name_msg="Введите или выберите название датасета!"
+        )
+
+    def _get_selected_dataset(self):
         ret, selected_dataset = self.list_datasets.get_selected_item()
-        if ret == -1:
-            UMessageBox.show_error("Датасет не выбран!")
+        return selected_dataset if ret != -1 else None
+
+    def _rename_dataset_common(
+            self,
+            get_source_data_func,
+            rename_func,
+            error_no_selection_msg: str,
+            error_no_name_msg: str
+    ):
+        source_data = get_source_data_func()
+        if not source_data:
+            UMessageBox.show_error(error_no_selection_msg)
             return
 
         self.commander.set_block(True)
         new_dataset_name = terminate_closable_dialog(self.project.get_annotations().keys())
         self.commander.set_block(False)
 
-        if len(new_dataset_name) == 0:
-            UMessageBox.show_error("Введите или выберите название датасета!")
+        if new_dataset_name is None:
             return
 
+        if len(new_dataset_name) == 0:
+            UMessageBox.show_error(error_no_name_msg)
+            return
 
+        task = [
+            (rename_func, (source_data, new_dataset_name), {}),
+            (self.project.save, (), {})
+        ]
+
+        self.project.start_task_thread(task, [self.create_list_dataset, self.set_selected_dataset_to_gallery], [])
 
     @pyqtSlot()
     def handle_on_click_button_delete_annotations(self):

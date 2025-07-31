@@ -9,7 +9,7 @@ from PyQt5.QtGui import QColor
 
 from SAM2.sam2_net import USam2Net
 from coco.coco_json import load_coco_json, make_coco_json, save_coco_json, make_annotation_dict_from_coco
-from coco.coco_utility import UProjectInfo, UAnnotationClass, ECocoFileNames, EDefaultTrainName
+from coco.coco_utility import UProjectInfo, UAnnotationClass, ECocoFileNames, EDefaultTrainName, IMAGES_DIR
 from neural_model import URemoteNeuralNet, UBaseNeuralNet, ULocalDetectYOLO
 from supporting.functions import rstrip, get_distinct_color
 from supporting.task_runner import UTaskRunner
@@ -177,7 +177,7 @@ class UCocoProject:
             return
         else:
             image_name = os.path.basename(annotation.get_image_path())
-            new_path_image = rstrip(os.path.join(self.project_path, 'datasets', dataset, image_name))
+            new_path_image = rstrip(os.path.join(self.project_path, IMAGES_DIR, image_name))
 
             os.makedirs(os.path.dirname(new_path_image), exist_ok=True)
 
@@ -214,20 +214,19 @@ class UCocoProject:
         if len(self.annotations[dataset]) == 0:
             self.annotations.pop(dataset)
 
-        deleted_dataset_dir = rstrip(os.path.join(self.project_path, 'datasets', dataset))
-        if os.path.isdir(deleted_dataset_dir):
-            shutil.rmtree(deleted_dataset_dir)
+        #deleted_dataset_dir = rstrip(os.path.join(self.project_path, 'datasets', dataset))
+        #if os.path.isdir(deleted_dataset_dir):
+        #    shutil.rmtree(deleted_dataset_dir)
 
     def rename_dataset(self, dataset: str, new_dataset_name: str):
-        if dataset not in self.annotations:
+        if dataset not in self.annotations or dataset == new_dataset_name:
             return
 
-        if new_dataset_name not in self.annotations[dataset]:
-            self.annotations[new_dataset_name] = list()
+        if new_dataset_name not in self.annotations:
+            self.annotations[new_dataset_name] = []
 
-        for annotation in self.annotations[dataset][:]:
+        for annotation in self.annotations[dataset]:
             annotation.set_dataset_name(new_dataset_name)
-            self.annotations[dataset].remove(annotation)
             self.annotations[new_dataset_name].append(annotation)
 
         self.annotations.pop(dataset)
@@ -241,11 +240,12 @@ class UCocoProject:
             try:
                 self.annotations[ann_dataset].remove(annotation)
             except ValueError:
+                print(str(ValueError) + str(annotation))
                 pass
+            annotation.set_dataset_name(new_dataset_name)
             self.annotations[new_dataset_name].append(annotation)
             if len(self.annotations[ann_dataset]) == 0:
                 self.annotations.pop(ann_dataset)
-                self._delete_dataset_dir(ann_dataset)
 
 
     def remove_list_of_annotations(self, removing_annotations: list[FAnnotationItem]):
@@ -456,7 +456,7 @@ class UCocoProject:
     def _copy_images(self, source_path: str, data_list: dict[str, list[FAnnotationItem]]):
         for dataset, item_list in data_list.items():
             for item in item_list:
-                new_image_path = rstrip(os.path.join(source_path, "datasets", dataset, os.path.basename(item.get_image_path())))
+                new_image_path = rstrip(os.path.join(source_path, IMAGES_DIR, os.path.basename(item.get_image_path())))
                 os.makedirs(os.path.dirname(new_image_path), exist_ok=True)
 
                 shutil.copy2(item.get_image_path(), new_image_path)
