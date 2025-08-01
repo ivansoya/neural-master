@@ -1,5 +1,4 @@
 import math
-import queue
 from collections import OrderedDict
 from typing import Optional
 
@@ -7,7 +6,6 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, QRectF, QRect, QObject, pyqtSl
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPixmap, QColor, QImage, QPolygonF
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QWidget, QGraphicsPixmapItem, QGraphicsProxyWidget, \
     QGraphicsObject
-from networkx.algorithms.bipartite.basic import color
 
 from supporting.functions import get_points_from_flat_cords
 from utility import FAnnotationItem, EAnnotationType, FAnnotationData
@@ -134,7 +132,7 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
         if self.pixmap:
             x = (self.size - self.pixmap.width()) // 2
             y = (self.size - self.pixmap.height()) // 2
-            painter.drawPixmap(x, y, self.pixmap)
+            painter.drawPixmap(int(x), int(y), self.pixmap)
 
         if self.selected:
             painter.setPen(QPen(QColor(Qt.blue), self.board_width * 2))
@@ -149,6 +147,18 @@ class UGraphicsAnnotationGalleryItem(UGraphicsGalleryItem):
 
     def is_loaded(self):
         return self.loaded
+
+    def resize(self, new_size: float):
+        if self.size == new_size:
+            return
+
+        self.size = new_size
+
+        if self.loaded:
+            self.loaded = False
+            self.pixmap = None
+
+        self.update()
 
 
 class UGalleryImageLoader(QObject):
@@ -181,6 +191,7 @@ class UGalleryImageLoader(QObject):
     def update_visibilities(self, updated_indexes: set[int], is_new: bool):
         if is_new:
             self.current_indexes.clear()
+            self.set_load_images.clear()
         if self.current_indexes == updated_indexes:
             return
         self.indexes_to_load = updated_indexes - self.current_indexes
@@ -345,9 +356,10 @@ class UImageGallery(QGraphicsView):
 
         # Обновляем саму сетку с виджетами
         for index, cached_widget in list(self.widget_cache.items()):
+            cached_widget.resize(self.cell_size)
             if index not in self.filtered_indexes:
                 self.widget_cache.move_to_end(index, last=False)
-                cached_widget.setPos(self.margin, -1000)
+                cached_widget.setPos(self.margin, -10000)
             else:
                 pos_index = self.filtered_indexes[index]
                 pos_x = self.margin // 2 + (pos_index % self.columns) * (self.cell_size + self.current_margin)
@@ -367,6 +379,10 @@ class UImageGallery(QGraphicsView):
         self.signal_changed_viewport.emit(set(list_visible_index_real), force)
 
     def update_scene_rect(self):
+        # Сохраняем относительные позиции ползунков
+        vertical_scrollbar = self.verticalScrollBar()
+        v_ratio = vertical_scrollbar.value() / max(1, vertical_scrollbar.maximum())
+
         self.scene.setSceneRect(
             0,
             0,
@@ -374,11 +390,11 @@ class UImageGallery(QGraphicsView):
             (len(self.filtered_indexes) // self.columns + 1) * (self.cell_size + self.margin)
         )
 
-        vertical_scrollbar = self.verticalScrollBar()
         max_scroll = max(0, self.scene.sceneRect().height() - self.height())
-
         vertical_scrollbar.setRange(0, int(max_scroll))
-        vertical_scrollbar.setPageStep(self.height())  # Размер шага при клике на полосу прокрутки
+        vertical_scrollbar.setPageStep(self.height())
+
+        vertical_scrollbar.setValue(int(v_ratio * max(1, vertical_scrollbar.maximum())))
 
     def set_dataset_annotations(self, annotation_list: list[FAnnotationItem]):
         self.annotation_data = annotation_list
@@ -427,8 +443,21 @@ class UImageGallery(QGraphicsView):
         self.update_visibility()
 
     def wheelEvent(self, event):
-        super().wheelEvent(event)
-        self.update_visibility()
+        modifiers = event.modifiers()
+        if modifiers & Qt.ControlModifier:
+            delta = event.angleDelta().y()
+            if delta > 0:
+                if self.cell_size + 50 <= self.width():
+                    self.cell_size += 50
+            else:
+                if self.cell_size -50 >= 200:
+                    self.cell_size -= 50
+            self.update_grid()
+            self.update_scene_rect()
+            self.update_visibility(True)
+        else:
+            super().wheelEvent(event)
+            self.update_visibility()
 
     def scrollContentsBy(self, dx, dy):
         super().scrollContentsBy(dx, dy)
