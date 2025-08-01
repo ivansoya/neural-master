@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QWidget, QAbstractItemView, QMessageBox, QDialog
+from PyQt5.QtWidgets import QWidget, QAbstractItemView, QMessageBox, QDialog, QListWidget
 
 from coco.coco_project import UCocoProject
 from stats.class_chart import FCountColor
@@ -37,6 +37,8 @@ class UPageClasses(QWidget, Ui_classes_page_design):
             self.commander.project_load_complete.connect(self.update_chart_statistics)
             self.commander.project_load_complete.connect(self.update_classes)
             self.commander.project_updated.connect(self.update_chart_statistics)
+
+        self.list_datasets.setSelectionMode(QListWidget.MultiSelection)
 
     def add_class_to_project(self):
         if self.project.task_thread and self.project.task_thread.isRunning():
@@ -77,6 +79,9 @@ class UPageClasses(QWidget, Ui_classes_page_design):
                 classes[class_id].name,
                 QColor(classes[class_id].color)
             )
+
+        datasets = self.project.get_annotations().keys()
+
 
     def update_chart_statistics(self):
         annotations_by_dataset = self.project.get_annotations()

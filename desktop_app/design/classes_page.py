@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_classes_page_design(object):
     def setupUi(self, classes_page_design):
         classes_page_design.setObjectName("classes_page_design")
-        classes_page_design.resize(1388, 805)
+        classes_page_design.resize(1239, 805)
         classes_page_design.setStyleSheet("QPushButton {\n"
 "    background-color: lightgray;\n"
 "    color: black;            \n"
@@ -92,13 +92,19 @@ class Ui_classes_page_design(object):
         self.verticalWidget1.setObjectName("verticalWidget1")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalWidget1)
         self.verticalLayout.setObjectName("verticalLayout")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.pushButton = QtWidgets.QPushButton(self.verticalWidget1)
+        self.pushButton.setObjectName("pushButton")
+        self.horizontalLayout_2.addWidget(self.pushButton)
         self.button_show_all = QtWidgets.QPushButton(self.verticalWidget1)
         self.button_show_all.setObjectName("button_show_all")
-        self.verticalLayout.addWidget(self.button_show_all)
-        self.list_stat_item = QtWidgets.QListWidget(self.verticalWidget1)
-        self.list_stat_item.setMaximumSize(QtCore.QSize(16777215, 16777215))
-        self.list_stat_item.setObjectName("list_stat_item")
-        self.verticalLayout.addWidget(self.list_stat_item)
+        self.horizontalLayout_2.addWidget(self.button_show_all)
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
+        self.list_datasets = QtWidgets.QListWidget(self.verticalWidget1)
+        self.list_datasets.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.list_datasets.setObjectName("list_datasets")
+        self.verticalLayout.addWidget(self.list_datasets)
         self.horizontalLayout.addWidget(self.verticalWidget1)
         self.page_main_layout.addLayout(self.horizontalLayout)
 
@@ -112,7 +118,8 @@ class Ui_classes_page_design(object):
         self.groupBox.setTitle(_translate("classes_page_design", "Добавление класса"))
         self.button_add_class.setText(_translate("classes_page_design", "Добавить класс"))
         self.groupBox_3.setTitle(_translate("classes_page_design", "Отображение статистики"))
-        self.button_show_all.setText(_translate("classes_page_design", "Вывести все"))
+        self.pushButton.setText(_translate("classes_page_design", "Снять выбор"))
+        self.button_show_all.setText(_translate("classes_page_design", "Показать все"))
 from annotation.annotation_scene import UClassSelectorList
 from dataset.dataset_widgets import EnumComboBox
 from stats.class_chart import UWidgetChart

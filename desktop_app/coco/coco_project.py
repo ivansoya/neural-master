@@ -249,7 +249,7 @@ class UCocoProject:
 
 
     def remove_list_of_annotations(self, removing_annotations: list[FAnnotationItem]):
-        for annotation in removing_annotations:
+        for annotation in removing_annotations[:]:
             dataset = annotation.get_dataset_name()
             if dataset not in self.annotations:
                 print(f"У аннотации под ID {annotation.get_image_id()} нет датасета, удаление невозможно!")

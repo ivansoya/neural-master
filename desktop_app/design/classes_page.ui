@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1388</width>
+    <width>1239</width>
     <height>805</height>
    </rect>
   </property>
@@ -152,14 +152,25 @@ QPushButton:pressed {
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QPushButton" name="button_show_all">
-          <property name="text">
-           <string>Вывести все</string>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QPushButton" name="pushButton">
+            <property name="text">
+             <string>Снять выбор</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="button_show_all">
+            <property name="text">
+             <string>Показать все</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
-         <widget class="QListWidget" name="list_stat_item">
+         <widget class="QListWidget" name="list_datasets">
           <property name="maximumSize">
            <size>
             <width>16777215</width>
