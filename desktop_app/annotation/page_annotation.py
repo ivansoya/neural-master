@@ -253,12 +253,17 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             dialog.combo_choose_dataset.currentTextChanged.connect(
                 lambda selected_item: dialog.lineedit_dataset_name.setText(selected_item)
             )
-            if dialog.exec_():
-                dataset_name = dialog.lineedit_dataset_name.text()
-                for ann_item in list_nones:
-                    ann_item.set_dataset_name(dataset_name)
-                    ann_item.set_image_id(self.project.get_image_id_with_increment())
-                list_annotations.extend(list_nones)
+            if dialog.exec_() != QDialog.Accepted:
+                return
+
+            dataset_name = dialog.get_text().strip()
+            if not dataset_name:
+                return
+
+            for ann_item in list_nones:
+                ann_item.set_dataset_name(dataset_name)
+                ann_item.set_image_id(self.project.get_image_id_with_increment())
+            list_annotations.extend(list_nones)
 
         self.overlay = UOverlayLoader(self.display_scene)
 

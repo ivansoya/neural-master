@@ -7,3 +7,5 @@ runs/
 post_processing_data/
 convert_script/
 calibration/
+__pycache__/
+*.py[cod]
