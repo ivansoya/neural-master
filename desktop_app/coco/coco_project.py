@@ -78,8 +78,7 @@ class UCocoProject:
         for class_id, class_info in other_classes.items():
             if class_id not in self.annotation_classes:
                 return False
-            if (self.annotation_classes[class_id].name != class_info.name or
-                self.annotation_classes[class_id].super_category != class_info.super_category):
+            if self.annotation_classes[class_id].name != class_info.name:
                 return False
         return True
 
