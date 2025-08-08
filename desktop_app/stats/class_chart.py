@@ -40,17 +40,19 @@ class UWidgetChart(QWidget):
         print(classes.values())
         colors = [(item.color.redF(), item.color.greenF(), item.color.blueF()) for item in classes.values()]
 
-        self.canvas.ax.bar(class_names, counts, color=colors)
+        self.canvas.ax.barh(class_names[::-1], counts[::-1], color=colors[::-1])
 
         self.canvas.ax.set_title("Распределение классов")
-        self.canvas.ax.set_xlabel("Названия классов")
-        self.canvas.ax.set_ylabel("Количество объектов классов")
+        self.canvas.ax.set_xlabel("Количество объектов классов")
+        self.canvas.ax.set_ylabel("Названия классов")
 
-        self.canvas.ax.set_xticks(range(len(class_names)))
-        self.canvas.ax.set_xticklabels(class_names, rotation=45)
+        self.canvas.ax.grid(True, axis='x')
+
+        self.canvas.ax.set_yticks(range(len(class_names)))
+        #self.canvas.ax.set_xticklabels(class_names, rotation=45)
 
         widget_height = self.height() * 0.75
-        self.canvas.ax.set_ylim(0, max(counts) * 1.2 if counts else 1)
+        self.canvas.ax.set_xlim(0, max(counts) * 1.2 if counts else 1)
 
         self.canvas.fig.subplots_adjust(bottom=0.2)
 
