@@ -254,10 +254,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
                 lambda selected_item: dialog.lineedit_dataset_name.setText(selected_item)
             )
             if dialog.exec_() != QDialog.Accepted:
+                self.commander.set_block(False)
                 return
 
             dataset_name = dialog.get_text().strip()
             if not dataset_name:
+                self.commander.set_block(False)
                 return
 
             for ann_item in list_nones:
@@ -270,7 +272,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         tasks = [
             (self.project.update_annotations, (list_annotations, "noname_dataset",), {}),
             (self.project.remove_list_of_annotations, (list_to_delete,), {}),
-            (self.project.save, (), {})
+            (self.project.save, (), {}),
         ]
 
         self.project.start_task_thread(tasks, [self.handle_on_ended_adding_dataset], [])
@@ -283,6 +285,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.overlay = UOverlayLoader.delete_overlay(self.overlay)
         self.thumbnail_carousel.clear_thumbnails_to_last_annotated()
         self.annotation_scene.clear()
+        self.try_run_task()
         if self.commander:
             self.commander.project_updated.emit()
             if self.thumbnail_carousel.get_thumbnails_count() == 0:
