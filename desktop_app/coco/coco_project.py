@@ -138,6 +138,29 @@ class UCocoProject:
 
         save_coco_json(json_file, coco)
 
+    def import_annotated_images(self, annotated_images: list[FAnnotationItem], new_dataset: str):
+        image_path = rstrip(os.path.join(self.project_path, IMAGES_DIR))
+        file_names = {f for f in os.listdir(image_path) if os.path.isfile(rstrip(os.path.join(image_path, f)))}
+
+        for annotated_image in annotated_images:
+            image_name = os.path.basename(annotated_image.get_image_path())
+            if os.path.basename(annotated_image.get_image_path()) in file_names:
+                print(f"Изображение с именем {image_name} уже существует в проекте!")
+                continue
+
+            # Создание папки и копирование изображения
+            self.copy_image_to_project(annotated_image)
+
+            annotated_image.set_image_id(self.get_image_id_with_increment())
+
+            for annotation in annotated_image.get_annotation_data():
+                annotation.set_annotation_id(self.get_annotation_id_with_increment())
+
+            if new_dataset not in self.annotations:
+                self.annotations[new_dataset] = []
+
+            self.annotations[new_dataset].append(annotated_image)
+
     def update_annotations(self, update_annotations: list[FAnnotationItem], new_dataset: str = "noname_dataset"):
         usable_image_ids: set[int] = {item.get_image_id() for item_list in self.annotations.values() for item in item_list}
         usable_ann_ids: set[int] = {ann_data.get_annotation_id() for item_list in self.annotations.values() for item in item_list for ann_data in item.get_annotation_data()}
@@ -199,7 +222,7 @@ class UCocoProject:
                 ann_object.set_annotation_id(new_annotation_id)
                 ann_ids.add(new_annotation_id)
             elif self.current_annotation_id < ann_object_id:
-                    self.current_annotation_id = ann_object_id
+                self.current_annotation_id = ann_object_id
 
         self.annotations[dataset].append(annotation)
 
@@ -469,6 +492,16 @@ class UCocoProject:
         dataset_dir = rstrip(os.path.join(self.project_path, 'datasets', dataset_name))
         os.makedirs(dataset_dir, exist_ok=True)
 
+    def copy_image_to_project(self, annotated_image: FAnnotationItem):
+        image_path = annotated_image.get_image_path()
+        if not os.path.isfile(image_path):
+            return False
+
+        new_image_path = rstrip(os.path.join(self.project_path, IMAGES_DIR, os.path.basename(image_path)))
+        shutil.copy2(image_path, new_image_path)
+        annotated_image.set_image_path(new_image_path)
+
+        return True
 
     """
     ----------------------------

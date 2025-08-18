@@ -169,28 +169,32 @@ class UPageDataset(QWidget, Ui_page_dataset):
         if confirm_window is None:
             return
 
+        json_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Выберите json импортируемых данных",
+            os.getcwd(),
+            "Json проекты (*.json);;Все файлы (*)"
+        )
+
+        if not os.path.isfile(json_path):
+            return
+
         # Обработка слияния
         if confirm_window is True:
-            json_path, _ = QFileDialog.getOpenFileName(
-                self,
-                "Выберите json импортируемых данных",
-                os.getcwd(),
-                "Json проекты (*.json);;Все файлы (*)"
-            )
-            if not os.path.isfile(json_path):
-                return
-
             task = [
-                (self.merge_import, (json_path, ), {}),
+                (self.run_import, (json_path, True, ), {}),
+                (self.project.save, (), {})
+            ]
+        else:
+            task = [
+                (self.run_import, (json_path, False, ), {}),
                 (self.project.save, (), {})
             ]
 
-            if self.project.start_task_thread(task, [self.handle_on_ended_import], [self.handle_on_error_import]):
-                if self.commander: self.commander.task_start.emit("Начат импорт!")
-        else:
-            return
+        if self.project.start_task_thread(task, [self.handle_on_ended_import], [self.handle_on_error_import]):
+            if self.commander: self.commander.task_start.emit("Начат импорт!")
 
-    def merge_import(self, path_import: str):
+    def run_import(self, path_import: str, is_merge: bool):
         _, _, annotations, images, classes = load_coco_json(path_import)
 
         loaded_annotations, classes = make_annotation_dict_from_coco(images, annotations, classes, os.path.dirname(path_import))
@@ -198,8 +202,12 @@ class UPageDataset(QWidget, Ui_page_dataset):
         if not self.project.is_classes_equal(classes):
             raise Exception("Набор классов импортируемого датасета не совпадает с текущим!")
 
-        for dataset, ann_items in loaded_annotations.items():
-            self.project.update_annotations(ann_items, dataset)
+        if is_merge:
+            for dataset, ann_items in loaded_annotations.items():
+                self.project.update_annotations(ann_items, dataset)
+        else:
+            for dataset, ann_items in loaded_annotations.items():
+                self.project.import_annotated_images(ann_items, dataset)
 
     @pyqtSlot(str)
     def handle_on_error_import(self, error_text: str):
