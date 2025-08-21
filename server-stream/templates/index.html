@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Варан</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div id="selector-container">
+    <label for="stream-select">Выбранный трактор: </label>
+    <select id="stream-select">
+      <option value="https://http.11voran.keenetic.link">4882 Димитровград</option>
+      <option value="https://http.6voran.keenetic.link">4883 Рузаевка</option>
+      <option value="https://http.2voran.keenetic.link">4885 Октябрьск</option>
+      <option value="https://http.5voran.keenetic.link">4886 Моршанск</option>
+      <option value="https://http.10voran.keenetic.link">4957 Бугульма</option>
+      <option value="https://http.3voran.keenetic.link">4959 Чишмы</option>
+      <option value="https://http.14voran.keenetic.link">5004 Жигулевск</option>
+      <option value="https://http.9voran.keenetic.link">5005 Круглое Поле</option>
+      <option value="https://http.12voran.keenetic.link">5015 Уфа</option>
+      <option value="https://http.7voran.keenetic.link">5017 Ульяновск</option>
+      <option value="https://http.13voran.keenetic.link">5019 Аксаково</option>
+      <option value="https://http.1voran.keenetic.link">5192 Санкт-Петербург</option>
+      <option value="https://http.8voran.keenetic.link">175 Екатеринбург</option>
+      <option value="https://http.4voran.keenetic.link">189 Саратов</option>
+      <option value="http://192.168.1.100:8888">Тест</option>
+    </select>
+    <button id="toggle-mode-btn" class="btn" title="Переключить между потоковым режимом и слайдшоу">Режим: Слайдшоу</button>
+    <button id="fullscreen-btn" class="btn" title="Переключить полноэкранный режим">Во весь экран</button>
+    <span id="refresh-status" style="margin-left:10px; color:yellow; display:none;">⏳ Проверка...</span>
+    <button id="refresh-btn" class="btn" title="Обновить изображение">Обновить</button>
+  </div>
+
+  <div id="stream-container">
+    <img id="stream" src="" alt="Live Stream" />
+    <div id="overlay">Поиск трансляции...</div>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
