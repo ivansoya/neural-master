@@ -94,15 +94,30 @@ class Ui_classes_page_design(object):
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.pushButton = QtWidgets.QPushButton(self.verticalWidget1)
-        self.pushButton.setObjectName("pushButton")
-        self.horizontalLayout_2.addWidget(self.pushButton)
+        self.button_clear_all = QtWidgets.QPushButton(self.verticalWidget1)
+        self.button_clear_all.setObjectName("button_clear_all")
+        self.horizontalLayout_2.addWidget(self.button_clear_all)
         self.button_show_all = QtWidgets.QPushButton(self.verticalWidget1)
         self.button_show_all.setObjectName("button_show_all")
         self.horizontalLayout_2.addWidget(self.button_show_all)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.list_datasets = QtWidgets.QListWidget(self.verticalWidget1)
         self.list_datasets.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.list_datasets.setStyleSheet("QListWidget {\n"
+"        background-color: #2b2b2b;       /* фон всего списка */\n"
+"        color: white;                    /* цвет текста */\n"
+"        border: 1px solid #444;\n"
+"    }\n"
+"    QListWidget::item {\n"
+"        padding: 6px;\n"
+"    }\n"
+"    QListWidget::item:selected {\n"
+"        background: #007acc;             /* фон выбранного элемента */\n"
+"        color: white;                    /* цвет текста выбранного */\n"
+"    }\n"
+"    QListWidget::item:hover {\n"
+"        background: #444;                /* фон при наведении */\n"
+"    }")
         self.list_datasets.setObjectName("list_datasets")
         self.verticalLayout.addWidget(self.list_datasets)
         self.horizontalLayout.addWidget(self.verticalWidget1)
@@ -118,7 +133,7 @@ class Ui_classes_page_design(object):
         self.groupBox.setTitle(_translate("classes_page_design", "Добавление класса"))
         self.button_add_class.setText(_translate("classes_page_design", "Добавить класс"))
         self.groupBox_3.setTitle(_translate("classes_page_design", "Отображение статистики"))
-        self.pushButton.setText(_translate("classes_page_design", "Снять выбор"))
+        self.button_clear_all.setText(_translate("classes_page_design", "Снять выбор"))
         self.button_show_all.setText(_translate("classes_page_design", "Показать все"))
 from annotation.annotation_scene import UClassSelectorList
 from dataset.dataset_widgets import EnumComboBox

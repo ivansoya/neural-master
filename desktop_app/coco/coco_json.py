@@ -178,6 +178,9 @@ def make_annotation_dict_from_coco(
     for item in temp_image_dict.values():
         result[item.get_dataset_name()].append(item)
 
+    for dataset_name, items in result.items():
+        items.sort(key=lambda x: os.path.basename(x.get_image_path()))
+
     return result, classes_dict
 
 def make_coco_json(

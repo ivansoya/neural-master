@@ -33,12 +33,28 @@ class UPageClasses(QWidget, Ui_classes_page_design):
         })
         self.combo_type.setCurrentIndex(0)
 
+        self.list_datasets.setSelectionMode(QListWidget.MultiSelection)
+        self.list_datasets.itemSelectionChanged.connect(self.update_chart_statistics)
+
+        self.button_show_all.clicked.connect(self.handle_on_choose_all_clicked)
+        self.button_clear_all.clicked.connect(self.handle_on_clear_all_clicked)
+
         if self.commander:
             self.commander.project_load_complete.connect(self.update_chart_statistics)
             self.commander.project_load_complete.connect(self.update_classes)
+            self.commander.project_load_complete.connect(self.update_list_dataset)
             self.commander.project_updated.connect(self.update_chart_statistics)
 
-        self.list_datasets.setSelectionMode(QListWidget.MultiSelection)
+
+    def update_list_dataset(self):
+        self.list_datasets.addItems(self.project.get_annotations().keys())
+        self.list_datasets.selectAll()
+
+    def handle_on_clear_all_clicked(self):
+        self.list_datasets.clearSelection()
+
+    def handle_on_choose_all_clicked(self):
+        self.list_datasets.selectAll()
 
     def add_class_to_project(self):
         if self.project.task_thread and self.project.task_thread.isRunning():
@@ -97,9 +113,12 @@ class UPageClasses(QWidget, Ui_classes_page_design):
         }
 
         allowed_types = self.combo_type.get_current_enum()
+        allowed_datasets = [item.text() for item in self.list_datasets.selectedItems()]
 
-        for dataset_annotations in annotations_by_dataset.values():
-            for annotation in dataset_annotations:
+        for dataset, annotations  in annotations_by_dataset.items():
+            if dataset not in allowed_datasets:
+                continue
+            for annotation in annotations:
                 for ann_data in annotation.get_annotation_data():
                     if ann_data.get_annotation_type() not in allowed_types:
                         continue

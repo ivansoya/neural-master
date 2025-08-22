@@ -154,7 +154,7 @@ QPushButton:pressed {
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QPushButton" name="pushButton">
+           <widget class="QPushButton" name="button_clear_all">
             <property name="text">
              <string>Снять выбор</string>
             </property>
@@ -176,6 +176,23 @@ QPushButton:pressed {
             <width>16777215</width>
             <height>16777215</height>
            </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QListWidget {
+        background-color: #2b2b2b;       /* фон всего списка */
+        color: white;                    /* цвет текста */
+        border: 1px solid #444;
+    }
+    QListWidget::item {
+        padding: 6px;
+    }
+    QListWidget::item:selected {
+        background: #007acc;             /* фон выбранного элемента */
+        color: white;                    /* цвет текста выбранного */
+    }
+    QListWidget::item:hover {
+        background: #444;                /* фон при наведении */
+    }</string>
           </property>
          </widget>
         </item>
