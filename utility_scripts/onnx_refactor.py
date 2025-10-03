@@ -330,6 +330,6 @@ def refactor_with_version_yolo(yolo_version: str, model_path: str, save_model_pa
         return False
 
 if __name__ == "__main__":
-    refactor_detect_yolov11_model("C:/Users/1/Documents/PycharmProjects/neural-master/untrained/yolo11n.onnx",
-                               "C:/Users/1/Documents/PycharmProjects/neural-master/untrained/trimmed_model.onnx")
+    refactor_detect_yolov11_model("/untrained/yolov11/yolo11n.onnx",
+                                  "/untrained/yolov11/trimmed_model.onnx")
 
