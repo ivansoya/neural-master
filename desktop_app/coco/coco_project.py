@@ -4,6 +4,8 @@ import shutil
 from collections import defaultdict
 from typing import Optional
 
+import numpy as np
+import yaml
 from PyQt5.QtCore import QThread, QObject, pyqtSlot
 from PyQt5.QtGui import QColor
 
@@ -14,6 +16,7 @@ from neural_model import URemoteNeuralNet, UBaseNeuralNet, ULocalDetectYOLO
 from supporting.functions import rstrip, get_distinct_color
 from supporting.task_runner import UTaskRunner
 from utility import FAnnotationItem, FAnnotationData, UMessageBox
+
 
 class UCocoProject:
     def __init__(self):
@@ -105,7 +108,8 @@ class UCocoProject:
             licenses=licenses,
         )
 
-        print(f"Общее количество изображений: {len(images), sum([len(ann_list) for ann_list in self.annotations.values()])}")
+        print(
+            f"Общее количество изображений: {len(images), sum([len(ann_list) for ann_list in self.annotations.values()])}")
         print(f"Количество аннотаций в проекте: {len(annotations)}")
 
         self.current_image_id = max([img["id"] for img in images], default=1)
@@ -162,8 +166,10 @@ class UCocoProject:
             self.annotations[new_dataset].append(annotated_image)
 
     def update_annotations(self, update_annotations: list[FAnnotationItem], new_dataset: str = "noname_dataset"):
-        usable_image_ids: set[int] = {item.get_image_id() for item_list in self.annotations.values() for item in item_list}
-        usable_ann_ids: set[int] = {ann_data.get_annotation_id() for item_list in self.annotations.values() for item in item_list for ann_data in item.get_annotation_data()}
+        usable_image_ids: set[int] = {item.get_image_id() for item_list in self.annotations.values() for item in
+                                      item_list}
+        usable_ann_ids: set[int] = {ann_data.get_annotation_id() for item_list in self.annotations.values() for item in
+                                    item_list for ann_data in item.get_annotation_data()}
 
         for annotation in update_annotations:
             dataset = annotation.get_dataset_name()
@@ -269,7 +275,6 @@ class UCocoProject:
             if len(self.annotations[ann_dataset]) == 0:
                 self.annotations.pop(ann_dataset)
 
-
     def remove_list_of_annotations(self, removing_annotations: list[FAnnotationItem]):
         for annotation in removing_annotations[:]:
             dataset = annotation.get_dataset_name()
@@ -307,6 +312,20 @@ class UCocoProject:
     -------------- EXPORT ---------------
     """
 
+    @staticmethod
+    def write_files(image_dir_path: str, label_dir_path: str, annotation: FAnnotationItem):
+        image_name = os.path.basename(annotation.get_image_path())
+        image_path = rstrip(os.path.join(image_dir_path, image_name))
+        try:
+            shutil.copy2(annotation.get_image_path(), image_path)
+        except Exception as error:
+            print(f"{str(error)}: связано с файлом {annotation.get_image_path()} и копированием его в {image_path}")
+
+        label_name = os.path.splitext(image_name)[0] + ".txt"
+        label_path = rstrip(os.path.join(label_dir_path, label_name))
+        with open(label_path, "w", encoding="utf-8") as label_file:
+            label_file.write(annotation.get_bbox_strings())
+
     def simple_export_with_refactor(self, export_path: str, chosen_datasets: list[str], chosen_classes_id: list[int]):
         os.makedirs(export_path, exist_ok=True)
 
@@ -329,11 +348,14 @@ class UCocoProject:
 
         save_coco_json(rstrip(os.path.join(export_path, os.path.basename(export_path) + ".json")), export_coco)
 
-    def simple_txt_export_with_refactor(self, export_path: str, chosen_datasets: list[str], chosen_classes_id: list[int]):
+    def simple_txt_export_with_refactor(self, export_path: str, chosen_datasets: list[str],
+                                        chosen_classes_id: list[int], train_percentage: float = 0.8):
         dirs = [
             export_path,
-            rstrip(os.path.join(export_path, EDefaultTrainName.IMAGES)),
-            rstrip(os.path.join(export_path, EDefaultTrainName.LABELS))
+            rstrip(os.path.join(export_path, EDefaultTrainName.VAL_IMAGES)),
+            rstrip(os.path.join(export_path, EDefaultTrainName.VAL_LABELS)),
+            rstrip(os.path.join(export_path, EDefaultTrainName.TRAIN_IMAGES)),
+            rstrip(os.path.join(export_path, EDefaultTrainName.TRAIN_LABELS))
         ]
         for dir_path in dirs:
             os.makedirs(dir_path, exist_ok=True)
@@ -342,25 +364,52 @@ class UCocoProject:
         refactored_classes = self._get_refactored_classes(chosen_classes_id)
 
         print(f"Оригинальное количество картинок: {sum(len(ann_data) for ann_data in self.annotations.values())}"
-              f"После рефакторинга: {sum(len(ann_data) for ann_data in refactored_data_dict.values())}")
+              f"\nПосле рефакторинга: {sum(len(ann_data) for ann_data in refactored_data_dict.values())}")
 
+        images_by_classes = defaultdict(list)  # key - tuple
         for ann_list in refactored_data_dict.values():
             for ann_item in ann_list:
-                image_name = os.path.basename(ann_item.get_image_path())
-                image_path = rstrip(os.path.join(export_path, EDefaultTrainName.IMAGES, image_name))
-                try:
-                    shutil.copy2(ann_item.get_image_path(), image_path)
-                except Exception as error:
-                    print(f"{str(error)}: связано с файлом {ann_item.get_image_path()} и копированием его в {image_path}")
-                    continue
+                classes = [data.get_class_id() for data in ann_item.get_annotation_data()]
 
-                label_name = os.path.splitext(image_name)[0] + ".txt"
-                label_path = rstrip(os.path.join(export_path, EDefaultTrainName.LABELS, label_name))
-                with open(label_path, "w", encoding="utf-8") as label_file:
-                    label_file.write(ann_item.get_bbox_strings())
+                if classes:
+                    images_by_classes[tuple(sorted(classes))].append(ann_item)
+                else:
+                    images_by_classes[()].append(ann_item)
 
-        with open(rstrip(os.path.join(export_path, EDefaultTrainName.CLASSES)), "w", encoding="utf-8") as classes_file:
-            classes_file.writelines([f"{class_obj.name}\n" for class_id, class_obj in refactored_classes.items()])
+        for key, value in images_by_classes.items():
+            train_count: int = np.ceil(len(value) * train_percentage).astype(int)
+
+            train_selected = random.sample(value, train_count)
+            val_selected = [item for item in value if item not in train_selected]
+
+            print("Из набора классов", key, "общего количества", len(value), "выбрано", len(train_selected),
+                  "обучающих и", len(val_selected), "валидационных изображений!")
+
+            for train_item in train_selected:
+                UCocoProject.write_files(
+                    rstrip(os.path.join(export_path, EDefaultTrainName.TRAIN_IMAGES)),
+                    rstrip(os.path.join(export_path, EDefaultTrainName.TRAIN_LABELS)),
+                    train_item
+                )
+
+            for val_item in val_selected:
+                UCocoProject.write_files(
+                    rstrip(os.path.join(export_path, EDefaultTrainName.VAL_IMAGES)),
+                    rstrip(os.path.join(export_path, EDefaultTrainName.VAL_LABELS)),
+                    val_item
+                )
+
+        dataset_yaml = {
+            "path": export_path,
+            "train": EDefaultTrainName.TRAIN_IMAGES.value,
+            "val": EDefaultTrainName.VAL_IMAGES.value,
+            "names": {i: class_obj.name for i, class_obj in refactored_classes.items()},
+            "nc": len(refactored_classes),
+        }
+
+        yaml_path = os.path.join(export_path, EDefaultTrainName.YAML)
+        with open(yaml_path, "w", encoding="utf-8") as f:
+            yaml.dump(dataset_yaml, f, allow_unicode=True, sort_keys=False)
 
     def train_export_with_refactor(
             self,
@@ -389,7 +438,6 @@ class UCocoProject:
 
         # Сохранение
 
-
     def _get_refactored_classes(self, chosen_classes_id: list[int]):
         refactored_classes: dict[int, UAnnotationClass] = dict()
 
@@ -403,7 +451,8 @@ class UCocoProject:
         return refactored_classes
 
     def _get_refactor_data(self, chosen_datasets: list[str], chosen_classes_id: list[int]):
-        needed_dataset_items: list[FAnnotationItem] = [item for dataset in chosen_datasets for item in self.annotations.get(dataset, [])]
+        needed_dataset_items: list[FAnnotationItem] = [item for dataset in chosen_datasets for item in
+                                                       self.annotations.get(dataset, [])]
         refactored_annotations: dict[str, list[FAnnotationItem]] = dict()
 
         for item in needed_dataset_items:

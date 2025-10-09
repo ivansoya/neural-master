@@ -21,6 +21,7 @@ class EDefaultTrainName(StrEnum):
     IMAGES = "images"
     LABELS = "labels"
     CLASSES = "classes.txt"
+    YAML = "dataset.yaml"
 
 @dataclass
 class UProjectInfo:

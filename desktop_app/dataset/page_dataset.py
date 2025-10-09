@@ -129,7 +129,7 @@ class UPageDataset(QWidget, Ui_page_dataset):
                 ]
             else:
                 task = [
-                    (self.project.simple_txt_export_with_refactor, (export_path, chosen_datasets, chosen_class_ids,), {})
+                    (self.project.simple_txt_export_with_refactor, (export_path, chosen_datasets, chosen_class_ids, train_percentage), {})
                 ]
 
             if self.project.start_task_thread(task, [self.handle_on_ended_export], []) is False:
