@@ -403,7 +403,7 @@ class UCocoProject:
             "path": export_path,
             "train": EDefaultTrainName.TRAIN_IMAGES.value,
             "val": EDefaultTrainName.VAL_IMAGES.value,
-            "names": {i: class_obj.name for i, class_obj in refactored_classes.items()},
+            "names": {i - 1: class_obj.name for i, class_obj in refactored_classes.items()},
             "nc": len(refactored_classes),
         }
 
