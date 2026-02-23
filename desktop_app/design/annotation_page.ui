@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1388</width>
-    <height>897</height>
+    <height>985</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -148,8 +148,8 @@ QPushButton:pressed {
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>230</width>
-                <height>207</height>
+                <width>226</width>
+                <height>186</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -461,6 +461,18 @@ QPushButton:pressed {
                  </property>
                 </widget>
                </item>
+               <item>
+                <widget class="QLabel" name="label_background">
+                 <property name="font">
+                  <font>
+                   <pointsize>11</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Фон:</string>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </item>
              <item>
@@ -516,6 +528,24 @@ QPushButton:pressed {
                   <font>
                    <pointsize>11</pointsize>
                   </font>
+                 </property>
+                 <property name="text">
+                  <string>0</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_count_backgound">
+                 <property name="font">
+                  <font>
+                   <pointsize>11</pointsize>
+                  </font>
+                 </property>
+                 <property name="layoutDirection">
+                  <enum>Qt::LeftToRight</enum>
                  </property>
                  <property name="text">
                   <string>0</string>

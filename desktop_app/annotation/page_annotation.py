@@ -61,6 +61,7 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.current_annotated_count: int = 0
         self.current_dropped_count: int = 0
         self.current_not_annotated_count: int = 0
+        self.current_background_count: int = 0
 
         self.commander.project_load_complete.connect(self.handle_on_load_project)
 
@@ -227,10 +228,12 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         self.current_annotated_count = 0
         self.current_dropped_count = 0
         self.current_not_annotated_count = 0
+        self.current_background_count = 0
 
         self.label_count_annotated.setText(str(self.current_annotated_count))
         self.label_count_not_annotated.setText(str(self.current_not_annotated_count))
         self.label_count_dropped.setText(str(self.current_dropped_count))
+        self.label_count_backgound.setText(str(self.current_background_count))
 
         self.annotation_scene.set_annotation_id(self.project.get_annotation_id())
         self.load_thumbnails(files)
@@ -392,6 +395,8 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
             self.thumbnail_carousel.select_thumbnail_by_direction("right")
         elif key_number == int(Qt.Key_N):
             self._drop_current_thumbnail()
+        elif key_number == int(Qt.Key_G):
+            self._select_as_background()
         elif key_number == int(Qt.Key_Shift):
             self.annotation_scene.set_work_mode(EWorkMode.ForceDragMode.value)
 
@@ -530,6 +535,9 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
         elif status.value == EAnnotationStatus.MARKED_DROP.value:
             self.current_dropped_count += value
             self.label_count_dropped.setText(str(self.current_dropped_count))
+        elif status.value == EAnnotationStatus.BACKGROUND.value:
+            self.current_background_count += value
+            self.label_count_backgound.setText(str(self.current_background_count))
 
     def _annotate_image(self):
         thumb_id, matrix = self.annotation_scene.get_selectable_matrix()
@@ -556,4 +564,9 @@ class UPageAnnotation(QWidget, Ui_annotataion_page):
     def _drop_current_thumbnail(self):
         self.annotation_scene.clean_all_annotations(to_emit=True)
         self.thumbnail_carousel.set_thumbnail_dropped()
+        self.thumbnail_carousel.select_thumbnail_by_direction("right")
+
+    def _select_as_background(self):
+        self.annotation_scene.clean_all_annotations(to_emit=True)
+        self.thumbnail_carousel.set_thumbnail_background()
         self.thumbnail_carousel.select_thumbnail_by_direction("right")

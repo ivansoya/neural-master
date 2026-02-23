@@ -3,6 +3,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QWidget, QAbstractItemView, QMessageBox, QDialog, QListWidget
 
 from coco.coco_project import UCocoProject
+from coco.coco_utility import UAnnotationClass
 from stats.class_chart import FCountColor
 from commander import UGlobalSignalHolder
 from design.classes_page import Ui_classes_page_design
@@ -98,10 +99,15 @@ class UPageClasses(QWidget, Ui_classes_page_design):
 
         datasets = self.project.get_annotations().keys()
 
-
     def update_chart_statistics(self):
         annotations_by_dataset = self.project.get_annotations()
-        class_info_by_id = self.project.get_classes()
+        background_class = UAnnotationClass(
+            "background",
+            QColor(Qt.gray),
+            "background",
+        )
+        class_info_by_id = {-1: background_class}
+        class_info_by_id.update(self.project.get_classes())
 
         if not annotations_by_dataset:
             return
@@ -115,10 +121,14 @@ class UPageClasses(QWidget, Ui_classes_page_design):
         allowed_types = self.combo_type.get_current_enum()
         allowed_datasets = [item.text() for item in self.list_datasets.selectedItems()]
 
-        for dataset, annotations  in annotations_by_dataset.items():
+        for dataset, annotations in annotations_by_dataset.items():
             if dataset not in allowed_datasets:
                 continue
             for annotation in annotations:
+                if not annotation.get_annotation_data():
+                    count_by_class["background"].increment_count()
+                    continue
+
                 for ann_data in annotation.get_annotation_data():
                     if ann_data.get_annotation_type() not in allowed_types:
                         continue

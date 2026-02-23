@@ -35,6 +35,7 @@ class EAnnotationStatus(Enum):
     MARKED_DROP = 3
     PERFORMING_ANNOTATION = 4
     NO_STATUS = 5
+    BACKGROUND = 6
 
 
 class EDatasetType(Enum):

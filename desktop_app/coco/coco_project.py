@@ -469,8 +469,8 @@ class UCocoProject:
                 else:
                     continue
 
-            if len(annotation_list) == 0:
-                continue
+            # if len(annotation_list) == 0:
+            #    continue
 
             copy_item = item.copy()
             copy_item.update_annotation_data(annotation_list)
