@@ -314,17 +314,22 @@ class UCocoProject:
 
     @staticmethod
     def write_files(image_dir_path: str, label_dir_path: str, annotation: FAnnotationItem):
-        image_name = os.path.basename(annotation.get_image_path())
-        image_path = rstrip(os.path.join(image_dir_path, image_name))
         try:
-            shutil.copy2(annotation.get_image_path(), image_path)
-        except Exception as error:
-            print(f"{str(error)}: связано с файлом {annotation.get_image_path()} и копированием его в {image_path}")
+            image_name = os.path.basename(annotation.get_image_path())
+            image_path = rstrip(os.path.join(image_dir_path, image_name))
 
-        label_name = os.path.splitext(image_name)[0] + ".txt"
-        label_path = rstrip(os.path.join(label_dir_path, label_name))
-        with open(label_path, "w", encoding="utf-8") as label_file:
-            label_file.write(annotation.get_bbox_strings())
+            shutil.copy2(annotation.get_image_path(), image_path)
+
+            label_name = os.path.splitext(image_name)[0] + ".txt"
+            label_path = rstrip(os.path.join(label_dir_path, label_name))
+
+            with open(label_path, "w", encoding="utf-8") as label_file:
+                label_file.write(annotation.get_bbox_strings())
+
+        except FileNotFoundError as e:
+            print(f"[WARN] файл не найден при экспорте: {e}")
+        except Exception as e:
+            print(f"[WARN] ошибка экспорта файла: {e}")
 
     def simple_export_with_refactor(self, export_path: str, chosen_datasets: list[str], chosen_classes_id: list[int]):
         os.makedirs(export_path, exist_ok=True)
@@ -527,10 +532,20 @@ class UCocoProject:
     def _copy_images(self, source_path: str, data_list: dict[str, list[FAnnotationItem]]):
         for dataset, item_list in data_list.items():
             for item in item_list:
-                new_image_path = rstrip(os.path.join(source_path, IMAGES_DIR, os.path.basename(item.get_image_path())))
-                os.makedirs(os.path.dirname(new_image_path), exist_ok=True)
+                try:
+                    src = item.get_image_path()
+                    if not os.path.isfile(src):
+                        print(f"[WARN] пропущено (нет файла): {src}")
+                        continue
 
-                shutil.copy2(item.get_image_path(), new_image_path)
+                    new_image_path = rstrip(
+                        os.path.join(source_path, IMAGES_DIR, os.path.basename(src))
+                    )
+                    os.makedirs(os.path.dirname(new_image_path), exist_ok=True)
+                    shutil.copy2(src, new_image_path)
+
+                except Exception as e:
+                    print(f"[WARN] copy_images error: {e}")
 
     def _delete_dataset_dir(self, dataset_name: str):
         deleted_dataset_dir = rstrip(os.path.join(self.project_path, 'datasets', dataset_name))
